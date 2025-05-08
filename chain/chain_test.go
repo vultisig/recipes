@@ -2,11 +2,13 @@ package chain
 
 import (
 	"testing"
+
+	"github.com/vultisig/recipes/bitcoin"
 )
 
 // TestBitcoinChain tests the Bitcoin chain implementation
 func TestBitcoinChain(t *testing.T) {
-	btc := NewBitcoin()
+	btc := bitcoin.NewChain()
 
 	// Test ID
 	if got := btc.ID(); got != "bitcoin" {
@@ -34,7 +36,7 @@ func TestRegistry(t *testing.T) {
 	reg := NewRegistry()
 
 	// Test registering a chain
-	btc := NewBitcoin()
+	btc := bitcoin.NewChain()
 	err := reg.Register(btc)
 	if err != nil {
 		t.Errorf("Register() error = %v, want nil", err)

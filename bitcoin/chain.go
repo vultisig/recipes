@@ -1,4 +1,6 @@
-package chain
+package bitcoin
+
+import "github.com/vultisig/recipes/types"
 
 // Bitcoin implements the Chain interface for the Bitcoin blockchain
 type Bitcoin struct{}
@@ -19,6 +21,6 @@ func (b *Bitcoin) SupportedProtocols() []string {
 }
 
 // NewBitcoin creates a new Bitcoin chain instance
-func NewBitcoin() Chain {
+func NewChain() types.Chain {
 	return &Bitcoin{}
 }

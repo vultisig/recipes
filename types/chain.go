@@ -1,4 +1,4 @@
-package chain
+package types
 
 // Chain represents a blockchain network
 type Chain interface {
