@@ -1,10 +1,9 @@
 name: Check Resources Documentation
 
+# run on all commits to any branch/PR
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   check-resources:
