@@ -1,0 +1,31 @@
+name: Check Resources Documentation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for comparing changes
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Generate RESOURCES.md
+        run: go run cmd/generator/main.go --output RESOURCES.md
+
+      - name: Check for changes
+        run: |
+          if [[ -n "$(git status --porcelain RESOURCES.md)" ]]; then
+            echo "::error::RESOURCES.md is out of date. Please run 'go run cmd/generator/main.go --output RESOURCES.md' and commit the changes."
+            git diff RESOURCES.md
+            exit 1
+          fi 
