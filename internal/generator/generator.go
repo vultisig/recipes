@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"os"
+	"sort"
 	"text/template"
 
 	"github.com/vultisig/recipes/chain"
@@ -86,6 +87,11 @@ func (g *Generator) Generate() error {
 			}
 		}
 	}
+
+	// sort resources by ResourcePath
+	sort.Slice(resources, func(i, j int) bool {
+		return resources[i].ResourcePath < resources[j].ResourcePath
+	})
 
 	// Execute template
 	data := map[string]interface{}{
