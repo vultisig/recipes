@@ -3,7 +3,6 @@ name: Check Resources Documentation
 # run on all commits to any branch/PR
 on:
   push:
-  pull_request:
 
 jobs:
   check-resources:
