@@ -18,13 +18,29 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Install protoc and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
       - name: Generate RESOURCES.md
         run: go run cmd/generator/main.go --output RESOURCES.md
+
+      - name: Run go generate
+        run: go generate ./...
 
       - name: Check for changes
         run: |
           if [[ -n "$(git status --porcelain RESOURCES.md)" ]]; then
             echo "::error::RESOURCES.md is out of date. Please run 'go run cmd/generator/main.go --output RESOURCES.md' and commit the changes."
             git diff RESOURCES.md
+            exit 1
+          fi
+          
+          if [[ -n "$(git status --porcelain types/)" ]]; then
+            echo "::error::Generated files are out of date. Please run 'go generate ./...' and commit the changes."
+            git diff
             exit 1
           fi 

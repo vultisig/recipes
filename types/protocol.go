@@ -53,6 +53,6 @@ type Protocol interface {
 }
 
 // ResourcePath builds a fully qualified resource path for a function
-func ResourcePath(chainID, protocolID, functionID string) string {
+func FullyQualifiedResourcePath(chainID, protocolID, functionID string) string {
 	return fmt.Sprintf("%s.%s.%s", chainID, protocolID, functionID)
 }
