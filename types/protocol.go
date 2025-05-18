@@ -31,25 +31,25 @@ type Function struct {
 	Parameters []*FunctionParam
 }
 
-// Protocol represents a cryptocurrency protocol within a chain
+// Protocol defines the interface for a specific protocol on a chain (e.g., ETH, ERC20)
 type Protocol interface {
-	// ID returns the unique identifier for the protocol
+	// ID returns the unique identifier for the protocol (e.g., "eth", "usdc")
 	ID() string
-
-	// Name returns a human-readable name for the protocol
+	// Name returns a human-readable name for the protocol (e.g., "Ethereum", "USD Coin")
 	Name() string
-
-	// ChainID returns the ID of the chain this protocol belongs to
+	// ChainID returns the identifier of the chain this protocol belongs to
 	ChainID() string
-
-	// Description returns a detailed description of the protocol
+	// Description returns a brief description of the protocol
 	Description() string
-
-	// Functions returns a list of available functions for this protocol
+	// Functions returns a list of supported functions by this protocol
 	Functions() []*Function
-
-	// GetFunction retrieves a specific function by ID
+	// GetFunction returns a specific function by its ID
 	GetFunction(id string) (*Function, error)
+
+	// MatchFunctionCall checks if a decoded transaction matches the criteria for a specific function call
+	// defined in a policy. It returns true if it matches, along with extracted parameters relevant
+	// to the function call, or an error if the matching process fails.
+	MatchFunctionCall(decodedTx DecodedTransaction, policyMatcher *PolicyFunctionMatcher) (matches bool, extractedParams map[string]interface{}, err error)
 }
 
 // ResourcePath builds a fully qualified resource path for a function

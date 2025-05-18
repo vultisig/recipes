@@ -5,6 +5,7 @@ package types;
 option go_package = "github.com/vultisig/recipes/types";
 
 import "constraint.proto";
+import "parameter_constraint.proto";
 
 // Rule represents a single permission rule in the policy
 message Rule {
@@ -22,6 +23,12 @@ message Rule {
 
   // Authorization defines how this should be authorized (if needed)
   Authorization authorization = 5;
+
+  // Rule ID
+  string id = 6;
+
+  // Parameter constraints
+  repeated ParameterConstraint parameter_constraints = 7;
 }
 
 // Effect determines whether a rule allows or denies access

@@ -84,8 +84,12 @@ type Rule struct {
 	Constraints map[string]*Constraint `protobuf:"bytes,4,rep,name=constraints,proto3" json:"constraints,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Authorization defines how this should be authorized (if needed)
 	Authorization *Authorization `protobuf:"bytes,5,opt,name=authorization,proto3" json:"authorization,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Rule ID
+	Id string `protobuf:"bytes,6,opt,name=id,proto3" json:"id,omitempty"`
+	// Parameter constraints
+	ParameterConstraints []*ParameterConstraint `protobuf:"bytes,7,rep,name=parameter_constraints,json=parameterConstraints,proto3" json:"parameter_constraints,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Rule) Reset() {
@@ -153,6 +157,20 @@ func (x *Rule) GetAuthorization() *Authorization {
 	return nil
 }
 
+func (x *Rule) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Rule) GetParameterConstraints() []*ParameterConstraint {
+	if x != nil {
+		return x.ParameterConstraints
+	}
+	return nil
+}
+
 // Authorization represents how a transaction should be authorized
 type Authorization struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -213,13 +231,15 @@ var File_rule_proto protoreflect.FileDescriptor
 const file_rule_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"rule.proto\x12\x05types\x1a\x10constraint.proto\"\xba\x02\n" +
+	"rule.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1aparameter_constraint.proto\"\x9b\x03\n" +
 	"\x04Rule\x12\x1a\n" +
 	"\bresource\x18\x01 \x01(\tR\bresource\x12%\n" +
 	"\x06effect\x18\x02 \x01(\x0e2\r.types.EffectR\x06effect\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12>\n" +
 	"\vconstraints\x18\x04 \x03(\v2\x1c.types.Rule.ConstraintsEntryR\vconstraints\x12:\n" +
-	"\rauthorization\x18\x05 \x01(\v2\x14.types.AuthorizationR\rauthorization\x1aQ\n" +
+	"\rauthorization\x18\x05 \x01(\v2\x14.types.AuthorizationR\rauthorization\x12\x0e\n" +
+	"\x02id\x18\x06 \x01(\tR\x02id\x12O\n" +
+	"\x15parameter_constraints\x18\a \x03(\v2\x1a.types.ParameterConstraintR\x14parameterConstraints\x1aQ\n" +
 	"\x10ConstraintsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
 	"\x05value\x18\x02 \x01(\v2\x11.types.ConstraintR\x05value:\x028\x01\"=\n" +
@@ -246,22 +266,24 @@ func file_rule_proto_rawDescGZIP() []byte {
 var file_rule_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_rule_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_rule_proto_goTypes = []any{
-	(Effect)(0),           // 0: types.Effect
-	(*Rule)(nil),          // 1: types.Rule
-	(*Authorization)(nil), // 2: types.Authorization
-	nil,                   // 3: types.Rule.ConstraintsEntry
-	(*Constraint)(nil),    // 4: types.Constraint
+	(Effect)(0),                 // 0: types.Effect
+	(*Rule)(nil),                // 1: types.Rule
+	(*Authorization)(nil),       // 2: types.Authorization
+	nil,                         // 3: types.Rule.ConstraintsEntry
+	(*ParameterConstraint)(nil), // 4: types.ParameterConstraint
+	(*Constraint)(nil),          // 5: types.Constraint
 }
 var file_rule_proto_depIdxs = []int32{
 	0, // 0: types.Rule.effect:type_name -> types.Effect
 	3, // 1: types.Rule.constraints:type_name -> types.Rule.ConstraintsEntry
 	2, // 2: types.Rule.authorization:type_name -> types.Authorization
-	4, // 3: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 3: types.Rule.parameter_constraints:type_name -> types.ParameterConstraint
+	5, // 4: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_rule_proto_init() }
@@ -270,6 +292,7 @@ func file_rule_proto_init() {
 		return
 	}
 	file_constraint_proto_init()
+	file_parameter_constraint_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

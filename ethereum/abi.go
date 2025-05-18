@@ -36,6 +36,7 @@ type ABIFunction struct {
 // ABI represents an Ethereum ABI
 type ABI struct {
 	Functions []ABIFunction
+	RawJson   string
 }
 
 // ParseABI parses an ABI JSON into an ABI struct
@@ -55,6 +56,7 @@ func ParseABI(abiJSON []byte) (*ABI, error) {
 
 	return &ABI{
 		Functions: functions,
+		RawJson:   string(abiJSON),
 	}, nil
 }
 

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package types;
+
+option go_package = "github.com/vultisig/recipes/types";
+
+import "constraint.proto";
+
+message ParameterConstraint {
+  string parameter_name = 1;
+  Constraint constraint = 2;
+}
