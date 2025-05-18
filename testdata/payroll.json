@@ -1,0 +1,32 @@
+{
+  "id": "sample-eth-transfer-policy-v1",
+  "name": "Sample ETH Transfer Policy",
+  "description": "Allows sending up to 1 native ETH to Bob's address.",
+  "rules": [
+    {
+      "id": "allow-eth-transfer-to-bob-max-1eth",
+      "description": "Allow transfer of native ETH to Bob's address (0xb0b0000000000000000000000000000000000001), up to 1 ETH.",
+      "resource": "ethereum.eth.transfer",
+      "parameter_constraints": [
+        {
+          "parameter_name": "recipient",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_FIXED",
+            "fixed_value": "0xb0b0000000000000000000000000000000000001",
+            "required": true
+          }
+        },
+        {
+          "parameter_name": "amount",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_MAX",
+            "max_value": "1000000000000000000",
+            "denominated_in": "wei",
+            "required": true
+          }
+        }
+      ],
+      "effect": "EFFECT_ALLOW"
+    }
+  ]
+}

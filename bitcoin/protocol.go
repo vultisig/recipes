@@ -62,6 +62,10 @@ func (b *BTC) GetFunction(id string) (*types.Function, error) {
 	return nil, fmt.Errorf("function %q not found for protocol BTC", id)
 }
 
+func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
+	return false, nil, fmt.Errorf("function matching not supported on Bitcoin")
+}
+
 // NewBTC creates a new BTC protocol instance
 func NewBTC() types.Protocol {
 	return &BTC{}
