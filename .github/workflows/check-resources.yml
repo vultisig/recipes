@@ -3,7 +3,6 @@ name: Check Resources Documentation
 # run on all commits to any branch/PR
 on:
   push:
-  pull_request:
 
 jobs:
   check-resources:
@@ -16,15 +15,34 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.24'
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "30.2"
+
+      - name: Install protoc and dependencies
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - name: Generate RESOURCES.md
         run: go run cmd/generator/main.go --output RESOURCES.md
+
+      - name: Run go generate
+        run: go generate ./...
 
       - name: Check for changes
         run: |
           if [[ -n "$(git status --porcelain RESOURCES.md)" ]]; then
             echo "::error::RESOURCES.md is out of date. Please run 'go run cmd/generator/main.go --output RESOURCES.md' and commit the changes."
             git diff RESOURCES.md
+            exit 1
+          fi
+          
+          if [[ -n "$(git status --porcelain types/)" ]]; then
+            echo "::error::Generated files are out of date. Please run 'go generate ./...' and commit the changes."
+            git diff
             exit 1
           fi 

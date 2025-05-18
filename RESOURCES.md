@@ -43,54 +43,64 @@ Transfer Bitcoin to another address
 ```
 
 
-### ethereum.usdt.name
+### ethereum.dai.allowance
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD name  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin allowance  
 
-Call the name function on Tether USD token
+Get the amount of Dai Stablecoin tokens allowed to be spent by an address
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
+| owner | address | owner parameter of type address |
+| spender | address | spender parameter of type address |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdt.name",
+  "resource": "ethereum.dai.allowance",
   "effect": "ALLOW",
   "constraints": {
+    "owner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
 
   }
 }
 ```
 
 
-### ethereum.usdt.approve
+### ethereum.dai.approve
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD approve  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin approve  
 
-Approve an address to spend Tether USD tokens
+Approve an address to spend Dai Stablecoin tokens
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Tether USD tokens |
+| amount | number | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdt.approve",
+  "resource": "ethereum.dai.approve",
   "effect": "ALLOW",
   "constraints": {
     "spender": {
@@ -107,13 +117,45 @@ Approve an address to spend Tether USD tokens
 ```
 
 
-### ethereum.usdt.totalSupply
+### ethereum.dai.balanceOf
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD totalSupply  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin balanceOf  
 
-Call the totalSupply function on Tether USD token
+Get the Dai Stablecoin token balance of an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.dai.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.dai.decimals
+
+**Chain:** Ethereum  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin decimals  
+
+Call the decimals function on Dai Stablecoin token
 
 **Parameters:**
 
@@ -125,7 +167,7 @@ Call the totalSupply function on Tether USD token
 
 ```json
 {
-  "resource": "ethereum.usdt.totalSupply",
+  "resource": "ethereum.dai.decimals",
   "effect": "ALLOW",
   "constraints": {
 
@@ -134,13 +176,131 @@ Call the totalSupply function on Tether USD token
 ```
 
 
-### ethereum.usdt.transferFrom
+### ethereum.dai.name
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD transferFrom  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin name  
 
-Transfer Tether USD tokens from one address to another
+Call the name function on Dai Stablecoin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.dai.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.dai.symbol
+
+**Chain:** Ethereum  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin symbol  
+
+Call the symbol function on Dai Stablecoin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.dai.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.dai.totalSupply
+
+**Chain:** Ethereum  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin totalSupply  
+
+Call the totalSupply function on Dai Stablecoin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.dai.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.dai.transfer
+
+**Chain:** Ethereum  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin transfer  
+
+Transfer Dai Stablecoin tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Dai Stablecoin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.dai.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.dai.transferFrom
+
+**Chain:** Ethereum  
+**Protocol:** Dai Stablecoin  
+**Function:** Dai Stablecoin transferFrom  
+
+Transfer Dai Stablecoin tokens from one address to another
 
 **Parameters:**
 
@@ -148,14 +308,14 @@ Transfer Tether USD tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Tether USD tokens |
+| amount | number | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdt.transferFrom",
+  "resource": "ethereum.dai.transferFrom",
   "effect": "ALLOW",
   "constraints": {
     "sender": {
@@ -176,40 +336,124 @@ Transfer Tether USD tokens from one address to another
 ```
 
 
-### ethereum.usdt.decimals
+### ethereum.eth.transfer
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD decimals  
+**Protocol:** Ethereum  
+**Function:** Transfer ETH  
 
-Call the decimals function on Tether USD token
+Transfer Ether to another address
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
+| recipient | address | The Ethereum address of the recipient |
+| amount | decimal | The amount of Ether to transfer |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdt.decimals",
+  "resource": "ethereum.eth.transfer",
   "effect": "ALLOW",
   "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
 
   }
 }
 ```
 
 
-### ethereum.usdt.balanceOf
+### ethereum.usdc.allowance
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD balanceOf  
+**Protocol:** USD Coin  
+**Function:** USD Coin allowance  
 
-Get the Tether USD token balance of an address
+Get the amount of USD Coin tokens allowed to be spent by an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| owner | address | owner parameter of type address |
+| spender | address | spender parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.allowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "owner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.usdc.approve
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin approve  
+
+Approve an address to spend USD Coin tokens
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| spender | address | spender parameter of type address |
+| amount | number | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.approve",
+  "effect": "ALLOW",
+  "constraints": {
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.usdc.balanceOf
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin balanceOf  
+
+Get the USD Coin token balance of an address
 
 **Parameters:**
 
@@ -222,7 +466,7 @@ Get the Tether USD token balance of an address
 
 ```json
 {
-  "resource": "ethereum.usdt.balanceOf",
+  "resource": "ethereum.usdc.balanceOf",
   "effect": "ALLOW",
   "constraints": {
     "account": {
@@ -235,13 +479,13 @@ Get the Tether USD token balance of an address
 ```
 
 
-### ethereum.usdt.symbol
+### ethereum.usdc.decimals
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD symbol  
+**Protocol:** USD Coin  
+**Function:** USD Coin decimals  
 
-Call the symbol function on Tether USD token
+Call the decimals function on USD Coin token
 
 **Parameters:**
 
@@ -253,7 +497,7 @@ Call the symbol function on Tether USD token
 
 ```json
 {
-  "resource": "ethereum.usdt.symbol",
+  "resource": "ethereum.usdc.decimals",
   "effect": "ALLOW",
   "constraints": {
 
@@ -262,29 +506,152 @@ Call the symbol function on Tether USD token
 ```
 
 
-### ethereum.usdt.transfer
+### ethereum.usdc.name
 
 **Chain:** Ethereum  
-**Protocol:** Tether USD  
-**Function:** Tether USD transfer  
+**Protocol:** USD Coin  
+**Function:** USD Coin name  
 
-Transfer Tether USD tokens to another address
+Call the name function on USD Coin token
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdt.transfer",
+  "resource": "ethereum.usdc.name",
   "effect": "ALLOW",
   "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdc.symbol
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin symbol  
+
+Call the symbol function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdc.totalSupply
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin totalSupply  
+
+Call the totalSupply function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdc.transfer
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin transfer  
+
+Transfer USD Coin tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.usdc.transferFrom
+
+**Chain:** Ethereum  
+**Protocol:** USD Coin  
+**Function:** USD Coin transferFrom  
+
+Transfer USD Coin tokens from one address to another
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdc.transferFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "sender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
     "recipient": {
       "type": "fixed",
       "value": "example_value"
@@ -336,54 +703,27 @@ Get the amount of Tether USD tokens allowed to be spent by an address
 ```
 
 
-### ethereum.dai.name
+### ethereum.usdt.approve
 
 **Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin name  
+**Protocol:** Tether USD  
+**Function:** Tether USD approve  
 
-Call the name function on Dai Stablecoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.dai.name",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.dai.approve
-
-**Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin approve  
-
-Approve an address to spend Dai Stablecoin tokens
+Approve an address to spend Tether USD tokens
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
+| amount | number | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.dai.approve",
+  "resource": "ethereum.usdt.approve",
   "effect": "ALLOW",
   "constraints": {
     "spender": {
@@ -400,109 +740,13 @@ Approve an address to spend Dai Stablecoin tokens
 ```
 
 
-### ethereum.dai.totalSupply
+### ethereum.usdt.balanceOf
 
 **Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin totalSupply  
+**Protocol:** Tether USD  
+**Function:** Tether USD balanceOf  
 
-Call the totalSupply function on Dai Stablecoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.dai.totalSupply",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.dai.transferFrom
-
-**Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin transferFrom  
-
-Transfer Dai Stablecoin tokens from one address to another
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| sender | address | sender parameter of type address |
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.dai.transferFrom",
-  "effect": "ALLOW",
-  "constraints": {
-    "sender": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "recipient": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "amount": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.dai.decimals
-
-**Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin decimals  
-
-Call the decimals function on Dai Stablecoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.dai.decimals",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.dai.balanceOf
-
-**Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin balanceOf  
-
-Get the Dai Stablecoin token balance of an address
+Get the Tether USD token balance of an address
 
 **Parameters:**
 
@@ -515,7 +759,7 @@ Get the Dai Stablecoin token balance of an address
 
 ```json
 {
-  "resource": "ethereum.dai.balanceOf",
+  "resource": "ethereum.usdt.balanceOf",
   "effect": "ALLOW",
   "constraints": {
     "account": {
@@ -528,13 +772,13 @@ Get the Dai Stablecoin token balance of an address
 ```
 
 
-### ethereum.dai.symbol
+### ethereum.usdt.decimals
 
 **Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin symbol  
+**Protocol:** Tether USD  
+**Function:** Tether USD decimals  
 
-Call the symbol function on Dai Stablecoin token
+Call the decimals function on Tether USD token
 
 **Parameters:**
 
@@ -546,7 +790,7 @@ Call the symbol function on Dai Stablecoin token
 
 ```json
 {
-  "resource": "ethereum.dai.symbol",
+  "resource": "ethereum.usdt.decimals",
   "effect": "ALLOW",
   "constraints": {
 
@@ -555,27 +799,108 @@ Call the symbol function on Dai Stablecoin token
 ```
 
 
-### ethereum.dai.transfer
+### ethereum.usdt.name
 
 **Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin transfer  
+**Protocol:** Tether USD  
+**Function:** Tether USD name  
 
-Transfer Dai Stablecoin tokens to another address
+Call the name function on Tether USD token
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.dai.transfer",
+  "resource": "ethereum.usdt.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdt.symbol
+
+**Chain:** Ethereum  
+**Protocol:** Tether USD  
+**Function:** Tether USD symbol  
+
+Call the symbol function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdt.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdt.totalSupply
+
+**Chain:** Ethereum  
+**Protocol:** Tether USD  
+**Function:** Tether USD totalSupply  
+
+Call the totalSupply function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdt.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.usdt.transfer
+
+**Chain:** Ethereum  
+**Protocol:** Tether USD  
+**Function:** Tether USD transfer  
+
+Transfer Tether USD tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Tether USD tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.usdt.transfer",
   "effect": "ALLOW",
   "constraints": {
     "recipient": {
@@ -592,141 +917,13 @@ Transfer Dai Stablecoin tokens to another address
 ```
 
 
-### ethereum.dai.allowance
+### ethereum.usdt.transferFrom
 
 **Chain:** Ethereum  
-**Protocol:** Dai Stablecoin  
-**Function:** Dai Stablecoin allowance  
+**Protocol:** Tether USD  
+**Function:** Tether USD transferFrom  
 
-Get the amount of Dai Stablecoin tokens allowed to be spent by an address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| owner | address | owner parameter of type address |
-| spender | address | spender parameter of type address |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.dai.allowance",
-  "effect": "ALLOW",
-  "constraints": {
-    "owner": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "spender": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.wbtc.name
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin name  
-
-Call the name function on Wrapped Bitcoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.name",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.wbtc.approve
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin approve  
-
-Approve an address to spend Wrapped Bitcoin tokens
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| spender | address | spender parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.approve",
-  "effect": "ALLOW",
-  "constraints": {
-    "spender": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "amount": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.wbtc.totalSupply
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin totalSupply  
-
-Call the totalSupply function on Wrapped Bitcoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.totalSupply",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.wbtc.transferFrom
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin transferFrom  
-
-Transfer Wrapped Bitcoin tokens from one address to another
+Transfer Tether USD tokens from one address to another
 
 **Parameters:**
 
@@ -734,143 +931,20 @@ Transfer Wrapped Bitcoin tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
+| amount | number | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.wbtc.transferFrom",
+  "resource": "ethereum.usdt.transferFrom",
   "effect": "ALLOW",
   "constraints": {
     "sender": {
       "type": "fixed",
       "value": "example_value"
     },
-    "recipient": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "amount": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.wbtc.decimals
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin decimals  
-
-Call the decimals function on Wrapped Bitcoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.decimals",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.wbtc.balanceOf
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin balanceOf  
-
-Get the Wrapped Bitcoin token balance of an address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| account | address | account parameter of type address |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.balanceOf",
-  "effect": "ALLOW",
-  "constraints": {
-    "account": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.wbtc.symbol
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin symbol  
-
-Call the symbol function on Wrapped Bitcoin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.symbol",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.wbtc.transfer
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Bitcoin  
-**Function:** Wrapped Bitcoin transfer  
-
-Transfer Wrapped Bitcoin tokens to another address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.wbtc.transfer",
-  "effect": "ALLOW",
-  "constraints": {
     "recipient": {
       "type": "fixed",
       "value": "example_value"
@@ -922,54 +996,27 @@ Get the amount of Wrapped Bitcoin tokens allowed to be spent by an address
 ```
 
 
-### ethereum.weth.name
+### ethereum.wbtc.approve
 
 **Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether name  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin approve  
 
-Call the name function on Wrapped Ether token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.weth.name",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.weth.approve
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether approve  
-
-Approve an address to spend Wrapped Ether tokens
+Approve an address to spend Wrapped Bitcoin tokens
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
+| amount | number | The amount of Wrapped Bitcoin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.weth.approve",
+  "resource": "ethereum.wbtc.approve",
   "effect": "ALLOW",
   "constraints": {
     "spender": {
@@ -986,13 +1033,45 @@ Approve an address to spend Wrapped Ether tokens
 ```
 
 
-### ethereum.weth.totalSupply
+### ethereum.wbtc.balanceOf
 
 **Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether totalSupply  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin balanceOf  
 
-Call the totalSupply function on Wrapped Ether token
+Get the Wrapped Bitcoin token balance of an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.wbtc.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.wbtc.decimals
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin decimals  
+
+Call the decimals function on Wrapped Bitcoin token
 
 **Parameters:**
 
@@ -1004,7 +1083,7 @@ Call the totalSupply function on Wrapped Ether token
 
 ```json
 {
-  "resource": "ethereum.weth.totalSupply",
+  "resource": "ethereum.wbtc.decimals",
   "effect": "ALLOW",
   "constraints": {
 
@@ -1013,34 +1092,110 @@ Call the totalSupply function on Wrapped Ether token
 ```
 
 
-### ethereum.weth.transferFrom
+### ethereum.wbtc.name
 
 **Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether transferFrom  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin name  
 
-Transfer Wrapped Ether tokens from one address to another
+Call the name function on Wrapped Bitcoin token
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| sender | address | sender parameter of type address |
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.weth.transferFrom",
+  "resource": "ethereum.wbtc.name",
   "effect": "ALLOW",
   "constraints": {
-    "sender": {
-      "type": "fixed",
-      "value": "example_value"
-    },
+
+  }
+}
+```
+
+
+### ethereum.wbtc.symbol
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin symbol  
+
+Call the symbol function on Wrapped Bitcoin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.wbtc.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.wbtc.totalSupply
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin totalSupply  
+
+Call the totalSupply function on Wrapped Bitcoin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.wbtc.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.wbtc.transfer
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin transfer  
+
+Transfer Wrapped Bitcoin tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Wrapped Bitcoin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.wbtc.transfer",
+  "effect": "ALLOW",
+  "constraints": {
     "recipient": {
       "type": "fixed",
       "value": "example_value"
@@ -1055,115 +1210,34 @@ Transfer Wrapped Ether tokens from one address to another
 ```
 
 
-### ethereum.weth.decimals
+### ethereum.wbtc.transferFrom
 
 **Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether decimals  
+**Protocol:** Wrapped Bitcoin  
+**Function:** Wrapped Bitcoin transferFrom  
 
-Call the decimals function on Wrapped Ether token
+Transfer Wrapped Bitcoin tokens from one address to another
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Wrapped Bitcoin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.weth.decimals",
+  "resource": "ethereum.wbtc.transferFrom",
   "effect": "ALLOW",
   "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.weth.balanceOf
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether balanceOf  
-
-Get the Wrapped Ether token balance of an address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| account | address | account parameter of type address |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.weth.balanceOf",
-  "effect": "ALLOW",
-  "constraints": {
-    "account": {
+    "sender": {
       "type": "fixed",
       "value": "example_value"
     },
-
-  }
-}
-```
-
-
-### ethereum.weth.symbol
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether symbol  
-
-Call the symbol function on Wrapped Ether token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.weth.symbol",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.weth.transfer
-
-**Chain:** Ethereum  
-**Protocol:** Wrapped Ether  
-**Function:** Wrapped Ether transfer  
-
-Transfer Wrapped Ether tokens to another address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.weth.transfer",
-  "effect": "ALLOW",
-  "constraints": {
     "recipient": {
       "type": "fixed",
       "value": "example_value"
@@ -1215,91 +1289,27 @@ Get the amount of Wrapped Ether tokens allowed to be spent by an address
 ```
 
 
-### ethereum.eth.transfer
+### ethereum.weth.approve
 
 **Chain:** Ethereum  
-**Protocol:** Ethereum  
-**Function:** Transfer ETH  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether approve  
 
-Transfer Ether to another address
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| recipient | address | The Ethereum address of the recipient |
-| amount | decimal | The amount of Ether to transfer |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.eth.transfer",
-  "effect": "ALLOW",
-  "constraints": {
-    "recipient": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "amount": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.usdc.name
-
-**Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin name  
-
-Call the name function on USD Coin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.usdc.name",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.usdc.approve
-
-**Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin approve  
-
-Approve an address to spend USD Coin tokens
+Approve an address to spend Wrapped Ether tokens
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of USD Coin tokens |
+| amount | number | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdc.approve",
+  "resource": "ethereum.weth.approve",
   "effect": "ALLOW",
   "constraints": {
     "spender": {
@@ -1316,109 +1326,13 @@ Approve an address to spend USD Coin tokens
 ```
 
 
-### ethereum.usdc.totalSupply
+### ethereum.weth.balanceOf
 
 **Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin totalSupply  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether balanceOf  
 
-Call the totalSupply function on USD Coin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.usdc.totalSupply",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.usdc.transferFrom
-
-**Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin transferFrom  
-
-Transfer USD Coin tokens from one address to another
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| sender | address | sender parameter of type address |
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of USD Coin tokens |
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.usdc.transferFrom",
-  "effect": "ALLOW",
-  "constraints": {
-    "sender": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "recipient": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "amount": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-
-  }
-}
-```
-
-
-### ethereum.usdc.decimals
-
-**Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin decimals  
-
-Call the decimals function on USD Coin token
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-
-
-**Example Policy Rule:**
-
-```json
-{
-  "resource": "ethereum.usdc.decimals",
-  "effect": "ALLOW",
-  "constraints": {
-
-  }
-}
-```
-
-
-### ethereum.usdc.balanceOf
-
-**Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin balanceOf  
-
-Get the USD Coin token balance of an address
+Get the Wrapped Ether token balance of an address
 
 **Parameters:**
 
@@ -1431,7 +1345,7 @@ Get the USD Coin token balance of an address
 
 ```json
 {
-  "resource": "ethereum.usdc.balanceOf",
+  "resource": "ethereum.weth.balanceOf",
   "effect": "ALLOW",
   "constraints": {
     "account": {
@@ -1444,13 +1358,13 @@ Get the USD Coin token balance of an address
 ```
 
 
-### ethereum.usdc.symbol
+### ethereum.weth.decimals
 
 **Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin symbol  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether decimals  
 
-Call the symbol function on USD Coin token
+Call the decimals function on Wrapped Ether token
 
 **Parameters:**
 
@@ -1462,7 +1376,7 @@ Call the symbol function on USD Coin token
 
 ```json
 {
-  "resource": "ethereum.usdc.symbol",
+  "resource": "ethereum.weth.decimals",
   "effect": "ALLOW",
   "constraints": {
 
@@ -1471,27 +1385,108 @@ Call the symbol function on USD Coin token
 ```
 
 
-### ethereum.usdc.transfer
+### ethereum.weth.name
 
 **Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin transfer  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether name  
 
-Transfer USD Coin tokens to another address
+Call the name function on Wrapped Ether token
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| recipient | address | recipient parameter of type address |
-| amount | number | The amount of USD Coin tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdc.transfer",
+  "resource": "ethereum.weth.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.weth.symbol
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether symbol  
+
+Call the symbol function on Wrapped Ether token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.weth.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.weth.totalSupply
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether totalSupply  
+
+Call the totalSupply function on Wrapped Ether token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.weth.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.weth.transfer
+
+**Chain:** Ethereum  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether transfer  
+
+Transfer Wrapped Ether tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Wrapped Ether tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.weth.transfer",
   "effect": "ALLOW",
   "constraints": {
     "recipient": {
@@ -1508,34 +1503,39 @@ Transfer USD Coin tokens to another address
 ```
 
 
-### ethereum.usdc.allowance
+### ethereum.weth.transferFrom
 
 **Chain:** Ethereum  
-**Protocol:** USD Coin  
-**Function:** USD Coin allowance  
+**Protocol:** Wrapped Ether  
+**Function:** Wrapped Ether transferFrom  
 
-Get the amount of USD Coin tokens allowed to be spent by an address
+Transfer Wrapped Ether tokens from one address to another
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| owner | address | owner parameter of type address |
-| spender | address | spender parameter of type address |
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | number | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
 
 ```json
 {
-  "resource": "ethereum.usdc.allowance",
+  "resource": "ethereum.weth.transferFrom",
   "effect": "ALLOW",
   "constraints": {
-    "owner": {
+    "sender": {
       "type": "fixed",
       "value": "example_value"
     },
-    "spender": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
       "type": "fixed",
       "value": "example_value"
     },

@@ -41,6 +41,11 @@
                     enable = true;
                   };
 
+                  packages = with pkgs; [
+                    protobuf
+                    protoc-gen-go
+                  ];
+
                   enterShell = ''
                     source .env
                     echo "recipes shell"

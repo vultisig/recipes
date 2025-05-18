@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package types;
+
+option go_package = "github.com/vultisig/recipes/types";
+
+import "google/protobuf/timestamp.proto";
+import "rule.proto";
+
+// Policy represents a set of rules that determine what a plugin is allowed to do
+message Policy {
+  // ID is a unique identifier for the policy
+  string id = 1;
+
+  // Name is a human-readable name for the policy
+  string name = 2;
+
+  // Description provides details about what the policy allows
+  string description = 3;
+
+  // Version is the policy version
+  string version = 4;
+
+  // Author is the identifier of the plugin developer
+  string author = 5;
+
+  // Rules is an ordered list of permission rules
+  repeated Rule rules = 6;
+
+  // CreatedAt is when the policy was created
+  google.protobuf.Timestamp created_at = 7;
+
+  // UpdatedAt is when the policy was last updated
+  google.protobuf.Timestamp updated_at = 8;
+}
