@@ -93,7 +93,7 @@ Approve an address to spend Dai Stablecoin tokens
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
+| amount | decimal | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
@@ -270,7 +270,7 @@ Transfer Dai Stablecoin tokens to another address
 | Name | Type | Description |
 |------|------|-------------|
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
+| amount | decimal | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
@@ -308,7 +308,7 @@ Transfer Dai Stablecoin tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Dai Stablecoin tokens |
+| amount | decimal | The amount of Dai Stablecoin tokens |
 
 
 **Example Policy Rule:**
@@ -423,7 +423,7 @@ Approve an address to spend USD Coin tokens
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of USD Coin tokens |
+| amount | decimal | The amount of USD Coin tokens |
 
 
 **Example Policy Rule:**
@@ -600,7 +600,7 @@ Transfer USD Coin tokens to another address
 | Name | Type | Description |
 |------|------|-------------|
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of USD Coin tokens |
+| amount | decimal | The amount of USD Coin tokens |
 
 
 **Example Policy Rule:**
@@ -638,7 +638,7 @@ Transfer USD Coin tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of USD Coin tokens |
+| amount | decimal | The amount of USD Coin tokens |
 
 
 **Example Policy Rule:**
@@ -716,7 +716,7 @@ Approve an address to spend Tether USD tokens
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Tether USD tokens |
+| amount | decimal | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
@@ -893,7 +893,7 @@ Transfer Tether USD tokens to another address
 | Name | Type | Description |
 |------|------|-------------|
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Tether USD tokens |
+| amount | decimal | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
@@ -931,7 +931,7 @@ Transfer Tether USD tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Tether USD tokens |
+| amount | decimal | The amount of Tether USD tokens |
 
 
 **Example Policy Rule:**
@@ -1009,7 +1009,7 @@ Approve an address to spend Wrapped Bitcoin tokens
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
+| amount | decimal | The amount of Wrapped Bitcoin tokens |
 
 
 **Example Policy Rule:**
@@ -1186,7 +1186,7 @@ Transfer Wrapped Bitcoin tokens to another address
 | Name | Type | Description |
 |------|------|-------------|
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
+| amount | decimal | The amount of Wrapped Bitcoin tokens |
 
 
 **Example Policy Rule:**
@@ -1224,7 +1224,7 @@ Transfer Wrapped Bitcoin tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Bitcoin tokens |
+| amount | decimal | The amount of Wrapped Bitcoin tokens |
 
 
 **Example Policy Rule:**
@@ -1302,7 +1302,7 @@ Approve an address to spend Wrapped Ether tokens
 | Name | Type | Description |
 |------|------|-------------|
 | spender | address | spender parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
+| amount | decimal | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
@@ -1479,7 +1479,7 @@ Transfer Wrapped Ether tokens to another address
 | Name | Type | Description |
 |------|------|-------------|
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
+| amount | decimal | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
@@ -1517,7 +1517,7 @@ Transfer Wrapped Ether tokens from one address to another
 |------|------|-------------|
 | sender | address | sender parameter of type address |
 | recipient | address | recipient parameter of type address |
-| amount | number | The amount of Wrapped Ether tokens |
+| amount | decimal | The amount of Wrapped Ether tokens |
 
 
 **Example Policy Rule:**
