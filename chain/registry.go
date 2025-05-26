@@ -27,12 +27,7 @@ func (r *Registry) Register(chain types.Chain) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	id := chain.ID()
-	if _, exists := r.chains[id]; exists {
-		return fmt.Errorf("chain with ID %q already registered", id)
-	}
-
-	r.chains[id] = chain
+	r.chains[chain.ID()] = chain
 	return nil
 }
 
