@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/bitcoin"
+	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -26,12 +27,7 @@ func (r *Registry) Register(chain types.Chain) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	id := chain.ID()
-	if _, exists := r.chains[id]; exists {
-		return fmt.Errorf("chain with ID %q already registered", id)
-	}
-
-	r.chains[id] = chain
+	r.chains[chain.ID()] = chain
 	return nil
 }
 
@@ -82,4 +78,5 @@ func GetChain(id string) (types.Chain, error) {
 func init() {
 	// Register Bitcoin chain
 	RegisterChain(bitcoin.NewChain())
+	RegisterChain(ethereum.NewEthereum())
 }

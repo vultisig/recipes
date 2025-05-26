@@ -30,11 +30,14 @@ func (b *Bitcoin) Description() string {
 }
 
 func (b *Bitcoin) GetProtocol(id string) (types.Protocol, error) {
+	if id == "btc" {
+		return NewBTC(), nil
+	}
 	return nil, fmt.Errorf("protocol %q not found or not supported on Bitcoin", id)
 }
 
 func (b *Bitcoin) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
-	return nil, fmt.Errorf("transaction parsing not supported on Bitcoin")
+	return ParseBitcoinTransaction(txHex)
 }
 
 // NewBitcoin creates a new Bitcoin chain instance
