@@ -41,8 +41,13 @@ func (p *ParsedBitcoinTransaction) ChainIdentifier() string { return "bitcoin" }
 // Hash returns the transaction hash.
 func (p *ParsedBitcoinTransaction) Hash() string { return p.txHash }
 
-// From returns empty string as Bitcoin doesn't have a simple from address in unsigned transactions
-func (p *ParsedBitcoinTransaction) From() string { return "" }
+// Return the first address as vultisig vaults don't use multiple addresses
+func (p *ParsedBitcoinTransaction) From() string {
+	if len(p.inputs) > 0 {
+		return decodeOutputScript(p.inputs[0].ScriptSig)
+	}
+	return ""
+}
 
 // To returns the first output address if it can be decoded, otherwise empty
 func (p *ParsedBitcoinTransaction) To() string {
