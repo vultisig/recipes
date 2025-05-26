@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/bitcoin"
+	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -82,4 +83,5 @@ func GetChain(id string) (types.Chain, error) {
 func init() {
 	// Register Bitcoin chain
 	RegisterChain(bitcoin.NewChain())
+	RegisterChain(ethereum.NewEthereum())
 }

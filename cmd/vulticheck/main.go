@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/vultisig/recipes/chain"
-	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -15,8 +14,8 @@ import (
 
 func main() {
 	policyPath := flag.String("policy", "", "Path to the policy.json file")
-	txHex := flag.String("tx", "", "Hex-encoded Ethereum transaction string")
-	// Future flags could include: chainID (e.g., "ethereum", "bitcoin")
+	txHex := flag.String("tx", "", "Hex-encoded transaction string")
+	chainID := flag.String("chain", "ethereum", "Chain ID (e.g., 'ethereum', 'bitcoin')")
 	flag.Parse()
 
 	if *policyPath == "" {
@@ -39,16 +38,19 @@ func main() {
 	}
 	fmt.Printf("Successfully loaded policy: %s (Name: %s)\n", policy.GetId(), policy.GetName())
 
-	// 2. Initialize Chain (currently hardcoded for Ethereum)
-	// In a multi-chain system, you'd select the chain based on policy or another param.
-	ethChain := ethereum.NewEthereum() // Returns types.Chain
+	// 2. Initialize Chain based on chainID flag
+	selectedChain, err := chain.GetChain(*chainID)
+	if err != nil {
+		log.Fatalf("Failed to get chain %s: %v", *chainID, err)
+	}
+	fmt.Printf("Using chain: %s (%s)\n", selectedChain.ID(), selectedChain.Name())
 
-	// If tokens or specific ABIs are involved, they might need to be loaded into the chain instance.
-	// For example, if a policy refers to "USDC" and the chain needs its token info/ABI:
-	// tokenListBytes, _ := os.ReadFile("path/to/your/ethereum_tokenlist.json")
-	// if tokenListBytes != nil { ethChain.(*ethereum.Ethereum).LoadTokenList(tokenListBytes) }
-	// genericERC20ABIBytes, _ := os.ReadFile("path/to/erc20.abi.json") // NewEthereum already loads a generic one
-	// if genericERC20ABIBytes != nil { ethChain.(*ethereum.Ethereum).LoadABI("ERC20", genericERC20ABIBytes) }
+	// If it's Ethereum and tokens or specific ABIs are involved, they might need to be loaded.
+	if *chainID == "ethereum" {
+		// For example, if a policy refers to "USDC" and the chain needs its token info/ABI:
+		// tokenListBytes, _ := os.ReadFile("path/to/your/ethereum_tokenlist.json")
+		// if tokenListBytes != nil { selectedChain.(*ethereum.Ethereum).LoadTokenList(tokenListBytes) }
+	}
 
 	// 3. Iterate through Policy Rules and Verify Transaction
 	transactionAllowedByPolicy := false
@@ -57,9 +59,9 @@ func main() {
 	var extractedTxParams map[string]interface{}
 
 	// Attempt to parse the transaction once, as it's the same for all rules on this chain.
-	decodedTx, err := ethChain.ParseTransaction(*txHex)
+	decodedTx, err := selectedChain.ParseTransaction(*txHex)
 	if err != nil {
-		log.Fatalf("Failed to parse Ethereum transaction '%s': %v. Cannot proceed.", *txHex, err)
+		log.Fatalf("Failed to parse %s transaction '%s': %v. Cannot proceed.", *chainID, *txHex, err)
 	}
 	fmt.Printf("Successfully parsed transaction: Hash=%s, From=%s, To=%s, Value=%s\n",
 		decodedTx.Hash(), decodedTx.From(), decodedTx.To(), decodedTx.Value().String())
@@ -75,8 +77,8 @@ func main() {
 			continue
 		}
 
-		if resourcePath.ChainId != "ethereum" {
-			log.Printf("Skipping rule %s: target chain %s is not 'ethereum'", rule.GetId(), resourcePath.ChainId)
+		if resourcePath.ChainId != *chainID {
+			log.Printf("Skipping rule %s: target chain %s is not '%s'", rule.GetId(), resourcePath.ChainId, *chainID)
 			continue
 		}
 
@@ -84,7 +86,7 @@ func main() {
 		fmt.Printf("  Targeting: Chain='%s', Asset='%s', Function='%s'\n",
 			resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
 
-		protocol, err := ethChain.GetProtocol(resourcePath.ProtocolId)
+		protocol, err := selectedChain.GetProtocol(resourcePath.ProtocolId)
 		if err != nil {
 			log.Printf("  Skipping rule %s: Could not get protocol for asset '%s': %v", rule.GetId(), resourcePath.ProtocolId, err)
 			continue
