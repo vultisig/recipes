@@ -4,57 +4,53 @@ package types;
 
 option go_package = "github.com/vultisig/recipes/types";
 
-import "google/protobuf/timestamp.proto";
-import "rule.proto";
+import "resource.proto";
+import "constraint.proto";
 
-// Recipe represents a complete transaction policy specification for plugins
-message Recipe {
-  // Unique identifier for the recipe (required)
-  string id = 1;
-
-  // Human-readable name for the recipe (required)
-  string name = 2;
-
-  // Detailed description of what the recipe allows (required)
-  string description = 3;
-
-  // Ordered list of permission rules that define allowed/denied actions (required)
-  repeated Rule rules = 4;
-
-  // Optional fields for enhanced recipe management
-  string version = 5;
-  string author = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
-  RecipeMetadata metadata = 9;
+// RecipeSchema defines what types of recipes/policies a plugin can handle
+// This is used for UI filtering and policy validation
+message RecipeSchema {
+  // Plugin identification
+  string plugin_id = 1;
+  string plugin_name = 2;
+  string plugin_version = 3;
+  
+  // What resources this plugin can handle with their parameter constraints
+  repeated ResourcePattern supported_resources = 4;
+  
+  // Plugin requirements
+  PluginRequirements requirements = 5;
 }
 
-// RecipeMetadata provides additional optional metadata for recipe management
-message RecipeMetadata {
-  // License under which the recipe is distributed
-  string license = 1;
+// ResourcePattern defines a specific resource and what constraints its parameters support
+message ResourcePattern {
+  // Specific resource (e.g., ethereum.eth.transfer)
+  ResourcePath resource_path = 1;
+  
+  // What constraint types each parameter of this resource supports
+  repeated ParameterConstraintCapability parameter_capabilities = 2;
+  
+  // Whether this resource is required by the plugin
+  bool required = 3;
+}
 
-  // Tags for categorization and discovery
-  repeated string tags = 2;
+// ParameterConstraintCapability defines what constraint types a parameter supports
+message ParameterConstraintCapability {
+  // Parameter name (e.g., "recipient", "amount")
+  string parameter_name = 1;
+  
+  // Supported constraint types for this parameter
+  repeated ConstraintType supported_types = 2;
+  
+  // Whether this parameter must be constrained
+  bool required = 3;
+}
 
-  // Documentation URL
-  string documentation_url = 3;
-
+// PluginRequirements defines what the plugin needs to function
+message PluginRequirements {
   // Minimum Vultisig version required
-  string min_vultisig_version = 4;
-
-  // Supported blockchain networks
-  repeated string supported_chains = 5;
-
-  // Supported protocols
-  repeated string supported_protocols = 6;
-
-  // Recipe category (e.g., "payroll", "trading", "defi")
-  string category = 7;
-
-  // Whether this recipe is deprecated
-  bool deprecated = 8;
-
-  // Deprecation reason and migration info
-  string deprecation_message = 9;
+  string min_vultisig_version = 1;
+  
+  // Required blockchain networks
+  repeated string required_chains = 2;
 }
