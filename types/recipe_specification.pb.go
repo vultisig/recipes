@@ -9,7 +9,6 @@ package types
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,41 +21,36 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Recipe represents a complete transaction policy specification for plugins
-type Recipe struct {
+// RecipeSchema defines what types of recipes/policies a plugin can handle
+// This is used for UI filtering and policy validation
+type RecipeSchema struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Unique identifier for the recipe (required)
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Human-readable name for the recipe (required)
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// Detailed description of what the recipe allows (required)
-	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// Ordered list of permission rules that define allowed/denied actions (required)
-	Rules []*Rule `protobuf:"bytes,4,rep,name=rules,proto3" json:"rules,omitempty"`
-	// Optional fields for enhanced recipe management
-	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
-	Author        string                 `protobuf:"bytes,6,opt,name=author,proto3" json:"author,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Metadata      *RecipeMetadata        `protobuf:"bytes,9,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Plugin identification
+	PluginId      string `protobuf:"bytes,1,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
+	PluginName    string `protobuf:"bytes,2,opt,name=plugin_name,json=pluginName,proto3" json:"plugin_name,omitempty"`
+	PluginVersion string `protobuf:"bytes,3,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
+	// What resources this plugin can handle with their parameter constraints
+	SupportedResources []*ResourcePattern `protobuf:"bytes,4,rep,name=supported_resources,json=supportedResources,proto3" json:"supported_resources,omitempty"`
+	// Plugin requirements
+	Requirements  *PluginRequirements `protobuf:"bytes,5,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Recipe) Reset() {
-	*x = Recipe{}
+func (x *RecipeSchema) Reset() {
+	*x = RecipeSchema{}
 	mi := &file_recipe_specification_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Recipe) String() string {
+func (x *RecipeSchema) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Recipe) ProtoMessage() {}
+func (*RecipeSchema) ProtoMessage() {}
 
-func (x *Recipe) ProtoReflect() protoreflect.Message {
+func (x *RecipeSchema) ProtoReflect() protoreflect.Message {
 	mi := &file_recipe_specification_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -68,113 +62,73 @@ func (x *Recipe) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Recipe.ProtoReflect.Descriptor instead.
-func (*Recipe) Descriptor() ([]byte, []int) {
+// Deprecated: Use RecipeSchema.ProtoReflect.Descriptor instead.
+func (*RecipeSchema) Descriptor() ([]byte, []int) {
 	return file_recipe_specification_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Recipe) GetId() string {
+func (x *RecipeSchema) GetPluginId() string {
 	if x != nil {
-		return x.Id
+		return x.PluginId
 	}
 	return ""
 }
 
-func (x *Recipe) GetName() string {
+func (x *RecipeSchema) GetPluginName() string {
 	if x != nil {
-		return x.Name
+		return x.PluginName
 	}
 	return ""
 }
 
-func (x *Recipe) GetDescription() string {
+func (x *RecipeSchema) GetPluginVersion() string {
 	if x != nil {
-		return x.Description
+		return x.PluginVersion
 	}
 	return ""
 }
 
-func (x *Recipe) GetRules() []*Rule {
+func (x *RecipeSchema) GetSupportedResources() []*ResourcePattern {
 	if x != nil {
-		return x.Rules
+		return x.SupportedResources
 	}
 	return nil
 }
 
-func (x *Recipe) GetVersion() string {
+func (x *RecipeSchema) GetRequirements() *PluginRequirements {
 	if x != nil {
-		return x.Version
-	}
-	return ""
-}
-
-func (x *Recipe) GetAuthor() string {
-	if x != nil {
-		return x.Author
-	}
-	return ""
-}
-
-func (x *Recipe) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
+		return x.Requirements
 	}
 	return nil
 }
 
-func (x *Recipe) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-func (x *Recipe) GetMetadata() *RecipeMetadata {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
-// RecipeMetadata provides additional optional metadata for recipe management
-type RecipeMetadata struct {
+// ResourcePattern defines a specific resource and what constraints its parameters support
+type ResourcePattern struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// License under which the recipe is distributed
-	License string `protobuf:"bytes,1,opt,name=license,proto3" json:"license,omitempty"`
-	// Tags for categorization and discovery
-	Tags []string `protobuf:"bytes,2,rep,name=tags,proto3" json:"tags,omitempty"`
-	// Documentation URL
-	DocumentationUrl string `protobuf:"bytes,3,opt,name=documentation_url,json=documentationUrl,proto3" json:"documentation_url,omitempty"`
-	// Minimum Vultisig version required
-	MinVultisigVersion string `protobuf:"bytes,4,opt,name=min_vultisig_version,json=minVultisigVersion,proto3" json:"min_vultisig_version,omitempty"`
-	// Supported blockchain networks
-	SupportedChains []string `protobuf:"bytes,5,rep,name=supported_chains,json=supportedChains,proto3" json:"supported_chains,omitempty"`
-	// Supported protocols
-	SupportedProtocols []string `protobuf:"bytes,6,rep,name=supported_protocols,json=supportedProtocols,proto3" json:"supported_protocols,omitempty"`
-	// Recipe category (e.g., "payroll", "trading", "defi")
-	Category string `protobuf:"bytes,7,opt,name=category,proto3" json:"category,omitempty"`
-	// Whether this recipe is deprecated
-	Deprecated bool `protobuf:"varint,8,opt,name=deprecated,proto3" json:"deprecated,omitempty"`
-	// Deprecation reason and migration info
-	DeprecationMessage string `protobuf:"bytes,9,opt,name=deprecation_message,json=deprecationMessage,proto3" json:"deprecation_message,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Specific resource (e.g., ethereum.eth.transfer)
+	ResourcePath *ResourcePath `protobuf:"bytes,1,opt,name=resource_path,json=resourcePath,proto3" json:"resource_path,omitempty"`
+	// What constraint types each parameter of this resource supports
+	ParameterCapabilities []*ParameterConstraintCapability `protobuf:"bytes,2,rep,name=parameter_capabilities,json=parameterCapabilities,proto3" json:"parameter_capabilities,omitempty"`
+	// Whether this resource is required by the plugin
+	Required      bool `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RecipeMetadata) Reset() {
-	*x = RecipeMetadata{}
+func (x *ResourcePattern) Reset() {
+	*x = ResourcePattern{}
 	mi := &file_recipe_specification_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RecipeMetadata) String() string {
+func (x *ResourcePattern) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RecipeMetadata) ProtoMessage() {}
+func (*ResourcePattern) ProtoMessage() {}
 
-func (x *RecipeMetadata) ProtoReflect() protoreflect.Message {
+func (x *ResourcePattern) ProtoReflect() protoreflect.Message {
 	mi := &file_recipe_specification_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -186,104 +140,174 @@ func (x *RecipeMetadata) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RecipeMetadata.ProtoReflect.Descriptor instead.
-func (*RecipeMetadata) Descriptor() ([]byte, []int) {
+// Deprecated: Use ResourcePattern.ProtoReflect.Descriptor instead.
+func (*ResourcePattern) Descriptor() ([]byte, []int) {
 	return file_recipe_specification_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *RecipeMetadata) GetLicense() string {
+func (x *ResourcePattern) GetResourcePath() *ResourcePath {
 	if x != nil {
-		return x.License
-	}
-	return ""
-}
-
-func (x *RecipeMetadata) GetTags() []string {
-	if x != nil {
-		return x.Tags
+		return x.ResourcePath
 	}
 	return nil
 }
 
-func (x *RecipeMetadata) GetDocumentationUrl() string {
+func (x *ResourcePattern) GetParameterCapabilities() []*ParameterConstraintCapability {
 	if x != nil {
-		return x.DocumentationUrl
+		return x.ParameterCapabilities
+	}
+	return nil
+}
+
+func (x *ResourcePattern) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+// ParameterConstraintCapability defines what constraint types a parameter supports
+type ParameterConstraintCapability struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Parameter name (e.g., "recipient", "amount")
+	ParameterName string `protobuf:"bytes,1,opt,name=parameter_name,json=parameterName,proto3" json:"parameter_name,omitempty"`
+	// Supported constraint types for this parameter
+	SupportedTypes []ConstraintType `protobuf:"varint,2,rep,packed,name=supported_types,json=supportedTypes,proto3,enum=types.ConstraintType" json:"supported_types,omitempty"`
+	// Whether this parameter must be constrained
+	Required      bool `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ParameterConstraintCapability) Reset() {
+	*x = ParameterConstraintCapability{}
+	mi := &file_recipe_specification_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ParameterConstraintCapability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ParameterConstraintCapability) ProtoMessage() {}
+
+func (x *ParameterConstraintCapability) ProtoReflect() protoreflect.Message {
+	mi := &file_recipe_specification_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ParameterConstraintCapability.ProtoReflect.Descriptor instead.
+func (*ParameterConstraintCapability) Descriptor() ([]byte, []int) {
+	return file_recipe_specification_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ParameterConstraintCapability) GetParameterName() string {
+	if x != nil {
+		return x.ParameterName
 	}
 	return ""
 }
 
-func (x *RecipeMetadata) GetMinVultisigVersion() string {
+func (x *ParameterConstraintCapability) GetSupportedTypes() []ConstraintType {
+	if x != nil {
+		return x.SupportedTypes
+	}
+	return nil
+}
+
+func (x *ParameterConstraintCapability) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+// PluginRequirements defines what the plugin needs to function
+type PluginRequirements struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Minimum Vultisig version required
+	MinVultisigVersion string `protobuf:"bytes,1,opt,name=min_vultisig_version,json=minVultisigVersion,proto3" json:"min_vultisig_version,omitempty"`
+	// Required blockchain networks
+	RequiredChains []string `protobuf:"bytes,2,rep,name=required_chains,json=requiredChains,proto3" json:"required_chains,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PluginRequirements) Reset() {
+	*x = PluginRequirements{}
+	mi := &file_recipe_specification_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginRequirements) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginRequirements) ProtoMessage() {}
+
+func (x *PluginRequirements) ProtoReflect() protoreflect.Message {
+	mi := &file_recipe_specification_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PluginRequirements.ProtoReflect.Descriptor instead.
+func (*PluginRequirements) Descriptor() ([]byte, []int) {
+	return file_recipe_specification_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PluginRequirements) GetMinVultisigVersion() string {
 	if x != nil {
 		return x.MinVultisigVersion
 	}
 	return ""
 }
 
-func (x *RecipeMetadata) GetSupportedChains() []string {
+func (x *PluginRequirements) GetRequiredChains() []string {
 	if x != nil {
-		return x.SupportedChains
+		return x.RequiredChains
 	}
 	return nil
-}
-
-func (x *RecipeMetadata) GetSupportedProtocols() []string {
-	if x != nil {
-		return x.SupportedProtocols
-	}
-	return nil
-}
-
-func (x *RecipeMetadata) GetCategory() string {
-	if x != nil {
-		return x.Category
-	}
-	return ""
-}
-
-func (x *RecipeMetadata) GetDeprecated() bool {
-	if x != nil {
-		return x.Deprecated
-	}
-	return false
-}
-
-func (x *RecipeMetadata) GetDeprecationMessage() string {
-	if x != nil {
-		return x.DeprecationMessage
-	}
-	return ""
 }
 
 var File_recipe_specification_proto protoreflect.FileDescriptor
 
 const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
-	"\x1arecipe_specification.proto\x12\x05types\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\n" +
-	"rule.proto\"\xcc\x02\n" +
-	"\x06Recipe\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12!\n" +
-	"\x05rules\x18\x04 \x03(\v2\v.types.RuleR\x05rules\x12\x18\n" +
-	"\aversion\x18\x05 \x01(\tR\aversion\x12\x16\n" +
-	"\x06author\x18\x06 \x01(\tR\x06author\x129\n" +
-	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
-	"\bmetadata\x18\t \x01(\v2\x15.types.RecipeMetadataR\bmetadata\"\xe6\x02\n" +
-	"\x0eRecipeMetadata\x12\x18\n" +
-	"\alicense\x18\x01 \x01(\tR\alicense\x12\x12\n" +
-	"\x04tags\x18\x02 \x03(\tR\x04tags\x12+\n" +
-	"\x11documentation_url\x18\x03 \x01(\tR\x10documentationUrl\x120\n" +
-	"\x14min_vultisig_version\x18\x04 \x01(\tR\x12minVultisigVersion\x12)\n" +
-	"\x10supported_chains\x18\x05 \x03(\tR\x0fsupportedChains\x12/\n" +
-	"\x13supported_protocols\x18\x06 \x03(\tR\x12supportedProtocols\x12\x1a\n" +
-	"\bcategory\x18\a \x01(\tR\bcategory\x12\x1e\n" +
-	"\n" +
-	"deprecated\x18\b \x01(\bR\n" +
-	"deprecated\x12/\n" +
-	"\x13deprecation_message\x18\t \x01(\tR\x12deprecationMessageB#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\"\xfb\x01\n" +
+	"\fRecipeSchema\x12\x1b\n" +
+	"\tplugin_id\x18\x01 \x01(\tR\bpluginId\x12\x1f\n" +
+	"\vplugin_name\x18\x02 \x01(\tR\n" +
+	"pluginName\x12%\n" +
+	"\x0eplugin_version\x18\x03 \x01(\tR\rpluginVersion\x12G\n" +
+	"\x13supported_resources\x18\x04 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12=\n" +
+	"\frequirements\x18\x05 \x01(\v2\x19.types.PluginRequirementsR\frequirements\"\xc4\x01\n" +
+	"\x0fResourcePattern\x128\n" +
+	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
+	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
+	"\brequired\x18\x03 \x01(\bR\brequired\"\xa2\x01\n" +
+	"\x1dParameterConstraintCapability\x12%\n" +
+	"\x0eparameter_name\x18\x01 \x01(\tR\rparameterName\x12>\n" +
+	"\x0fsupported_types\x18\x02 \x03(\x0e2\x15.types.ConstraintTypeR\x0esupportedTypes\x12\x1a\n" +
+	"\brequired\x18\x03 \x01(\bR\brequired\"o\n" +
+	"\x12PluginRequirements\x120\n" +
+	"\x14min_vultisig_version\x18\x01 \x01(\tR\x12minVultisigVersion\x12'\n" +
+	"\x0frequired_chains\x18\x02 \x03(\tR\x0erequiredChainsB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_recipe_specification_proto_rawDescOnce sync.Once
@@ -297,23 +321,26 @@ func file_recipe_specification_proto_rawDescGZIP() []byte {
 	return file_recipe_specification_proto_rawDescData
 }
 
-var file_recipe_specification_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_recipe_specification_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_recipe_specification_proto_goTypes = []any{
-	(*Recipe)(nil),                // 0: types.Recipe
-	(*RecipeMetadata)(nil),        // 1: types.RecipeMetadata
-	(*Rule)(nil),                  // 2: types.Rule
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(*RecipeSchema)(nil),                  // 0: types.RecipeSchema
+	(*ResourcePattern)(nil),               // 1: types.ResourcePattern
+	(*ParameterConstraintCapability)(nil), // 2: types.ParameterConstraintCapability
+	(*PluginRequirements)(nil),            // 3: types.PluginRequirements
+	(*ResourcePath)(nil),                  // 4: types.ResourcePath
+	(ConstraintType)(0),                   // 5: types.ConstraintType
 }
 var file_recipe_specification_proto_depIdxs = []int32{
-	2, // 0: types.Recipe.rules:type_name -> types.Rule
-	3, // 1: types.Recipe.created_at:type_name -> google.protobuf.Timestamp
-	3, // 2: types.Recipe.updated_at:type_name -> google.protobuf.Timestamp
-	1, // 3: types.Recipe.metadata:type_name -> types.RecipeMetadata
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	1, // 0: types.RecipeSchema.supported_resources:type_name -> types.ResourcePattern
+	3, // 1: types.RecipeSchema.requirements:type_name -> types.PluginRequirements
+	4, // 2: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
+	2, // 3: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
+	5, // 4: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_recipe_specification_proto_init() }
@@ -321,14 +348,15 @@ func file_recipe_specification_proto_init() {
 	if File_recipe_specification_proto != nil {
 		return
 	}
-	file_rule_proto_init()
+	file_resource_proto_init()
+	file_constraint_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_recipe_specification_proto_rawDesc), len(file_recipe_specification_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
