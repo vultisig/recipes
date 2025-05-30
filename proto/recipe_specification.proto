@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package types;
+
+option go_package = "github.com/vultisig/recipes/types";
+
+import "google/protobuf/timestamp.proto";
+import "rule.proto";
+
+// Recipe represents a complete transaction policy specification for plugins
+message Recipe {
+  // Unique identifier for the recipe (required)
+  string id = 1;
+
+  // Human-readable name for the recipe (required)
+  string name = 2;
+
+  // Detailed description of what the recipe allows (required)
+  string description = 3;
+
+  // Ordered list of permission rules that define allowed/denied actions (required)
+  repeated Rule rules = 4;
+
+  // Optional fields for enhanced recipe management
+  string version = 5;
+  string author = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  RecipeMetadata metadata = 9;
+}
+
+// RecipeMetadata provides additional optional metadata for recipe management
+message RecipeMetadata {
+  // License under which the recipe is distributed
+  string license = 1;
+
+  // Tags for categorization and discovery
+  repeated string tags = 2;
+
+  // Documentation URL
+  string documentation_url = 3;
+
+  // Minimum Vultisig version required
+  string min_vultisig_version = 4;
+
+  // Supported blockchain networks
+  repeated string supported_chains = 5;
+
+  // Supported protocols
+  repeated string supported_protocols = 6;
+
+  // Recipe category (e.g., "payroll", "trading", "defi")
+  string category = 7;
+
+  // Whether this recipe is deprecated
+  bool deprecated = 8;
+
+  // Deprecation reason and migration info
+  string deprecation_message = 9;
+}
