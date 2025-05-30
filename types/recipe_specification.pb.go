@@ -23,27 +23,22 @@ const (
 )
 
 // Recipe represents a complete transaction policy specification for plugins
-// This is the canonical definition of what a recipe contains and supports
 type Recipe struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Unique identifier for the recipe
+	// Unique identifier for the recipe (required)
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Human-readable name for the recipe
+	// Human-readable name for the recipe (required)
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// Detailed description of what the recipe allows
+	// Detailed description of what the recipe allows (required)
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// Semantic version of the recipe (e.g., "1.0.0")
-	Version string `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
-	// Author/organization identifier
-	Author string `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
-	// Ordered list of permission rules that define allowed/denied actions
-	Rules []*Rule `protobuf:"bytes,6,rep,name=rules,proto3" json:"rules,omitempty"`
-	// Creation timestamp
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	// Last update timestamp
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Optional metadata for enhanced recipe management
-	Metadata      *RecipeMetadata `protobuf:"bytes,9,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Ordered list of permission rules that define allowed/denied actions (required)
+	Rules []*Rule `protobuf:"bytes,4,rep,name=rules,proto3" json:"rules,omitempty"`
+	// Optional fields for enhanced recipe management
+	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Author        string                 `protobuf:"bytes,6,opt,name=author,proto3" json:"author,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Metadata      *RecipeMetadata        `protobuf:"bytes,9,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -99,6 +94,13 @@ func (x *Recipe) GetDescription() string {
 	return ""
 }
 
+func (x *Recipe) GetRules() []*Rule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
 func (x *Recipe) GetVersion() string {
 	if x != nil {
 		return x.Version
@@ -111,13 +113,6 @@ func (x *Recipe) GetAuthor() string {
 		return x.Author
 	}
 	return ""
-}
-
-func (x *Recipe) GetRules() []*Rule {
-	if x != nil {
-		return x.Rules
-	}
-	return nil
 }
 
 func (x *Recipe) GetCreatedAt() *timestamppb.Timestamp {
@@ -141,7 +136,7 @@ func (x *Recipe) GetMetadata() *RecipeMetadata {
 	return nil
 }
 
-// RecipeMetadata provides additional metadata for recipe management
+// RecipeMetadata provides additional optional metadata for recipe management
 type RecipeMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// License under which the recipe is distributed
@@ -268,10 +263,10 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\x06Recipe\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\tR\aversion\x12\x16\n" +
-	"\x06author\x18\x05 \x01(\tR\x06author\x12!\n" +
-	"\x05rules\x18\x06 \x03(\v2\v.types.RuleR\x05rules\x129\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12!\n" +
+	"\x05rules\x18\x04 \x03(\v2\v.types.RuleR\x05rules\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x16\n" +
+	"\x06author\x18\x06 \x01(\tR\x06author\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
