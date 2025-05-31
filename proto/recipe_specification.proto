@@ -6,6 +6,7 @@ option go_package = "github.com/vultisig/recipes/types";
 
 import "resource.proto";
 import "constraint.proto";
+import "scheduling.proto";
 
 // RecipeSchema defines what types of recipes/policies a plugin can handle
 // This is used for UI filtering and policy validation
@@ -18,8 +19,11 @@ message RecipeSchema {
   // What resources this plugin can handle with their parameter constraints
   repeated ResourcePattern supported_resources = 4;
   
+  // What scheduling capabilities this plugin supports
+  SchedulingCapability scheduling = 5;
+  
   // Plugin requirements
-  PluginRequirements requirements = 5;
+  PluginRequirements requirements = 6;
 }
 
 // ResourcePattern defines a specific resource and what constraints its parameters support
@@ -45,6 +49,8 @@ message ParameterConstraintCapability {
   // Whether this parameter must be constrained
   bool required = 3;
 }
+
+
 
 // PluginRequirements defines what the plugin needs to function
 message PluginRequirements {

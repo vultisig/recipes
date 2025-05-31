@@ -31,8 +31,10 @@ type RecipeSchema struct {
 	PluginVersion string `protobuf:"bytes,3,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
 	// What resources this plugin can handle with their parameter constraints
 	SupportedResources []*ResourcePattern `protobuf:"bytes,4,rep,name=supported_resources,json=supportedResources,proto3" json:"supported_resources,omitempty"`
+	// What scheduling capabilities this plugin supports
+	Scheduling *SchedulingCapability `protobuf:"bytes,5,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	// Plugin requirements
-	Requirements  *PluginRequirements `protobuf:"bytes,5,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	Requirements  *PluginRequirements `protobuf:"bytes,6,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -91,6 +93,13 @@ func (x *RecipeSchema) GetPluginVersion() string {
 func (x *RecipeSchema) GetSupportedResources() []*ResourcePattern {
 	if x != nil {
 		return x.SupportedResources
+	}
+	return nil
+}
+
+func (x *RecipeSchema) GetScheduling() *SchedulingCapability {
+	if x != nil {
+		return x.Scheduling
 	}
 	return nil
 }
@@ -289,14 +298,17 @@ var File_recipe_specification_proto protoreflect.FileDescriptor
 
 const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
-	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\"\xfb\x01\n" +
+	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\x1a\x10scheduling.proto\"\xb8\x02\n" +
 	"\fRecipeSchema\x12\x1b\n" +
 	"\tplugin_id\x18\x01 \x01(\tR\bpluginId\x12\x1f\n" +
 	"\vplugin_name\x18\x02 \x01(\tR\n" +
 	"pluginName\x12%\n" +
 	"\x0eplugin_version\x18\x03 \x01(\tR\rpluginVersion\x12G\n" +
-	"\x13supported_resources\x18\x04 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12=\n" +
-	"\frequirements\x18\x05 \x01(\v2\x19.types.PluginRequirementsR\frequirements\"\xc4\x01\n" +
+	"\x13supported_resources\x18\x04 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12;\n" +
+	"\n" +
+	"scheduling\x18\x05 \x01(\v2\x1b.types.SchedulingCapabilityR\n" +
+	"scheduling\x12=\n" +
+	"\frequirements\x18\x06 \x01(\v2\x19.types.PluginRequirementsR\frequirements\"\xc4\x01\n" +
 	"\x0fResourcePattern\x128\n" +
 	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
 	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
@@ -327,20 +339,22 @@ var file_recipe_specification_proto_goTypes = []any{
 	(*ResourcePattern)(nil),               // 1: types.ResourcePattern
 	(*ParameterConstraintCapability)(nil), // 2: types.ParameterConstraintCapability
 	(*PluginRequirements)(nil),            // 3: types.PluginRequirements
-	(*ResourcePath)(nil),                  // 4: types.ResourcePath
-	(ConstraintType)(0),                   // 5: types.ConstraintType
+	(*SchedulingCapability)(nil),          // 4: types.SchedulingCapability
+	(*ResourcePath)(nil),                  // 5: types.ResourcePath
+	(ConstraintType)(0),                   // 6: types.ConstraintType
 }
 var file_recipe_specification_proto_depIdxs = []int32{
 	1, // 0: types.RecipeSchema.supported_resources:type_name -> types.ResourcePattern
-	3, // 1: types.RecipeSchema.requirements:type_name -> types.PluginRequirements
-	4, // 2: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
-	2, // 3: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
-	5, // 4: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 1: types.RecipeSchema.scheduling:type_name -> types.SchedulingCapability
+	3, // 2: types.RecipeSchema.requirements:type_name -> types.PluginRequirements
+	5, // 3: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
+	2, // 4: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
+	6, // 5: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_recipe_specification_proto_init() }
@@ -350,6 +364,7 @@ func file_recipe_specification_proto_init() {
 	}
 	file_resource_proto_init()
 	file_constraint_proto_init()
+	file_scheduling_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
