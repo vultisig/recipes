@@ -6,6 +6,7 @@ option go_package = "github.com/vultisig/recipes/types";
 
 import "google/protobuf/timestamp.proto";
 import "rule.proto";
+import "scheduling.proto";
 
 // Policy represents a set of rules that determine what a plugin is allowed to do
 message Policy {
@@ -32,4 +33,37 @@ message Policy {
 
   // UpdatedAt is when the policy was last updated
   google.protobuf.Timestamp updated_at = 8;
+
+  // Schedule defines when this policy should be executed (optional)
+  Schedule schedule = 9;
+}
+
+// Schedule defines when and how often a policy should be executed
+message Schedule {
+  // Version of the scheduling specification
+  string schedule_version = 1;
+  
+  // Frequency of execution
+  ScheduleFrequency frequency = 2;
+  
+  // When to start the schedule
+  google.protobuf.Timestamp start_time = 3;
+  
+  // When to end the schedule (optional, if not set, runs indefinitely)
+  google.protobuf.Timestamp end_time = 4;
+  
+  // Maximum number of executions (optional)
+  int32 max_executions = 5;
+  
+  // Current execution count
+  int32 execution_count = 6;
+  
+  // Whether the schedule is currently active
+  bool is_active = 7;
+  
+  // Last execution time
+  google.protobuf.Timestamp last_execution = 8;
+  
+  // Next scheduled execution time
+  google.protobuf.Timestamp next_execution = 9;
 }
