@@ -7,14 +7,17 @@ option go_package = "github.com/vultisig/recipes/types";
 
 // SchedulingCapability defines what scheduling patterns a plugin supports
 message SchedulingCapability {
+    // Version of the scheduling specification this plugin supports
+    string schedule_version = 1;
+    
     // Whether this plugin supports scheduling at all
-    bool supports_scheduling = 1;
+    bool supports_scheduling = 2;
     
     // Supported schedule frequencies
-    repeated ScheduleFrequency supported_frequencies = 2;
+    repeated ScheduleFrequency supported_frequencies = 3;
   
     // Maximum number of scheduled executions allowed  
-    int32 max_scheduled_executions = 3;
+    int32 max_scheduled_executions = 4;
   }
   
 // ScheduleFrequency defines supported scheduling frequencies

@@ -85,12 +85,14 @@ func (ScheduleFrequency) EnumDescriptor() ([]byte, []int) {
 // SchedulingCapability defines what scheduling patterns a plugin supports
 type SchedulingCapability struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Version of the scheduling specification this plugin supports
+	ScheduleVersion string `protobuf:"bytes,1,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// Whether this plugin supports scheduling at all
-	SupportsScheduling bool `protobuf:"varint,1,opt,name=supports_scheduling,json=supportsScheduling,proto3" json:"supports_scheduling,omitempty"`
+	SupportsScheduling bool `protobuf:"varint,2,opt,name=supports_scheduling,json=supportsScheduling,proto3" json:"supports_scheduling,omitempty"`
 	// Supported schedule frequencies
-	SupportedFrequencies []ScheduleFrequency `protobuf:"varint,2,rep,packed,name=supported_frequencies,json=supportedFrequencies,proto3,enum=types.ScheduleFrequency" json:"supported_frequencies,omitempty"`
+	SupportedFrequencies []ScheduleFrequency `protobuf:"varint,3,rep,packed,name=supported_frequencies,json=supportedFrequencies,proto3,enum=types.ScheduleFrequency" json:"supported_frequencies,omitempty"`
 	// Maximum number of scheduled executions allowed
-	MaxScheduledExecutions int32 `protobuf:"varint,3,opt,name=max_scheduled_executions,json=maxScheduledExecutions,proto3" json:"max_scheduled_executions,omitempty"`
+	MaxScheduledExecutions int32 `protobuf:"varint,4,opt,name=max_scheduled_executions,json=maxScheduledExecutions,proto3" json:"max_scheduled_executions,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -125,6 +127,13 @@ func (*SchedulingCapability) Descriptor() ([]byte, []int) {
 	return file_scheduling_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *SchedulingCapability) GetScheduleVersion() string {
+	if x != nil {
+		return x.ScheduleVersion
+	}
+	return ""
+}
+
 func (x *SchedulingCapability) GetSupportsScheduling() bool {
 	if x != nil {
 		return x.SupportsScheduling
@@ -150,11 +159,12 @@ var File_scheduling_proto protoreflect.FileDescriptor
 
 const file_scheduling_proto_rawDesc = "" +
 	"\n" +
-	"\x10scheduling.proto\x12\x05types\"\xd0\x01\n" +
-	"\x14SchedulingCapability\x12/\n" +
-	"\x13supports_scheduling\x18\x01 \x01(\bR\x12supportsScheduling\x12M\n" +
-	"\x15supported_frequencies\x18\x02 \x03(\x0e2\x18.types.ScheduleFrequencyR\x14supportedFrequencies\x128\n" +
-	"\x18max_scheduled_executions\x18\x03 \x01(\x05R\x16maxScheduledExecutions*\xd4\x01\n" +
+	"\x10scheduling.proto\x12\x05types\"\xfb\x01\n" +
+	"\x14SchedulingCapability\x12)\n" +
+	"\x10schedule_version\x18\x01 \x01(\tR\x0fscheduleVersion\x12/\n" +
+	"\x13supports_scheduling\x18\x02 \x01(\bR\x12supportsScheduling\x12M\n" +
+	"\x15supported_frequencies\x18\x03 \x03(\x0e2\x18.types.ScheduleFrequencyR\x14supportedFrequencies\x128\n" +
+	"\x18max_scheduled_executions\x18\x04 \x01(\x05R\x16maxScheduledExecutions*\xd4\x01\n" +
 	"\x11ScheduleFrequency\x12\"\n" +
 	"\x1eSCHEDULE_FREQUENCY_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19SCHEDULE_FREQUENCY_HOURLY\x10\x01\x12\x1c\n" +
