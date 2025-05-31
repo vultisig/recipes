@@ -235,10 +235,10 @@ type PluginRequirements struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Minimum Vultisig version required
 	MinVultisigVersion string `protobuf:"bytes,1,opt,name=min_vultisig_version,json=minVultisigVersion,proto3" json:"min_vultisig_version,omitempty"`
-	// Required blockchain networks
-	RequiredChains []string `protobuf:"bytes,2,rep,name=required_chains,json=requiredChains,proto3" json:"required_chains,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Supported blockchain networks
+	SupportedChains []string `protobuf:"bytes,2,rep,name=supported_chains,json=supportedChains,proto3" json:"supported_chains,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PluginRequirements) Reset() {
@@ -278,9 +278,9 @@ func (x *PluginRequirements) GetMinVultisigVersion() string {
 	return ""
 }
 
-func (x *PluginRequirements) GetRequiredChains() []string {
+func (x *PluginRequirements) GetSupportedChains() []string {
 	if x != nil {
-		return x.RequiredChains
+		return x.SupportedChains
 	}
 	return nil
 }
@@ -304,10 +304,10 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\x1dParameterConstraintCapability\x12%\n" +
 	"\x0eparameter_name\x18\x01 \x01(\tR\rparameterName\x12>\n" +
 	"\x0fsupported_types\x18\x02 \x03(\x0e2\x15.types.ConstraintTypeR\x0esupportedTypes\x12\x1a\n" +
-	"\brequired\x18\x03 \x01(\bR\brequired\"o\n" +
+	"\brequired\x18\x03 \x01(\bR\brequired\"q\n" +
 	"\x12PluginRequirements\x120\n" +
-	"\x14min_vultisig_version\x18\x01 \x01(\tR\x12minVultisigVersion\x12'\n" +
-	"\x0frequired_chains\x18\x02 \x03(\tR\x0erequiredChainsB#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x14min_vultisig_version\x18\x01 \x01(\tR\x12minVultisigVersion\x12)\n" +
+	"\x10supported_chains\x18\x02 \x03(\tR\x0fsupportedChainsB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_recipe_specification_proto_rawDescOnce sync.Once

@@ -51,6 +51,6 @@ message PluginRequirements {
   // Minimum Vultisig version required
   string min_vultisig_version = 1;
   
-  // Required blockchain networks
-  repeated string required_chains = 2;
+  // Supported blockchain networks
+  repeated string supported_chains = 2;
 }
