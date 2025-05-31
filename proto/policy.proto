@@ -36,13 +36,14 @@ message Policy {
 
   // Schedule defines when this policy should be executed (optional)
   Schedule schedule = 9;
+
+  // Version of the scheduling specification
+  string schedule_version = 10;
 }
 
 // Schedule defines when and how often a policy should be executed
 message Schedule {
-  // Version of the scheduling specification
-  string schedule_version = 1;
-  
+
   // Frequency of execution
   ScheduleFrequency frequency = 2;
   
@@ -53,17 +54,5 @@ message Schedule {
   google.protobuf.Timestamp end_time = 4;
   
   // Maximum number of executions (optional)
-  int32 max_executions = 5;
-  
-  // Current execution count
-  int32 execution_count = 6;
-  
-  // Whether the schedule is currently active
-  bool is_active = 7;
-  
-  // Last execution time
-  google.protobuf.Timestamp last_execution = 8;
-  
-  // Next scheduled execution time
-  google.protobuf.Timestamp next_execution = 9;
+  int32 max_executions = 5;  
 }

@@ -42,9 +42,11 @@ type Policy struct {
 	// UpdatedAt is when the policy was last updated
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Schedule defines when this policy should be executed (optional)
-	Schedule      *Schedule `protobuf:"bytes,9,opt,name=schedule,proto3" json:"schedule,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Schedule *Schedule `protobuf:"bytes,9,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	// Version of the scheduling specification
+	ScheduleVersion string `protobuf:"bytes,10,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Policy) Reset() {
@@ -140,11 +142,16 @@ func (x *Policy) GetSchedule() *Schedule {
 	return nil
 }
 
+func (x *Policy) GetScheduleVersion() string {
+	if x != nil {
+		return x.ScheduleVersion
+	}
+	return ""
+}
+
 // Schedule defines when and how often a policy should be executed
 type Schedule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Version of the scheduling specification
-	ScheduleVersion string `protobuf:"bytes,1,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// Frequency of execution
 	Frequency ScheduleFrequency `protobuf:"varint,2,opt,name=frequency,proto3,enum=types.ScheduleFrequency" json:"frequency,omitempty"`
 	// When to start the schedule
@@ -153,14 +160,6 @@ type Schedule struct {
 	EndTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	// Maximum number of executions (optional)
 	MaxExecutions int32 `protobuf:"varint,5,opt,name=max_executions,json=maxExecutions,proto3" json:"max_executions,omitempty"`
-	// Current execution count
-	ExecutionCount int32 `protobuf:"varint,6,opt,name=execution_count,json=executionCount,proto3" json:"execution_count,omitempty"`
-	// Whether the schedule is currently active
-	IsActive bool `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	// Last execution time
-	LastExecution *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_execution,json=lastExecution,proto3" json:"last_execution,omitempty"`
-	// Next scheduled execution time
-	NextExecution *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=next_execution,json=nextExecution,proto3" json:"next_execution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -195,13 +194,6 @@ func (*Schedule) Descriptor() ([]byte, []int) {
 	return file_policy_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Schedule) GetScheduleVersion() string {
-	if x != nil {
-		return x.ScheduleVersion
-	}
-	return ""
-}
-
 func (x *Schedule) GetFrequency() ScheduleFrequency {
 	if x != nil {
 		return x.Frequency
@@ -230,40 +222,12 @@ func (x *Schedule) GetMaxExecutions() int32 {
 	return 0
 }
 
-func (x *Schedule) GetExecutionCount() int32 {
-	if x != nil {
-		return x.ExecutionCount
-	}
-	return 0
-}
-
-func (x *Schedule) GetIsActive() bool {
-	if x != nil {
-		return x.IsActive
-	}
-	return false
-}
-
-func (x *Schedule) GetLastExecution() *timestamppb.Timestamp {
-	if x != nil {
-		return x.LastExecution
-	}
-	return nil
-}
-
-func (x *Schedule) GetNextExecution() *timestamppb.Timestamp {
-	if x != nil {
-		return x.NextExecution
-	}
-	return nil
-}
-
 var File_policy_proto protoreflect.FileDescriptor
 
 const file_policy_proto_rawDesc = "" +
 	"\n" +
 	"\fpolicy.proto\x12\x05types\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\n" +
-	"rule.proto\x1a\x10scheduling.proto\"\xc6\x02\n" +
+	"rule.proto\x1a\x10scheduling.proto\"\xf1\x02\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -275,18 +239,15 @@ const file_policy_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12+\n" +
-	"\bschedule\x18\t \x01(\v2\x0f.types.ScheduleR\bschedule\"\xd2\x03\n" +
-	"\bSchedule\x12)\n" +
-	"\x10schedule_version\x18\x01 \x01(\tR\x0fscheduleVersion\x126\n" +
+	"\bschedule\x18\t \x01(\v2\x0f.types.ScheduleR\bschedule\x12)\n" +
+	"\x10schedule_version\x18\n" +
+	" \x01(\tR\x0fscheduleVersion\"\xdb\x01\n" +
+	"\bSchedule\x126\n" +
 	"\tfrequency\x18\x02 \x01(\x0e2\x18.types.ScheduleFrequencyR\tfrequency\x129\n" +
 	"\n" +
 	"start_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
 	"\bend_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12%\n" +
-	"\x0emax_executions\x18\x05 \x01(\x05R\rmaxExecutions\x12'\n" +
-	"\x0fexecution_count\x18\x06 \x01(\x05R\x0eexecutionCount\x12\x1b\n" +
-	"\tis_active\x18\a \x01(\bR\bisActive\x12A\n" +
-	"\x0elast_execution\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\rlastExecution\x12A\n" +
-	"\x0enext_execution\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\rnextExecutionB#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x0emax_executions\x18\x05 \x01(\x05R\rmaxExecutionsB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_policy_proto_rawDescOnce sync.Once
@@ -316,13 +277,11 @@ var file_policy_proto_depIdxs = []int32{
 	4, // 4: types.Schedule.frequency:type_name -> types.ScheduleFrequency
 	3, // 5: types.Schedule.start_time:type_name -> google.protobuf.Timestamp
 	3, // 6: types.Schedule.end_time:type_name -> google.protobuf.Timestamp
-	3, // 7: types.Schedule.last_execution:type_name -> google.protobuf.Timestamp
-	3, // 8: types.Schedule.next_execution:type_name -> google.protobuf.Timestamp
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_policy_proto_init() }
