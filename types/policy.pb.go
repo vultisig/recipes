@@ -32,7 +32,7 @@ type Policy struct {
 	// Description provides details about what the policy allows
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// Version is the policy version
-	Version string `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	Version int32 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
 	// Author is the identifier of the plugin developer
 	Author string `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
 	// Rules is an ordered list of permission rules
@@ -44,7 +44,7 @@ type Policy struct {
 	// Schedule defines when this policy should be executed (optional)
 	Schedule *Schedule `protobuf:"bytes,9,opt,name=schedule,proto3" json:"schedule,omitempty"`
 	// Version of the scheduling specification
-	ScheduleVersion string `protobuf:"bytes,10,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
+	ScheduleVersion int32 `protobuf:"varint,10,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -100,11 +100,11 @@ func (x *Policy) GetDescription() string {
 	return ""
 }
 
-func (x *Policy) GetVersion() string {
+func (x *Policy) GetVersion() int32 {
 	if x != nil {
 		return x.Version
 	}
-	return ""
+	return 0
 }
 
 func (x *Policy) GetAuthor() string {
@@ -142,11 +142,11 @@ func (x *Policy) GetSchedule() *Schedule {
 	return nil
 }
 
-func (x *Policy) GetScheduleVersion() string {
+func (x *Policy) GetScheduleVersion() int32 {
 	if x != nil {
 		return x.ScheduleVersion
 	}
-	return ""
+	return 0
 }
 
 // Schedule defines when and how often a policy should be executed
@@ -232,7 +232,7 @@ const file_policy_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\tR\aversion\x12\x16\n" +
+	"\aversion\x18\x04 \x01(\x05R\aversion\x12\x16\n" +
 	"\x06author\x18\x05 \x01(\tR\x06author\x12!\n" +
 	"\x05rules\x18\x06 \x03(\v2\v.types.RuleR\x05rules\x129\n" +
 	"\n" +
@@ -241,7 +241,7 @@ const file_policy_proto_rawDesc = "" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12+\n" +
 	"\bschedule\x18\t \x01(\v2\x0f.types.ScheduleR\bschedule\x12)\n" +
 	"\x10schedule_version\x18\n" +
-	" \x01(\tR\x0fscheduleVersion\"\xdb\x01\n" +
+	" \x01(\x05R\x0fscheduleVersion\"\xdb\x01\n" +
 	"\bSchedule\x126\n" +
 	"\tfrequency\x18\x02 \x01(\x0e2\x18.types.ScheduleFrequencyR\tfrequency\x129\n" +
 	"\n" +

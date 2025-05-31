@@ -26,13 +26,13 @@ const (
 type RecipeSchema struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Schema version for future compatibility
-	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	// Scheduling specification version this plugin supports
-	ScheduleVersion string `protobuf:"bytes,2,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
+	ScheduleVersion int32 `protobuf:"varint,2,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// Plugin identification
 	PluginId      string `protobuf:"bytes,3,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
 	PluginName    string `protobuf:"bytes,4,opt,name=plugin_name,json=pluginName,proto3" json:"plugin_name,omitempty"`
-	PluginVersion string `protobuf:"bytes,5,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
+	PluginVersion int32  `protobuf:"varint,5,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
 	// What resources this plugin can handle with their parameter constraints
 	SupportedResources []*ResourcePattern `protobuf:"bytes,6,rep,name=supported_resources,json=supportedResources,proto3" json:"supported_resources,omitempty"`
 	// What scheduling capabilities this plugin supports
@@ -73,18 +73,18 @@ func (*RecipeSchema) Descriptor() ([]byte, []int) {
 	return file_recipe_specification_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RecipeSchema) GetVersion() string {
+func (x *RecipeSchema) GetVersion() int32 {
 	if x != nil {
 		return x.Version
 	}
-	return ""
+	return 0
 }
 
-func (x *RecipeSchema) GetScheduleVersion() string {
+func (x *RecipeSchema) GetScheduleVersion() int32 {
 	if x != nil {
 		return x.ScheduleVersion
 	}
-	return ""
+	return 0
 }
 
 func (x *RecipeSchema) GetPluginId() string {
@@ -101,11 +101,11 @@ func (x *RecipeSchema) GetPluginName() string {
 	return ""
 }
 
-func (x *RecipeSchema) GetPluginVersion() string {
+func (x *RecipeSchema) GetPluginVersion() int32 {
 	if x != nil {
 		return x.PluginVersion
 	}
-	return ""
+	return 0
 }
 
 func (x *RecipeSchema) GetSupportedResources() []*ResourcePattern {
@@ -261,7 +261,7 @@ func (x *ParameterConstraintCapability) GetRequired() bool {
 type PluginRequirements struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Minimum Vultisig version required
-	MinVultisigVersion string `protobuf:"bytes,1,opt,name=min_vultisig_version,json=minVultisigVersion,proto3" json:"min_vultisig_version,omitempty"`
+	MinVultisigVersion int32 `protobuf:"varint,1,opt,name=min_vultisig_version,json=minVultisigVersion,proto3" json:"min_vultisig_version,omitempty"`
 	// Supported blockchain networks
 	SupportedChains []string `protobuf:"bytes,2,rep,name=supported_chains,json=supportedChains,proto3" json:"supported_chains,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -298,11 +298,11 @@ func (*PluginRequirements) Descriptor() ([]byte, []int) {
 	return file_recipe_specification_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *PluginRequirements) GetMinVultisigVersion() string {
+func (x *PluginRequirements) GetMinVultisigVersion() int32 {
 	if x != nil {
 		return x.MinVultisigVersion
 	}
-	return ""
+	return 0
 }
 
 func (x *PluginRequirements) GetSupportedChains() []string {
@@ -318,12 +318,12 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
 	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\x1a\x10scheduling.proto\"\xfd\x02\n" +
 	"\fRecipeSchema\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\x12)\n" +
-	"\x10schedule_version\x18\x02 \x01(\tR\x0fscheduleVersion\x12\x1b\n" +
+	"\aversion\x18\x01 \x01(\x05R\aversion\x12)\n" +
+	"\x10schedule_version\x18\x02 \x01(\x05R\x0fscheduleVersion\x12\x1b\n" +
 	"\tplugin_id\x18\x03 \x01(\tR\bpluginId\x12\x1f\n" +
 	"\vplugin_name\x18\x04 \x01(\tR\n" +
 	"pluginName\x12%\n" +
-	"\x0eplugin_version\x18\x05 \x01(\tR\rpluginVersion\x12G\n" +
+	"\x0eplugin_version\x18\x05 \x01(\x05R\rpluginVersion\x12G\n" +
 	"\x13supported_resources\x18\x06 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12;\n" +
 	"\n" +
 	"scheduling\x18\a \x01(\v2\x1b.types.SchedulingCapabilityR\n" +
@@ -338,7 +338,7 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\x0fsupported_types\x18\x02 \x03(\x0e2\x15.types.ConstraintTypeR\x0esupportedTypes\x12\x1a\n" +
 	"\brequired\x18\x03 \x01(\bR\brequired\"q\n" +
 	"\x12PluginRequirements\x120\n" +
-	"\x14min_vultisig_version\x18\x01 \x01(\tR\x12minVultisigVersion\x12)\n" +
+	"\x14min_vultisig_version\x18\x01 \x01(\x05R\x12minVultisigVersion\x12)\n" +
 	"\x10supported_chains\x18\x02 \x03(\tR\x0fsupportedChainsB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (

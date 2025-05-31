@@ -20,7 +20,7 @@ message Policy {
   string description = 3;
 
   // Version is the policy version
-  string version = 4;
+  int32 version = 4;
 
   // Author is the identifier of the plugin developer
   string author = 5;
@@ -38,7 +38,7 @@ message Policy {
   Schedule schedule = 9;
 
   // Version of the scheduling specification
-  string schedule_version = 10;
+  int32 schedule_version = 10;
 }
 
 // Schedule defines when and how often a policy should be executed
