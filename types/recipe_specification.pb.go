@@ -25,16 +25,20 @@ const (
 // This is used for UI filtering and policy validation
 type RecipeSchema struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Schema version for future compatibility
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// Scheduling specification version this plugin supports
+	ScheduleVersion string `protobuf:"bytes,2,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// Plugin identification
-	PluginId      string `protobuf:"bytes,1,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
-	PluginName    string `protobuf:"bytes,2,opt,name=plugin_name,json=pluginName,proto3" json:"plugin_name,omitempty"`
-	PluginVersion string `protobuf:"bytes,3,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
+	PluginId      string `protobuf:"bytes,3,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
+	PluginName    string `protobuf:"bytes,4,opt,name=plugin_name,json=pluginName,proto3" json:"plugin_name,omitempty"`
+	PluginVersion string `protobuf:"bytes,5,opt,name=plugin_version,json=pluginVersion,proto3" json:"plugin_version,omitempty"`
 	// What resources this plugin can handle with their parameter constraints
-	SupportedResources []*ResourcePattern `protobuf:"bytes,4,rep,name=supported_resources,json=supportedResources,proto3" json:"supported_resources,omitempty"`
+	SupportedResources []*ResourcePattern `protobuf:"bytes,6,rep,name=supported_resources,json=supportedResources,proto3" json:"supported_resources,omitempty"`
 	// What scheduling capabilities this plugin supports
-	Scheduling *SchedulingCapability `protobuf:"bytes,5,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
+	Scheduling *SchedulingCapability `protobuf:"bytes,7,opt,name=scheduling,proto3" json:"scheduling,omitempty"`
 	// Plugin requirements
-	Requirements  *PluginRequirements `protobuf:"bytes,6,opt,name=requirements,proto3" json:"requirements,omitempty"`
+	Requirements  *PluginRequirements `protobuf:"bytes,8,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,6 +71,20 @@ func (x *RecipeSchema) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RecipeSchema.ProtoReflect.Descriptor instead.
 func (*RecipeSchema) Descriptor() ([]byte, []int) {
 	return file_recipe_specification_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *RecipeSchema) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *RecipeSchema) GetScheduleVersion() string {
+	if x != nil {
+		return x.ScheduleVersion
+	}
+	return ""
 }
 
 func (x *RecipeSchema) GetPluginId() string {
@@ -298,17 +316,19 @@ var File_recipe_specification_proto protoreflect.FileDescriptor
 
 const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
-	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\x1a\x10scheduling.proto\"\xb8\x02\n" +
-	"\fRecipeSchema\x12\x1b\n" +
-	"\tplugin_id\x18\x01 \x01(\tR\bpluginId\x12\x1f\n" +
-	"\vplugin_name\x18\x02 \x01(\tR\n" +
+	"\x1arecipe_specification.proto\x12\x05types\x1a\x0eresource.proto\x1a\x10constraint.proto\x1a\x10scheduling.proto\"\xfd\x02\n" +
+	"\fRecipeSchema\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12)\n" +
+	"\x10schedule_version\x18\x02 \x01(\tR\x0fscheduleVersion\x12\x1b\n" +
+	"\tplugin_id\x18\x03 \x01(\tR\bpluginId\x12\x1f\n" +
+	"\vplugin_name\x18\x04 \x01(\tR\n" +
 	"pluginName\x12%\n" +
-	"\x0eplugin_version\x18\x03 \x01(\tR\rpluginVersion\x12G\n" +
-	"\x13supported_resources\x18\x04 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12;\n" +
+	"\x0eplugin_version\x18\x05 \x01(\tR\rpluginVersion\x12G\n" +
+	"\x13supported_resources\x18\x06 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12;\n" +
 	"\n" +
-	"scheduling\x18\x05 \x01(\v2\x1b.types.SchedulingCapabilityR\n" +
+	"scheduling\x18\a \x01(\v2\x1b.types.SchedulingCapabilityR\n" +
 	"scheduling\x12=\n" +
-	"\frequirements\x18\x06 \x01(\v2\x19.types.PluginRequirementsR\frequirements\"\xc4\x01\n" +
+	"\frequirements\x18\b \x01(\v2\x19.types.PluginRequirementsR\frequirements\"\xc4\x01\n" +
 	"\x0fResourcePattern\x128\n" +
 	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
 	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
