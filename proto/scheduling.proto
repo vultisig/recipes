@@ -17,8 +17,8 @@ message SchedulingCapability {
     int32 max_scheduled_executions = 3;
   }
   
-  // ScheduleFrequency defines supported scheduling frequencies
-  enum ScheduleFrequency {
+// ScheduleFrequency defines supported scheduling frequencies
+enum ScheduleFrequency {
     SCHEDULE_FREQUENCY_UNSPECIFIED = 0;
     
     // High frequency (DCA style)
