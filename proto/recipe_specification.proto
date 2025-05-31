@@ -4,8 +4,8 @@ package types;
 
 option go_package = "github.com/vultisig/recipes/types";
 
-import "proto/resource.proto";
-import "proto/constraint.proto";
+import "resource.proto";
+import "constraint.proto";
 
 // RecipeSchema defines what types of recipes/policies a plugin can handle
 // This is used for UI filtering and policy validation
