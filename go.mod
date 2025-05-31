@@ -3,13 +3,13 @@ module github.com/vultisig/recipes
 go 1.24.2
 
 require (
+	github.com/btcsuite/btcd v0.24.2
 	github.com/ethereum/go-ethereum v1.15.11
 	google.golang.org/protobuf v1.36.6
 )
 
 require (
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect
-	github.com/btcsuite/btcd v0.24.2 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect

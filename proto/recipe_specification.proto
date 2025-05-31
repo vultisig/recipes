@@ -6,20 +6,30 @@ option go_package = "github.com/vultisig/recipes/types";
 
 import "resource.proto";
 import "constraint.proto";
+import "scheduling.proto";
 
 // RecipeSchema defines what types of recipes/policies a plugin can handle
 // This is used for UI filtering and policy validation
 message RecipeSchema {
+  // Schema version for future compatibility
+  int32 version = 1;
+  
+  // Scheduling specification version this plugin supports
+  int32 schedule_version = 2;
+  
   // Plugin identification
-  string plugin_id = 1;
-  string plugin_name = 2;
-  string plugin_version = 3;
+  string plugin_id = 3;
+  string plugin_name = 4;
+  int32 plugin_version = 5;
   
   // What resources this plugin can handle with their parameter constraints
-  repeated ResourcePattern supported_resources = 4;
+  repeated ResourcePattern supported_resources = 6;
+  
+  // What scheduling capabilities this plugin supports
+  SchedulingCapability scheduling = 7;
   
   // Plugin requirements
-  PluginRequirements requirements = 5;
+  PluginRequirements requirements = 8;
 }
 
 // ResourcePattern defines a specific resource and what constraints its parameters support
@@ -49,7 +59,7 @@ message ParameterConstraintCapability {
 // PluginRequirements defines what the plugin needs to function
 message PluginRequirements {
   // Minimum Vultisig version required
-  string min_vultisig_version = 1;
+  int32 min_vultisig_version = 1;
   
   // Supported blockchain networks
   repeated string supported_chains = 2;
