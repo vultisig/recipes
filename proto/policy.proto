@@ -55,5 +55,5 @@ message Schedule {
   // Maximum number of executions (optional)
   int32 max_executions = 5;
 
-  int32 interval = 6; //  this is supplement  to
+  int32 interval = 6; //  this is supplement  to ScheduleFrequency, so we can do like every two days etc.
 }
