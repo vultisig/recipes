@@ -160,7 +160,7 @@ type Schedule struct {
 	EndTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	// Maximum number of executions (optional)
 	MaxExecutions int32 `protobuf:"varint,5,opt,name=max_executions,json=maxExecutions,proto3" json:"max_executions,omitempty"`
-	Interval      int32 `protobuf:"varint,6,opt,name=interval,proto3" json:"interval,omitempty"` //  this is supplement  to
+	Interval      int32 `protobuf:"varint,6,opt,name=interval,proto3" json:"interval,omitempty"` //  this is supplement  to ScheduleFrequency, so we can do like every two days etc.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
