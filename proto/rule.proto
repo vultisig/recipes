@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package types;
 
-option go_package = "github.com/vultisig/recipes/types";
-
 import "constraint.proto";
 import "parameter_constraint.proto";
+
+option go_package = "github.com/vultisig/recipes/types";
 
 // Rule represents a single permission rule in the policy
 message Rule {

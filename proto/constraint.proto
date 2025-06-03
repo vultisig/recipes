@@ -45,4 +45,4 @@ message Constraint {
   string denominated_in = 8;
   string period = 9;
   bool required = 10;
-} 
+}
