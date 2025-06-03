@@ -17,4 +17,4 @@ message ResourcePath {
 
   // Full is the complete resource path
   string full = 4;
-} 
+}
