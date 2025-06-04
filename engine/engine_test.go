@@ -48,8 +48,9 @@ func TestEngine(t *testing.T) {
 	engine.SetLogger(log.Default())
 
 	for _, testVector := range testVectors {
-		t.Run(testVector.policyPath, func(t *testing.T) {
-			policyFileBytes, err := os.ReadFile(testVector.policyPath)
+		tv := testVector
+		t.Run(tv.policyPath, func(t *testing.T) {
+			policyFileBytes, err := os.ReadFile(tv.policyPath)
 			if err != nil {
 				t.Fatalf("Failed to read policy file: %v", err)
 			}
@@ -59,12 +60,12 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to unmarshal policy: %v", err)
 			}
 
-			chain, err := chain.GetChain(testVector.chainStr)
+			chain, err := chain.GetChain(tv.chainStr)
 			if err != nil {
 				t.Fatalf("Failed to get chain: %v", err)
 			}
 
-			tx, err := chain.ParseTransaction(testVector.txHex)
+			tx, err := chain.ParseTransaction(tv.txHex)
 			if err != nil {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
@@ -74,11 +75,11 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
 
-			if transactionAllowedByPolicy != testVector.shouldPass {
-				t.Fatalf("Transaction allowed by policy: %t, expected: %t", transactionAllowedByPolicy, testVector.shouldPass)
+			if transactionAllowedByPolicy != tv.shouldPass {
+				t.Fatalf("Transaction allowed by policy: %t, expected: %t", transactionAllowedByPolicy, tv.shouldPass)
 			}
 
-			if testVector.shouldPass && matchingRule == nil {
+			if tv.shouldPass && matchingRule == nil {
 				t.Fatalf("No matching rule found")
 			}
 		})
