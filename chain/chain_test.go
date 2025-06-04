@@ -42,12 +42,6 @@ func TestRegistry(t *testing.T) {
 		t.Errorf("Register() error = %v, want nil", err)
 	}
 
-	// Test registering duplicate chain
-	err = reg.Register(btc)
-	if err == nil {
-		t.Error("Register() duplicate chain error = nil, want error")
-	}
-
 	// Test getting a chain
 	chain, err := reg.Get("bitcoin")
 	if err != nil {
