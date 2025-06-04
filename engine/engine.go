@@ -37,6 +37,7 @@ func (e *Engine) Evaluate(policy types.Policy, chain types.Chain, tx types.Decod
 
 		if resourcePath.ChainId != chain.ID() {
 			e.logger.Printf("Skipping rule %s: target chain %s is not '%s'", rule.GetId(), resourcePath.ChainId, chain.ID())
+			continue
 		}
 
 		e.logger.Printf("Evaluating rule %s: %s", rule.GetId(), resourcePathString)
