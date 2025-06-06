@@ -3,6 +3,7 @@ package engine
 import (
 	"io"
 	"log"
+
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 )
@@ -22,7 +23,7 @@ func (e *Engine) SetLogger(log *log.Logger) {
 	e.logger = log
 }
 
-func (e *Engine) Evaluate(policy types.Policy, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
+func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
 	for _, rule := range policy.GetRules() {
 		if rule == nil {
 			continue
