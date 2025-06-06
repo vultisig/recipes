@@ -5,40 +5,40 @@ import (
 	"os"
 	"testing"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/types"
-	"google.golang.org/protobuf/encoding/protojson"
 )
-
 
 var testVectors = []struct {
 	policyPath string
-	chainStr string
-	txHex string
+	chainStr   string
+	txHex      string
 	shouldPass bool
 }{
 	{
 		policyPath: "../testdata/payroll.json",
-		chainStr: "ethereum",
-		txHex: "0x00ec80872386f26fc10000830f424094b0b00000000000000000000000000000000000018806f05b59d3b2000080",
+		chainStr:   "ethereum",
+		txHex:      "0x00ec80872386f26fc10000830f424094b0b00000000000000000000000000000000000018806f05b59d3b2000080",
 		shouldPass: true,
 	},
 	{
 		policyPath: "../testdata/payroll.json",
-		chainStr: "bitcoin",
-		txHex: "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		chainStr:   "bitcoin",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: true,
 	},
 	{
 		policyPath: "../testdata/payroll.json",
-		chainStr: "ethereum",
-		txHex: "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
+		chainStr:   "ethereum",
+		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
 		shouldPass: false,
 	},
 	{
 		policyPath: "../testdata/payroll.json",
-		chainStr: "bitcoin",
-		txHex: "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		chainStr:   "bitcoin",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: false,
 	},
 }
@@ -60,17 +60,17 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to unmarshal policy: %v", err)
 			}
 
-			chain, err := chain.GetChain(tv.chainStr)
+			c, err := chain.GetChain(tv.chainStr)
 			if err != nil {
 				t.Fatalf("Failed to get chain: %v", err)
 			}
 
-			tx, err := chain.ParseTransaction(tv.txHex)
+			tx, err := c.ParseTransaction(tv.txHex)
 			if err != nil {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
 
-			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(policy, chain, tx)
+			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx)
 			if err != nil {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
