@@ -79,7 +79,7 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	params := make(map[string]interface{})
 	params["recipient"] = decodedTx.To()
 	params["amount"] = decodedTx.Value() // Amount as *big.Int in satoshis
-	
+
 	// Also store a string representation for display
 	displayParams := make(map[string]interface{})
 	displayParams["recipient"] = decodedTx.To()
@@ -90,10 +90,10 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 		if pc == nil {
 			continue
 		}
-		
+
 		paramName := pc.GetParameterName()
 		constraint := pc.GetConstraint()
-		
+
 		if constraint == nil {
 			return false, nil, fmt.Errorf("nil constraint found for parameter %q", paramName)
 		}
@@ -118,11 +118,11 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 			default:
 				return false, nil, fmt.Errorf("parameter %q has unsupported type %T", paramName, paramValue)
 			}
-			
+
 			if !strings.EqualFold(valStr, constraint.GetFixedValue()) {
 				return false, nil, nil // Constraint not met
 			}
-			
+
 		case types.ConstraintType_CONSTRAINT_TYPE_MAX:
 			var amount *big.Int
 			switch v := paramValue.(type) {
@@ -137,16 +137,16 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 			default:
 				return false, nil, fmt.Errorf("parameter %q has unsupported type %T for MAX constraint", paramName, paramValue)
 			}
-			
+
 			maxValue, ok := new(big.Int).SetString(constraint.GetMaxValue(), 10)
 			if !ok {
 				return false, nil, fmt.Errorf("constraint max_value %q is not a valid number", constraint.GetMaxValue())
 			}
-			
+
 			if amount.Cmp(maxValue) > 0 {
 				return false, nil, nil // Amount exceeds maximum
 			}
-			
+
 		default:
 			// Skip unsupported constraint types for now
 			continue

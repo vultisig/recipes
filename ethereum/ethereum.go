@@ -3,6 +3,7 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
 
@@ -15,6 +16,8 @@ import (
 // GenericERC20ABI is a standard ABI for ERC20 transfer function.
 // [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 const GenericERC20ABIJson = `[{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}]`
+
+const ethEvmChainID = 1
 
 // ParsedEthereumTransaction implements the vultisigTypes.DecodedTransaction interface for Ethereum.
 type ParsedEthereumTransaction struct {
@@ -60,6 +63,7 @@ type Ethereum struct {
 	abiRegistry     map[string]*ABI // Changed from *ABI to *types.ABI
 	tokenList       *TokenList
 	genericERC20ABI *ABI // Changed from *ABI to *types.ABI
+	chainID         *big.Int
 }
 
 // ID returns the unique identifier for the Ethereum chain
@@ -187,6 +191,28 @@ func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 	}
 
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
+}
+
+func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse) (string, error) {
+	if len(sigs) != 1 {
+		return "", fmt.Errorf("expected exactly one signature, got %d", len(sigs))
+	}
+
+	payloadDecoded, err := DecodeUnsignedPayload(common.FromHex(proposedTxHex))
+	if err != nil {
+		return "", fmt.Errorf("ethereum.DecodeUnsignedPayload: %w", err)
+	}
+
+	var sig []byte
+	sig = append(sig, common.FromHex(sigs[0].R)...)
+	sig = append(sig, common.FromHex(sigs[0].S)...)
+	sig = append(sig, common.FromHex(sigs[0].RecoveryID)...)
+
+	tx, err := types.NewTx(payloadDecoded).WithSignature(types.NewPragueSigner(big.NewInt(ethEvmChainID)), sig)
+	if err != nil {
+		return "", fmt.Errorf("gethtypes.NewTx.WithSignature: %w", err)
+	}
+	return tx.Hash().Hex(), nil
 }
 
 // NewEthereum creates a new Ethereum chain instance
