@@ -5,10 +5,11 @@ import (
 	"log"
 	"os"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/engine"
 	"github.com/vultisig/recipes/types"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 		log.Fatalf("Failed to get chain %s: %v", *chainID, err)
 	}
 	log.Printf("Using chain: %s (%s)\n", selectedChain.ID(), selectedChain.Name())
-	
+
 	// Attempt to parse the transaction once, as it's the same for all rules on this chain.
 	decodedTx, err := selectedChain.ParseTransaction(*txHex)
 	if err != nil {
@@ -52,9 +53,9 @@ func main() {
 	log.Printf("Successfully parsed transaction: Hash=%s, From=%s, To=%s, Value=%s\n",
 		decodedTx.Hash(), decodedTx.From(), decodedTx.To(), decodedTx.Value().String())
 
-	engine := engine.NewEngine()
-	engine.SetLogger(log.Default())
-	transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(policy, selectedChain, decodedTx)
+	eng := engine.NewEngine()
+	eng.SetLogger(log.Default())
+	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
 	if err != nil {
 		log.Printf("Failed to evaluate transaction: %v", err)
 	}
