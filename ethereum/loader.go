@@ -17,6 +17,9 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 	// Register native ETH protocol
 	protocol.RegisterProtocol(NewETH())
 
+	// Register protocol validators
+	registerProtocolValidators()
+
 	// Register token protocols from token list with dynamically loaded ERC20 functions
 	if ethereumChain.tokenList != nil && erc20ABI != nil {
 		for _, token := range ethereumChain.tokenList.Tokens {
@@ -70,12 +73,23 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 		// Skip registering the ERC20 ABI directly, as it's used for tokens
 		if name != "erc20" {
 			description := fmt.Sprintf("Protocol generated from %s ABI", name)
+
+			// Use the generic ABI protocol creation - validators are automatically applied
 			abiProtocol := NewABIProtocol(name, name, description, abi)
 			protocol.RegisterProtocol(abiProtocol)
 		}
 	}
 
 	return nil
+}
+
+// registerProtocolValidators registers all available protocol validators
+func registerProtocolValidators() {
+
+	// Register Uniswap v2 validator
+	uniswapValidator := NewUniswapV2Validator()
+	GlobalValidatorRegistry.RegisterValidator(uniswapValidator.GetProtocolID(), uniswapValidator)
+
 }
 
 // LoadTokenListFromFile loads a token list from a file
