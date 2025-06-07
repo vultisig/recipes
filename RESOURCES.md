@@ -412,8 +412,8 @@ Add liquidity to a token pair with slippage protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| tokenA | address | tokenA parameter of type address (Must be a valid ERC20 token contract address) |
-| tokenB | address | tokenB parameter of type address (Must be a valid ERC20 token contract address) |
+| tokenA | address | tokenA - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| tokenB | address | tokenB - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
 | amountADesired | decimal | amountADesired - Desired amount (maximum you're willing to provide) (Must be positive and within reasonable bounds) |
 | amountBDesired | decimal | amountBDesired - Desired amount (maximum you're willing to provide) (Must be positive and within reasonable bounds) |
 | amountAMin | decimal | amountAMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
@@ -479,7 +479,7 @@ Add liquidity to an ETH/token pair with slippage protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| token | address | token parameter of type address (Must be a valid ERC20 token contract address) |
+| token | address | token - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
 | amountTokenDesired | decimal | amountTokenDesired - Desired amount (maximum you're willing to provide) (Must be positive and within reasonable bounds) |
 | amountTokenMin | decimal | amountTokenMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | amountETHMin | decimal | amountETHMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
@@ -768,8 +768,8 @@ Remove liquidity from a token pair with minimum output protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| tokenA | address | tokenA parameter of type address (Must be a valid ERC20 token contract address) |
-| tokenB | address | tokenB parameter of type address (Must be a valid ERC20 token contract address) |
+| tokenA | address | tokenA - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| tokenB | address | tokenB - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
 | liquidity | decimal | Amount of LP tokens to remove |
 | amountAMin | decimal | amountAMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | amountBMin | decimal | amountBMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
@@ -830,7 +830,7 @@ Remove liquidity from an ETH/token pair with minimum output protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| token | address | token parameter of type address (Must be a valid ERC20 token contract address) |
+| token | address | token - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
 | liquidity | decimal | Amount of LP tokens to remove |
 | amountTokenMin | decimal | amountTokenMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | amountETHMin | decimal | amountETHMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
@@ -881,16 +881,16 @@ Remove liquidity from an ETH/token pair with minimum output protection
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.removeLiquidityETHSupportingFeeOnTransferTokens  
 
-Call the removeLiquidityETHSupportingFeeOnTransferTokens function on uniswapv2_router
+Remove liquidity from ETH/token pair supporting fee-on-transfer tokens
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| token | address | token parameter of type address (Must be a valid ERC20 token contract address) |
-| liquidity | decimal | liquidity parameter of type uint256 |
-| amountTokenMin | decimal | amountTokenMin parameter of type uint256 (Must be positive and within reasonable bounds) |
-| amountETHMin | decimal | amountETHMin parameter of type uint256 (Must be positive and within reasonable bounds) |
+| token | address | token - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| liquidity | decimal | Amount of LP tokens to remove |
+| amountTokenMin | decimal | amountTokenMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
+| amountETHMin | decimal | amountETHMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
 
@@ -938,22 +938,22 @@ Call the removeLiquidityETHSupportingFeeOnTransferTokens function on uniswapv2_r
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.removeLiquidityETHWithPermit  
 
-Call the removeLiquidityETHWithPermit function on uniswapv2_router
+Remove ETH/token liquidity using permit signature
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| token | address | token parameter of type address (Must be a valid ERC20 token contract address) |
-| liquidity | decimal | liquidity parameter of type uint256 |
-| amountTokenMin | decimal | amountTokenMin parameter of type uint256 (Must be positive and within reasonable bounds) |
-| amountETHMin | decimal | amountETHMin parameter of type uint256 (Must be positive and within reasonable bounds) |
+| token | address | token - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| liquidity | decimal | Amount of LP tokens to remove |
+| amountTokenMin | decimal | amountTokenMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
+| amountETHMin | decimal | amountETHMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
-| approveMax | boolean | approveMax parameter of type bool |
-| v | decimal | v parameter of type uint8 |
-| r | string | r parameter of type bytes32 |
-| s | string | s parameter of type bytes32 |
+| approveMax | boolean | Whether to approve maximum uint256 amount for permit |
+| v | decimal | v component of permit signature for gas-less approval |
+| r | string | r component of permit signature for gas-less approval |
+| s | string | s component of permit signature for gas-less approval |
 
 
 **Example Policy Rule:**
@@ -1092,23 +1092,23 @@ Call the removeLiquidityETHWithPermitSupportingFeeOnTransferTokens function on u
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.removeLiquidityWithPermit  
 
-Call the removeLiquidityWithPermit function on uniswapv2_router
+Remove liquidity using permit signature for gas-less approval
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| tokenA | address | tokenA parameter of type address (Must be a valid ERC20 token contract address) |
-| tokenB | address | tokenB parameter of type address (Must be a valid ERC20 token contract address) |
-| liquidity | decimal | liquidity parameter of type uint256 |
-| amountAMin | decimal | amountAMin parameter of type uint256 (Must be positive and within reasonable bounds) |
-| amountBMin | decimal | amountBMin parameter of type uint256 (Must be positive and within reasonable bounds) |
+| tokenA | address | tokenA - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| tokenB | address | tokenB - Token contract address for liquidity pair (Must be a valid ERC20 token contract address) |
+| liquidity | decimal | Amount of LP tokens to remove |
+| amountAMin | decimal | amountAMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
+| amountBMin | decimal | amountBMin - Minimum amount for slippage protection (typically 95-99% of desired) (Must be positive and within reasonable bounds) |
 | to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
-| approveMax | boolean | approveMax parameter of type bool |
-| v | decimal | v parameter of type uint8 |
-| r | string | r parameter of type bytes32 |
-| s | string | s parameter of type bytes32 |
+| approveMax | boolean | Whether to approve maximum uint256 amount for permit |
+| v | decimal | v component of permit signature for gas-less approval |
+| r | string | r component of permit signature for gas-less approval |
+| s | string | s component of permit signature for gas-less approval |
 
 
 **Example Policy Rule:**
@@ -1174,15 +1174,15 @@ Call the removeLiquidityWithPermit function on uniswapv2_router
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.swapETHForExactTokens  
 
-Call the swapETHForExactTokens function on uniswapv2_router
+Swap ETH for exact amount of tokens with maximum input protection
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| amountOut | decimal | amountOut parameter of type uint256 (Must be positive and within reasonable bounds) |
-| path | array | path parameter of type address[] |
-| to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
+| amountOut | decimal | Exact amount of output tokens desired (Must be positive and within reasonable bounds) |
+| path | array | Array of token addresses representing the swap path. First address is input token, last is output token |
+| to | address | Address that will receive the output tokens. Should be wallet address or approved contract (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
 | value | decimal | The amount of ETH to send with the transaction (Must be positive and within reasonable bounds) |
 
@@ -1336,7 +1336,7 @@ Swap exact tokens for ETH with minimum output protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| amountIn | decimal | amountIn parameter of type uint256 (Must be positive and within reasonable bounds) |
+| amountIn | decimal | Exact amount of input tokens to swap (Must be positive and within reasonable bounds) |
 | amountOutMin | decimal | Minimum amount of output tokens (slippage protection). Should be calculated as: expectedOutput * (1 - slippageTolerance) (Must be positive and within reasonable bounds) |
 | path | array | Array of token addresses representing the swap path. First address is input token, last is output token |
 | to | address | Address that will receive the output tokens. Should be wallet address or approved contract (Must be a valid Ethereum address, avoid zero address) |
@@ -1440,7 +1440,7 @@ Swap exact tokens for other tokens with minimum output protection
 
 | Name | Type | Description |
 |------|------|-------------|
-| amountIn | decimal | amountIn parameter of type uint256 (Must be positive and within reasonable bounds) |
+| amountIn | decimal | Exact amount of input tokens to swap (Must be positive and within reasonable bounds) |
 | amountOutMin | decimal | Minimum amount of output tokens (slippage protection). Should be calculated as: expectedOutput * (1 - slippageTolerance) (Must be positive and within reasonable bounds) |
 | path | array | Array of token addresses representing the swap path. First address is input token, last is output token |
 | to | address | Address that will receive the output tokens. Should be wallet address or approved contract (Must be a valid Ethereum address, avoid zero address) |
@@ -1538,16 +1538,16 @@ Call the swapExactTokensForTokensSupportingFeeOnTransferTokens function on unisw
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.swapTokensForExactETH  
 
-Call the swapTokensForExactETH function on uniswapv2_router
+Swap tokens for exact ETH with maximum input protection
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| amountOut | decimal | amountOut parameter of type uint256 (Must be positive and within reasonable bounds) |
-| amountInMax | decimal | amountInMax parameter of type uint256 (Must be positive and within reasonable bounds) |
-| path | array | path parameter of type address[] |
-| to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
+| amountOut | decimal | Exact amount of output tokens desired (Must be positive and within reasonable bounds) |
+| amountInMax | decimal | Maximum amount of input tokens willing to spend (slippage protection for exact output swaps) (Must be positive and within reasonable bounds) |
+| path | array | Array of token addresses representing the swap path. First address is input token, last is output token |
+| to | address | Address that will receive the output tokens. Should be wallet address or approved contract (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
 
 
@@ -1590,16 +1590,16 @@ Call the swapTokensForExactETH function on uniswapv2_router
 **Protocol:** uniswapv2_router  
 **Function:** uniswapv2_router.swapTokensForExactTokens  
 
-Call the swapTokensForExactTokens function on uniswapv2_router
+Swap tokens for exact amount of other tokens with maximum input protection
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| amountOut | decimal | amountOut parameter of type uint256 (Must be positive and within reasonable bounds) |
-| amountInMax | decimal | amountInMax parameter of type uint256 (Must be positive and within reasonable bounds) |
-| path | array | path parameter of type address[] |
-| to | address | to parameter of type address (Must be a valid Ethereum address, avoid zero address) |
+| amountOut | decimal | Exact amount of output tokens desired (Must be positive and within reasonable bounds) |
+| amountInMax | decimal | Maximum amount of input tokens willing to spend (slippage protection for exact output swaps) (Must be positive and within reasonable bounds) |
+| path | array | Array of token addresses representing the swap path. First address is input token, last is output token |
+| to | address | Address that will receive the output tokens. Should be wallet address or approved contract (Must be a valid Ethereum address, avoid zero address) |
 | deadline | decimal | Unix timestamp deadline for transaction execution. Must be in the future (current time + reasonable buffer) |
 
 
