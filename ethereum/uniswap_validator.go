@@ -36,6 +36,15 @@ func (v *UniswapV2Validator) CustomizeFunctions(f *types.Function, abiFunc *ABIF
 	case "swapExactTokensForTokens":
 		f.Description = "Swap exact tokens for other tokens with minimum output protection"
 		v.addSwapValidations(f)
+	case "swapETHForExactTokens":
+		f.Description = "Swap ETH for exact amount of tokens with maximum input protection"
+		v.addSwapValidations(f)
+	case "swapTokensForExactETH":
+		f.Description = "Swap tokens for exact ETH with maximum input protection"
+		v.addSwapValidations(f)
+	case "swapTokensForExactTokens":
+		f.Description = "Swap tokens for exact amount of other tokens with maximum input protection"
+		v.addSwapValidations(f)
 	case "addLiquidity":
 		f.Description = "Add liquidity to a token pair with slippage protection"
 		v.addLiquidityValidations(f)
@@ -47,6 +56,15 @@ func (v *UniswapV2Validator) CustomizeFunctions(f *types.Function, abiFunc *ABIF
 		v.addLiquidityValidations(f)
 	case "removeLiquidityETH":
 		f.Description = "Remove liquidity from an ETH/token pair with minimum output protection"
+		v.addLiquidityValidations(f)
+	case "removeLiquidityETHSupportingFeeOnTransferTokens":
+		f.Description = "Remove liquidity from ETH/token pair supporting fee-on-transfer tokens"
+		v.addLiquidityValidations(f)
+	case "removeLiquidityWithPermit":
+		f.Description = "Remove liquidity using permit signature for gas-less approval"
+		v.addLiquidityValidations(f)
+	case "removeLiquidityETHWithPermit":
+		f.Description = "Remove ETH/token liquidity using permit signature"
 		v.addLiquidityValidations(f)
 	}
 
@@ -63,11 +81,17 @@ func (v *UniswapV2Validator) CustomizeFunctions(f *types.Function, abiFunc *ABIF
 // ValidateTransaction implements ProtocolValidator interface - validates Uniswap transactions
 func (v *UniswapV2Validator) ValidateTransaction(functionName string, params map[string]interface{}) error {
 	switch functionName {
-	case "swapExactETHForTokens", "swapExactTokensForETH", "swapExactTokensForTokens":
-		return v.validateSwapTransaction(params)
+	case "swapExactETHForTokens", "swapExactTokensForETH", "swapExactTokensForTokens",
+		"swapETHForExactTokens", "swapTokensForExactETH", "swapTokensForExactTokens",
+		"swapExactETHForTokensSupportingFeeOnTransferTokens",
+		"swapExactTokensForETHSupportingFeeOnTransferTokens",
+		"swapExactTokensForTokensSupportingFeeOnTransferTokens":
+		return v.validateSwapTransaction(functionName, params)
 	case "addLiquidity", "addLiquidityETH":
 		return v.validateAddLiquidityTransaction(params)
-	case "removeLiquidity", "removeLiquidityETH":
+	case "removeLiquidity", "removeLiquidityETH", "removeLiquidityETHSupportingFeeOnTransferTokens",
+		"removeLiquidityWithPermit", "removeLiquidityETHWithPermit",
+		"removeLiquidityETHWithPermitSupportingFeeOnTransferTokens":
 		return v.validateRemoveLiquidityTransaction(params)
 	}
 
@@ -107,6 +131,12 @@ func (v *UniswapV2Validator) addSwapValidations(f *types.Function) {
 		switch param.Name {
 		case "amountOutMin":
 			param.Description = "Minimum amount of output tokens (slippage protection). Should be calculated as: expectedOutput * (1 - slippageTolerance)"
+		case "amountInMax":
+			param.Description = "Maximum amount of input tokens willing to spend (slippage protection for exact output swaps)"
+		case "amountOut":
+			param.Description = "Exact amount of output tokens desired"
+		case "amountIn":
+			param.Description = "Exact amount of input tokens to swap"
 		case "path":
 			param.Description = "Array of token addresses representing the swap path. First address is input token, last is output token"
 		case "to":
@@ -123,8 +153,14 @@ func (v *UniswapV2Validator) addLiquidityValidations(f *types.Function) {
 			param.Description = fmt.Sprintf("%s - Minimum amount for slippage protection (typically 95-99%% of desired)", param.Name)
 		case "amountADesired", "amountBDesired", "amountTokenDesired":
 			param.Description = fmt.Sprintf("%s - Desired amount (maximum you're willing to provide)", param.Name)
+		case "tokenA", "tokenB", "token":
+			param.Description = fmt.Sprintf("%s - Token contract address for liquidity pair", param.Name)
 		case "liquidity":
 			param.Description = "Amount of LP tokens to remove"
+		case "approveMax":
+			param.Description = "Whether to approve maximum uint256 amount for permit"
+		case "v", "r", "s":
+			param.Description = fmt.Sprintf("%s component of permit signature for gas-less approval", param.Name)
 		}
 	}
 }
@@ -168,12 +204,35 @@ func (v *UniswapV2Validator) addAddressValidations(f *types.Function) {
 }
 
 // validateSwapTransaction validates swap-specific business rules
-func (v *UniswapV2Validator) validateSwapTransaction(params map[string]interface{}) error {
-	// Validate slippage protection
-	if amountOutMin, ok := params["amountOutMin"]; ok {
-		if amount, ok := amountOutMin.(*big.Int); ok {
-			if amount.Cmp(big.NewInt(0)) <= 0 {
-				return fmt.Errorf("amountOutMin must be positive for slippage protection")
+func (v *UniswapV2Validator) validateSwapTransaction(functionName string, params map[string]interface{}) error {
+	// Validate slippage protection based on swap type
+	switch functionName {
+	case "swapExactETHForTokens", "swapExactTokensForETH", "swapExactTokensForTokens",
+		"swapExactETHForTokensSupportingFeeOnTransferTokens",
+		"swapExactTokensForETHSupportingFeeOnTransferTokens",
+		"swapExactTokensForTokensSupportingFeeOnTransferTokens":
+		// For exact input swaps, validate amountOutMin
+		if amountOutMin, ok := params["amountOutMin"]; ok {
+			if amount, ok := amountOutMin.(*big.Int); ok {
+				if amount.Cmp(big.NewInt(0)) <= 0 {
+					return fmt.Errorf("amountOutMin must be positive for slippage protection")
+				}
+			}
+		}
+	case "swapETHForExactTokens", "swapTokensForExactETH", "swapTokensForExactTokens":
+		// For exact output swaps, validate amountInMax and amountOut
+		if amountInMax, ok := params["amountInMax"]; ok {
+			if amount, ok := amountInMax.(*big.Int); ok {
+				if amount.Cmp(big.NewInt(0)) <= 0 {
+					return fmt.Errorf("amountInMax must be positive for slippage protection")
+				}
+			}
+		}
+		if amountOut, ok := params["amountOut"]; ok {
+			if amount, ok := amountOut.(*big.Int); ok {
+				if amount.Cmp(big.NewInt(0)) <= 0 {
+					return fmt.Errorf("amountOut must be positive")
+				}
 			}
 		}
 	}
@@ -210,15 +269,50 @@ func (v *UniswapV2Validator) validateAddLiquidityTransaction(params map[string]i
 	// Validate that minimum amounts are reasonable (should be 95-99% of desired)
 	desiredA := v.getBigIntParam(params, "amountADesired")
 	minA := v.getBigIntParam(params, "amountAMin")
+	desiredToken := v.getBigIntParam(params, "amountTokenDesired")
+	minToken := v.getBigIntParam(params, "amountTokenMin")
 
+	// Check ratio for token A (in addLiquidity)
 	if desiredA != nil && minA != nil {
-		// Calculate ratio: minA should be at least 90% of desiredA
-		ratio := new(big.Int).Mul(minA, big.NewInt(100))
-		ratio.Div(ratio, desiredA)
-
-		if ratio.Cmp(big.NewInt(90)) < 0 {
-			return fmt.Errorf("amountAMin too low compared to amountADesired (less than 90%%), increase slippage protection")
+		if err := v.validateLiquidityRatio(desiredA, minA, "amountADesired", "amountAMin"); err != nil {
+			return err
 		}
+	}
+
+	// Check ratio for token (in addLiquidityETH)
+	if desiredToken != nil && minToken != nil {
+		if err := v.validateLiquidityRatio(desiredToken, minToken, "amountTokenDesired", "amountTokenMin"); err != nil {
+			return err
+		}
+	}
+
+	// Validate token addresses
+	if tokenA, ok := params["tokenA"]; ok {
+		if tokenB, ok := params["tokenB"]; ok {
+			if tokenA == tokenB {
+				return fmt.Errorf("tokenA and tokenB cannot be the same")
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateLiquidityRatio validates that minimum amount is reasonable compared to desired
+func (v *UniswapV2Validator) validateLiquidityRatio(desired, minimum *big.Int, desiredName, minName string) error {
+	if desired.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("%s must be positive", desiredName)
+	}
+	if minimum.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("%s must be positive", minName)
+	}
+
+	// Calculate ratio: minimum should be at least 90% of desired
+	ratio := new(big.Int).Mul(minimum, big.NewInt(100))
+	ratio.Div(ratio, desired)
+
+	if ratio.Cmp(big.NewInt(90)) < 0 {
+		return fmt.Errorf("%s too low compared to %s (less than 90%%), increase slippage protection", minName, desiredName)
 	}
 
 	return nil
@@ -245,11 +339,6 @@ func (v *UniswapV2Validator) validateDeadline(params map[string]interface{}) err
 			return fmt.Errorf("deadline must be in the future (current: %s, deadline: %s)", currentTime.String(), deadline.String())
 		}
 
-		// Warn if deadline is too far in the future (more than 1 hour)
-		oneHourFromNow := new(big.Int).Add(currentTime, big.NewInt(3600))
-		if deadline.Cmp(oneHourFromNow) > 0 {
-			return fmt.Errorf("deadline too far in future (more than 1 hour), this may be unsafe")
-		}
 	}
 
 	return nil
@@ -257,12 +346,24 @@ func (v *UniswapV2Validator) validateDeadline(params map[string]interface{}) err
 
 // validateAmounts validates all amount parameters are positive
 func (v *UniswapV2Validator) validateAmounts(params map[string]interface{}) error {
-	for paramName, _ := range params {
-		if strings.Contains(paramName, "amount") || strings.Contains(paramName, "value") {
-			if amount := v.getBigIntParam(params, paramName); amount != nil {
-				if amount.Cmp(big.NewInt(0)) <= 0 {
-					return fmt.Errorf("parameter %s must be positive, got: %s", paramName, amount.String())
-				}
+	// Check specific amount parameter names from Uniswap v2 ABI
+	amountParams := []string{
+		"amountIn", "amountOut", "amountOutMin", "amountInMax",
+		"amountADesired", "amountBDesired", "amountTokenDesired",
+		"amountAMin", "amountBMin", "amountTokenMin", "amountETHMin",
+		"liquidity",
+	}
+
+	for _, paramName := range amountParams {
+		if amount := v.getBigIntParam(params, paramName); amount != nil {
+			if amount.Cmp(big.NewInt(0)) <= 0 {
+				return fmt.Errorf("parameter %s must be positive, got: %s", paramName, amount.String())
+			}
+
+			// Additional check for extremely large values that could cause overflow
+			maxValue := new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil) // 2^255
+			if amount.Cmp(maxValue) >= 0 {
+				return fmt.Errorf("parameter %s value too large, may cause overflow: %s", paramName, amount.String())
 			}
 		}
 	}
@@ -272,8 +373,11 @@ func (v *UniswapV2Validator) validateAmounts(params map[string]interface{}) erro
 
 // validateAddresses validates all address parameters
 func (v *UniswapV2Validator) validateAddresses(params map[string]interface{}) error {
-	for paramName, paramValue := range params {
-		if strings.Contains(strings.ToLower(paramName), "to") || strings.Contains(strings.ToLower(paramName), "token") {
+	// Check specific address parameter names from Uniswap v2 ABI
+	addressParams := []string{"to", "tokenA", "tokenB", "token"}
+
+	for _, paramName := range addressParams {
+		if paramValue, ok := params[paramName]; ok {
 			if addrStr, ok := paramValue.(string); ok {
 				if !common.IsHexAddress(addrStr) {
 					return fmt.Errorf("parameter %s must be a valid Ethereum address, got: %s", paramName, addrStr)
