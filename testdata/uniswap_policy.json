@@ -1,0 +1,95 @@
+{
+    "id": "uniswap-test-policy",
+    "name": "Uniswap V2 Test Policy",
+    "description": "Policy covering common Uniswap V2 Router interactions",
+    "rules": [
+      {
+        "id": "allow-swap-exact-eth-for-tokens",
+        "description": "Swap ETH for tokens – whitelist recipient",
+        "resource": "ethereum.uniswapv2_router.swapExactETHForTokens",
+        "parameter_constraints": [
+          {
+            "parameter_name": "to",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_WHITELIST",
+              "whitelist_values": { "values": ["0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b"] },
+              "required": true
+            }
+          }
+        ],
+        "effect": "EFFECT_ALLOW"
+      },
+      {
+        "id": "allow-swap-exact-tokens-for-eth",
+        "description": "Swap tokens for ETH – cap max input amount + whitelist recipient",
+        "resource": "ethereum.uniswapv2_router.swapExactTokensForETH",
+        "parameter_constraints": [
+          {
+            "parameter_name": "amountIn",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_MAX",
+              "max_value": "500000000000000000000",
+              "required": true
+            }
+          },
+          {
+            "parameter_name": "to",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_WHITELIST",
+              "whitelist_values": { "values": ["0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b"] },
+              "required": true
+            }
+          }
+        ],
+        "effect": "EFFECT_ALLOW"
+      },
+      {
+        "id": "allow-add-liquidity",
+        "description": "Add liquidity for WETH / SAMPLE – whitelist recipient address",
+        "resource": "ethereum.uniswapv2_router.addLiquidity",
+        "parameter_constraints": [
+          {
+            "parameter_name": "tokenA",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+              "required": true
+            }
+          },
+          {
+            "parameter_name": "tokenB",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b",
+              "required": true
+            }
+          },
+          {
+            "parameter_name": "to",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_WHITELIST",
+              "whitelist_values": { "values": ["0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b"] },
+              "required": true
+            }
+          }
+        ],
+        "effect": "EFFECT_ALLOW"
+      },
+      {
+        "id": "allow-remove-liquidity",
+        "description": "Remove liquidity – whitelist recipient address",
+        "resource": "ethereum.uniswapv2_router.removeLiquidity",
+        "parameter_constraints": [
+          {
+            "parameter_name": "to",
+            "constraint": {
+              "type": "CONSTRAINT_TYPE_WHITELIST",
+              "whitelist_values": { "values": ["0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b"] },
+              "required": true
+            }
+          }
+        ],
+        "effect": "EFFECT_ALLOW"
+      }
+    ]
+  }

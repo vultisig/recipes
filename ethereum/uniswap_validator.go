@@ -261,6 +261,19 @@ func (v *UniswapV2Validator) validateSwapTransaction(functionName string, params
 		}
 	}
 
+	// Common validations for swap transactions
+	if err := v.validateDeadline(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAmounts(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAddresses(params); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -295,6 +308,19 @@ func (v *UniswapV2Validator) validateAddLiquidityTransaction(params map[string]i
 		}
 	}
 
+	// Common validations for liquidity transactions
+	if err := v.validateDeadline(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAmounts(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAddresses(params); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -327,6 +353,19 @@ func (v *UniswapV2Validator) validateRemoveLiquidityTransaction(params map[strin
 		}
 	}
 
+	// Common validations for remove liquidity transactions
+	if err := v.validateDeadline(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAmounts(params); err != nil {
+		return err
+	}
+
+	if err := v.validateAddresses(params); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -339,6 +378,11 @@ func (v *UniswapV2Validator) validateDeadline(params map[string]interface{}) err
 			return fmt.Errorf("deadline must be in the future (current: %s, deadline: %s)", currentTime.String(), deadline.String())
 		}
 
+		// Warn if deadline is too far in the future (more than 1 hour)
+		oneHourFromNow := new(big.Int).Add(currentTime, big.NewInt(3600))
+		if deadline.Cmp(oneHourFromNow) > 0 {
+			return fmt.Errorf("deadline too far in future (more than 1 hour), this may be unsafe")
+		}
 	}
 
 	return nil

@@ -82,7 +82,28 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			if actualValueBigInt.Cmp(maxValueBigInt) > 0 { // actual > max
 				return false, nil // Constraint not met
 			}
-
+		case *types.Constraint_MinValue:
+			actualBig, ok := paramValue.(*big.Int)
+			if !ok {
+				return false, fmt.Errorf("parameter %q expected *big.Int for MinValue, got %T", paramName, paramValue)
+			}
+			minBig, ok := new(big.Int).SetString(cVal.MinValue, 10)
+			if !ok {
+				return false, fmt.Errorf("invalid MinValue string %q in policy for parameter %q", cVal.MinValue, paramName)
+			}
+			if actualBig.Cmp(minBig) < 0 {
+				return false, nil
+			}
+		case *types.Constraint_RangeValue:
+			actualBig, ok := paramValue.(*big.Int)
+			if !ok {
+				return false, fmt.Errorf("parameter %q expected *big.Int for RangeValue, got %T", paramName, paramValue)
+			}
+			minBig, _ := new(big.Int).SetString(cVal.RangeValue.Min, 10)
+			maxBig, _ := new(big.Int).SetString(cVal.RangeValue.Max, 10)
+			if actualBig.Cmp(minBig) < 0 || actualBig.Cmp(maxBig) > 0 {
+				return false, nil
+			}
 		default:
 			return false, fmt.Errorf("unsupported constraint value type: %T for parameter %q", constraint.Value, paramName)
 		}
