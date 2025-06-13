@@ -22,6 +22,203 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Enum representing fee types
+type FeeType int32
+
+const (
+	FeeType_FEE_TYPE_UNSPECIFIED FeeType = 0
+	FeeType_RECURRING            FeeType = 1
+	FeeType_ONCE                 FeeType = 2
+	FeeType_TRANSACTION          FeeType = 3
+)
+
+// Enum value maps for FeeType.
+var (
+	FeeType_name = map[int32]string{
+		0: "FEE_TYPE_UNSPECIFIED",
+		1: "RECURRING",
+		2: "ONCE",
+		3: "TRANSACTION",
+	}
+	FeeType_value = map[string]int32{
+		"FEE_TYPE_UNSPECIFIED": 0,
+		"RECURRING":            1,
+		"ONCE":                 2,
+		"TRANSACTION":          3,
+	}
+)
+
+func (x FeeType) Enum() *FeeType {
+	p := new(FeeType)
+	*p = x
+	return p
+}
+
+func (x FeeType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FeeType) Descriptor() protoreflect.EnumDescriptor {
+	return file_policy_proto_enumTypes[0].Descriptor()
+}
+
+func (FeeType) Type() protoreflect.EnumType {
+	return &file_policy_proto_enumTypes[0]
+}
+
+func (x FeeType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FeeType.Descriptor instead.
+func (FeeType) EnumDescriptor() ([]byte, []int) {
+	return file_policy_proto_rawDescGZIP(), []int{0}
+}
+
+// Enum representing billing frequency
+type BillingFrequency int32
+
+const (
+	BillingFrequency_BILLING_FREQUENCY_UNSPECIFIED BillingFrequency = 0
+	BillingFrequency_DAILY                         BillingFrequency = 1
+	BillingFrequency_WEEKLY                        BillingFrequency = 2
+	BillingFrequency_BIWEEKLY                      BillingFrequency = 3
+	BillingFrequency_MONTHLY                       BillingFrequency = 4
+)
+
+// Enum value maps for BillingFrequency.
+var (
+	BillingFrequency_name = map[int32]string{
+		0: "BILLING_FREQUENCY_UNSPECIFIED",
+		1: "DAILY",
+		2: "WEEKLY",
+		3: "BIWEEKLY",
+		4: "MONTHLY",
+	}
+	BillingFrequency_value = map[string]int32{
+		"BILLING_FREQUENCY_UNSPECIFIED": 0,
+		"DAILY":                         1,
+		"WEEKLY":                        2,
+		"BIWEEKLY":                      3,
+		"MONTHLY":                       4,
+	}
+)
+
+func (x BillingFrequency) Enum() *BillingFrequency {
+	p := new(BillingFrequency)
+	*p = x
+	return p
+}
+
+func (x BillingFrequency) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BillingFrequency) Descriptor() protoreflect.EnumDescriptor {
+	return file_policy_proto_enumTypes[1].Descriptor()
+}
+
+func (BillingFrequency) Type() protoreflect.EnumType {
+	return &file_policy_proto_enumTypes[1]
+}
+
+func (x BillingFrequency) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BillingFrequency.Descriptor instead.
+func (BillingFrequency) EnumDescriptor() ([]byte, []int) {
+	return file_policy_proto_rawDescGZIP(), []int{1}
+}
+
+// FeePolicy represents a single billing configuration
+type FeePolicy struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type  FeeType                `protobuf:"varint,2,opt,name=type,proto3,enum=types.FeeType" json:"type,omitempty"`
+	// Frequency only applies to recurring types
+	Frequency BillingFrequency `protobuf:"varint,3,opt,name=frequency,proto3,enum=types.BillingFrequency" json:"frequency,omitempty"`
+	Amount    int64            `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	// When billing starts (optional)
+	StartDate *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
+	// Optional description
+	Description   string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FeePolicy) Reset() {
+	*x = FeePolicy{}
+	mi := &file_policy_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FeePolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FeePolicy) ProtoMessage() {}
+
+func (x *FeePolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_policy_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FeePolicy.ProtoReflect.Descriptor instead.
+func (*FeePolicy) Descriptor() ([]byte, []int) {
+	return file_policy_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *FeePolicy) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FeePolicy) GetType() FeeType {
+	if x != nil {
+		return x.Type
+	}
+	return FeeType_FEE_TYPE_UNSPECIFIED
+}
+
+func (x *FeePolicy) GetFrequency() BillingFrequency {
+	if x != nil {
+		return x.Frequency
+	}
+	return BillingFrequency_BILLING_FREQUENCY_UNSPECIFIED
+}
+
+func (x *FeePolicy) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *FeePolicy) GetStartDate() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartDate
+	}
+	return nil
+}
+
+func (x *FeePolicy) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 // Policy represents a set of rules that determine what a plugin is allowed to do
 type Policy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -45,13 +242,15 @@ type Policy struct {
 	Schedule *Schedule `protobuf:"bytes,9,opt,name=schedule,proto3" json:"schedule,omitempty"`
 	// Version of the scheduling specification
 	ScheduleVersion int32 `protobuf:"varint,10,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// FeePolicies defines the billing configuration for this policy
+	FeePolicies   []*FeePolicy `protobuf:"bytes,11,rep,name=fee_policies,json=feePolicies,proto3" json:"fee_policies,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Policy) Reset() {
 	*x = Policy{}
-	mi := &file_policy_proto_msgTypes[0]
+	mi := &file_policy_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -63,7 +262,7 @@ func (x *Policy) String() string {
 func (*Policy) ProtoMessage() {}
 
 func (x *Policy) ProtoReflect() protoreflect.Message {
-	mi := &file_policy_proto_msgTypes[0]
+	mi := &file_policy_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -76,7 +275,7 @@ func (x *Policy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Policy.ProtoReflect.Descriptor instead.
 func (*Policy) Descriptor() ([]byte, []int) {
-	return file_policy_proto_rawDescGZIP(), []int{0}
+	return file_policy_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Policy) GetId() string {
@@ -149,6 +348,13 @@ func (x *Policy) GetScheduleVersion() int32 {
 	return 0
 }
 
+func (x *Policy) GetFeePolicies() []*FeePolicy {
+	if x != nil {
+		return x.FeePolicies
+	}
+	return nil
+}
+
 // Schedule defines when and how often a policy should be executed
 type Schedule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -167,7 +373,7 @@ type Schedule struct {
 
 func (x *Schedule) Reset() {
 	*x = Schedule{}
-	mi := &file_policy_proto_msgTypes[1]
+	mi := &file_policy_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -179,7 +385,7 @@ func (x *Schedule) String() string {
 func (*Schedule) ProtoMessage() {}
 
 func (x *Schedule) ProtoReflect() protoreflect.Message {
-	mi := &file_policy_proto_msgTypes[1]
+	mi := &file_policy_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -192,7 +398,7 @@ func (x *Schedule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Schedule.ProtoReflect.Descriptor instead.
 func (*Schedule) Descriptor() ([]byte, []int) {
-	return file_policy_proto_rawDescGZIP(), []int{1}
+	return file_policy_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Schedule) GetFrequency() ScheduleFrequency {
@@ -235,7 +441,15 @@ var File_policy_proto protoreflect.FileDescriptor
 const file_policy_proto_rawDesc = "" +
 	"\n" +
 	"\fpolicy.proto\x12\x05types\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\n" +
-	"rule.proto\x1a\x10scheduling.proto\"\xf1\x02\n" +
+	"rule.proto\x1a\x10scheduling.proto\"\xeb\x01\n" +
+	"\tFeePolicy\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x0e.types.FeeTypeR\x04type\x125\n" +
+	"\tfrequency\x18\x03 \x01(\x0e2\x17.types.BillingFrequencyR\tfrequency\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x03R\x06amount\x129\n" +
+	"\n" +
+	"start_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xa6\x03\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -249,14 +463,27 @@ const file_policy_proto_rawDesc = "" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12+\n" +
 	"\bschedule\x18\t \x01(\v2\x0f.types.ScheduleR\bschedule\x12)\n" +
 	"\x10schedule_version\x18\n" +
-	" \x01(\x05R\x0fscheduleVersion\"\xf7\x01\n" +
+	" \x01(\x05R\x0fscheduleVersion\x123\n" +
+	"\ffee_policies\x18\v \x03(\v2\x10.types.FeePolicyR\vfeePolicies\"\xf7\x01\n" +
 	"\bSchedule\x126\n" +
 	"\tfrequency\x18\x02 \x01(\x0e2\x18.types.ScheduleFrequencyR\tfrequency\x129\n" +
 	"\n" +
 	"start_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
 	"\bend_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12%\n" +
 	"\x0emax_executions\x18\x05 \x01(\x05R\rmaxExecutions\x12\x1a\n" +
-	"\binterval\x18\x06 \x01(\x05R\bintervalB#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\binterval\x18\x06 \x01(\x05R\binterval*M\n" +
+	"\aFeeType\x12\x18\n" +
+	"\x14FEE_TYPE_UNSPECIFIED\x10\x00\x12\r\n" +
+	"\tRECURRING\x10\x01\x12\b\n" +
+	"\x04ONCE\x10\x02\x12\x0f\n" +
+	"\vTRANSACTION\x10\x03*g\n" +
+	"\x10BillingFrequency\x12!\n" +
+	"\x1dBILLING_FREQUENCY_UNSPECIFIED\x10\x00\x12\t\n" +
+	"\x05DAILY\x10\x01\x12\n" +
+	"\n" +
+	"\x06WEEKLY\x10\x02\x12\f\n" +
+	"\bBIWEEKLY\x10\x03\x12\v\n" +
+	"\aMONTHLY\x10\x04B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_policy_proto_rawDescOnce sync.Once
@@ -270,27 +497,35 @@ func file_policy_proto_rawDescGZIP() []byte {
 	return file_policy_proto_rawDescData
 }
 
-var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_policy_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_policy_proto_goTypes = []any{
-	(*Policy)(nil),                // 0: types.Policy
-	(*Schedule)(nil),              // 1: types.Schedule
-	(*Rule)(nil),                  // 2: types.Rule
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
-	(ScheduleFrequency)(0),        // 4: types.ScheduleFrequency
+	(FeeType)(0),                  // 0: types.FeeType
+	(BillingFrequency)(0),         // 1: types.BillingFrequency
+	(*FeePolicy)(nil),             // 2: types.FeePolicy
+	(*Policy)(nil),                // 3: types.Policy
+	(*Schedule)(nil),              // 4: types.Schedule
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*Rule)(nil),                  // 6: types.Rule
+	(ScheduleFrequency)(0),        // 7: types.ScheduleFrequency
 }
 var file_policy_proto_depIdxs = []int32{
-	2, // 0: types.Policy.rules:type_name -> types.Rule
-	3, // 1: types.Policy.created_at:type_name -> google.protobuf.Timestamp
-	3, // 2: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
-	1, // 3: types.Policy.schedule:type_name -> types.Schedule
-	4, // 4: types.Schedule.frequency:type_name -> types.ScheduleFrequency
-	3, // 5: types.Schedule.start_time:type_name -> google.protobuf.Timestamp
-	3, // 6: types.Schedule.end_time:type_name -> google.protobuf.Timestamp
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	0,  // 0: types.FeePolicy.type:type_name -> types.FeeType
+	1,  // 1: types.FeePolicy.frequency:type_name -> types.BillingFrequency
+	5,  // 2: types.FeePolicy.start_date:type_name -> google.protobuf.Timestamp
+	6,  // 3: types.Policy.rules:type_name -> types.Rule
+	5,  // 4: types.Policy.created_at:type_name -> google.protobuf.Timestamp
+	5,  // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 6: types.Policy.schedule:type_name -> types.Schedule
+	2,  // 7: types.Policy.fee_policies:type_name -> types.FeePolicy
+	7,  // 8: types.Schedule.frequency:type_name -> types.ScheduleFrequency
+	5,  // 9: types.Schedule.start_time:type_name -> google.protobuf.Timestamp
+	5,  // 10: types.Schedule.end_time:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_policy_proto_init() }
@@ -305,13 +540,14 @@ func file_policy_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_policy_proto_rawDesc), len(file_policy_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   2,
+			NumEnums:      2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_policy_proto_goTypes,
 		DependencyIndexes: file_policy_proto_depIdxs,
+		EnumInfos:         file_policy_proto_enumTypes,
 		MessageInfos:      file_policy_proto_msgTypes,
 	}.Build()
 	File_policy_proto = out.File
