@@ -239,24 +239,53 @@ func (v *UniswapV2Validator) validateSwapTransaction(functionName string, params
 
 	// Validate swap path
 	if path, ok := params["path"]; ok {
+		var pathAddresses []string
+		var pathLength int
+
+		// Handle both []interface{} and []common.Address types
 		if pathArray, ok := path.([]interface{}); ok {
-			if len(pathArray) < 2 {
+			pathLength = len(pathArray)
+			if pathLength < 2 {
 				return fmt.Errorf("swap path must contain at least 2 addresses (input and output tokens)")
 			}
-			if len(pathArray) > 4 {
+			if pathLength > 4 {
 				return fmt.Errorf("swap path too long, maximum 4 tokens supported for optimal gas usage")
 			}
 
-			// Validate each address in path
+			// Convert []interface{} to []string
+			pathAddresses = make([]string, pathLength)
 			for i, addr := range pathArray {
 				if addrStr, ok := addr.(string); ok {
-					if !common.IsHexAddress(addrStr) {
-						return fmt.Errorf("invalid token address at path position %d: %s", i, addrStr)
-					}
-					if addrStr == "0x0000000000000000000000000000000000000000" {
-						return fmt.Errorf("zero address not allowed in swap path at position %d", i)
-					}
+					pathAddresses[i] = strings.ToLower(addrStr)
+				} else {
+					return fmt.Errorf("invalid address type at path position %d: expected string, got %T", i, addr)
 				}
+			}
+		} else if pathArray, ok := path.([]common.Address); ok {
+			pathLength = len(pathArray)
+			if pathLength < 2 {
+				return fmt.Errorf("swap path must contain at least 2 addresses (input and output tokens)")
+			}
+			if pathLength > 4 {
+				return fmt.Errorf("swap path too long, maximum 4 tokens supported for optimal gas usage")
+			}
+
+			// Convert []common.Address to []string
+			pathAddresses = make([]string, pathLength)
+			for i, addr := range pathArray {
+				pathAddresses[i] = strings.ToLower(addr.Hex())
+			}
+		} else {
+			return fmt.Errorf("invalid path type: expected []interface{} or []common.Address, got %T", path)
+		}
+
+		// Validate each address in path
+		for i, addrStr := range pathAddresses {
+			if !common.IsHexAddress(addrStr) {
+				return fmt.Errorf("invalid token address at path position %d: %s", i, addrStr)
+			}
+			if addrStr == "0x0000000000000000000000000000000000000000" {
+				return fmt.Errorf("zero address not allowed in swap path at position %d", i)
 			}
 		}
 	}

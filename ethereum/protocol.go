@@ -99,8 +99,17 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			if !ok {
 				return false, fmt.Errorf("parameter %q expected *big.Int for RangeValue, got %T", paramName, paramValue)
 			}
-			minBig, _ := new(big.Int).SetString(cVal.RangeValue.Min, 10)
-			maxBig, _ := new(big.Int).SetString(cVal.RangeValue.Max, 10)
+			minBig, minOk := new(big.Int).SetString(cVal.RangeValue.Min, 10)
+			if !minOk {
+				return false, fmt.Errorf("invalid RangeValue.Min string %q in policy for parameter %q", cVal.RangeValue.Min, paramName)
+			}
+			maxBig, maxOk := new(big.Int).SetString(cVal.RangeValue.Max, 10)
+			if !maxOk {
+				return false, fmt.Errorf("invalid RangeValue.Max string %q in policy for parameter %q", cVal.RangeValue.Max, paramName)
+			}
+			if minBig.Cmp(maxBig) > 0 {
+				return false, fmt.Errorf("invalid range for parameter %q: min (%s) is greater than max (%s)", paramName, cVal.RangeValue.Min, cVal.RangeValue.Max)
+			}
 			if actualBig.Cmp(minBig) < 0 || actualBig.Cmp(maxBig) > 0 {
 				return false, nil
 			}

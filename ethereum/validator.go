@@ -1,6 +1,9 @@
 package ethereum
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/vultisig/recipes/types"
 )
 
@@ -18,6 +21,7 @@ type ProtocolValidator interface {
 
 // ValidatorRegistry manages custom validators for different protocols
 type ValidatorRegistry struct {
+	mu         sync.RWMutex
 	validators map[string]ProtocolValidator
 }
 
@@ -29,12 +33,24 @@ func NewValidatorRegistry() *ValidatorRegistry {
 }
 
 // RegisterValidator registers a custom validator for a protocol
-func (vr *ValidatorRegistry) RegisterValidator(protocolID string, validator ProtocolValidator) {
+func (vr *ValidatorRegistry) RegisterValidator(protocolID string, validator ProtocolValidator) error {
+	vr.mu.Lock()
+	defer vr.mu.Unlock()
+
+	// Check if a validator is already registered for this protocol
+	if _, exists := vr.validators[protocolID]; exists {
+		return fmt.Errorf("validator for protocol '%s' is already registered", protocolID)
+	}
+
 	vr.validators[protocolID] = validator
+	return nil
 }
 
 // GetValidator returns the validator for a protocol, if any
 func (vr *ValidatorRegistry) GetValidator(protocolID string) (ProtocolValidator, bool) {
+	vr.mu.RLock()
+	defer vr.mu.RUnlock()
+
 	validator, exists := vr.validators[protocolID]
 	return validator, exists
 }

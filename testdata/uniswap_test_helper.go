@@ -92,10 +92,11 @@ func CreateSampleUniswapTransaction() (*types.Transaction, error) {
 	amountOutMin := big.NewInt(1000000000000000000) // 1 ETH worth of tokens minimum
 	path := []common.Address{
 		common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), // WETH
-		common.HexToAddress("0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b"), // Sample token
+		common.HexToAddress("0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"), // Sample token
 	}
-	to := common.HexToAddress("0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b") // Whitelisted recipient
-	deadline := big.NewInt(1640995200)                                      // Sample deadline timestamp
+	to := common.HexToAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045") // Whitelisted recipient
+	// Keep the tx valid for ~30 minutes - suitable for plugin operations
+	deadline := big.NewInt(time.Now().Unix() + 1800)
 
 	// Encode the function call
 	data, err := parsedABI.Pack("swapExactETHForTokens", amountOutMin, path, to, deadline)
@@ -121,10 +122,10 @@ var SampleUniswapParams = map[string]interface{}{
 	"amountOutMin": big.NewInt(1000000000000000000), // 1 ETH worth
 	"path": []interface{}{
 		"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-		"0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b", // Sample token
+		"0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", // Sample token
 	},
-	"to":       "0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b",
-	"deadline": big.NewInt(1640995200),
+	"to":       "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+	"deadline": big.NewInt(time.Now().Unix() + 1800), // Dynamic future deadline
 }
 
 // Invalid parameters that should fail validation
@@ -148,7 +149,7 @@ func BuildSwapExactETHForTokensHex(recipient string) (string, error) {
 	amountOutMin := big.NewInt(1000000000000000000)
 	path := []common.Address{
 		common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
-		common.HexToAddress("0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b"),
+		common.HexToAddress("0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"),
 	}
 	to := common.HexToAddress(recipient)
 	deadline := big.NewInt(time.Now().Unix() + 1800)
@@ -160,41 +161,17 @@ func BuildSwapExactETHForTokensHex(recipient string) (string, error) {
 
 	router := common.HexToAddress("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
 
-	// Create an unsigned dynamic fee tx payload (without signature fields)
-	unsigned := struct {
-		ChainID    *big.Int
-		Nonce      uint64
-		GasTipCap  *big.Int
-		GasFeeCap  *big.Int
-		Gas        uint64
-		To         *common.Address `rlp:"nil"`
-		Value      *big.Int
-		Data       []byte
-		AccessList types.AccessList
-	}{
-		ChainID:    big.NewInt(1),
-		Nonce:      0,
-		GasTipCap:  big.NewInt(2000000000),
-		GasFeeCap:  big.NewInt(20000000000),
-		Gas:        300000,
-		To:         &router,
-		Value:      big.NewInt(1000000000000000000),
-		Data:       data,
-		AccessList: nil,
-	}
-
-	payload, err := rlp.EncodeToBytes(unsigned)
+	raw, err := buildUnsignedDynamicTx(&router, big.NewInt(1000000000000000000), data)
 	if err != nil {
 		return "", err
 	}
 
-	raw := append([]byte{types.DynamicFeeTxType}, payload...)
 	return "0x" + hex.EncodeToString(raw), nil
 }
 
 // Helper wrappers for tests
 func ValidSwapExactETHForTokensTxHex() string {
-	hex, _ := BuildSwapExactETHForTokensHex("0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b")
+	hex, _ := BuildSwapExactETHForTokensHex("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
 	return hex
 }
 
@@ -206,9 +183,9 @@ func InvalidRecipientSwapExactETHForTokensTxHex() string {
 // shared addresses
 var (
 	wethAddr    = common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
-	sampleAddr  = common.HexToAddress("0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b")
+	sampleAddr  = common.HexToAddress("0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984")
 	routerAddr  = common.HexToAddress("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
-	whitelistTo = common.HexToAddress("0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b")
+	whitelistTo = common.HexToAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
 )
 
 func buildUnsignedDynamicTx(to *common.Address, value *big.Int, data []byte) ([]byte, error) {
@@ -251,7 +228,10 @@ func buildTxHex(data []byte, ethValue *big.Int) (string, error) {
 
 // ------- swapExactTokensForETH ---------
 func BuildSwapExactTokensForETHTxHex(recipient common.Address, amountIn *big.Int) (string, error) {
-	parsedABI, _ := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	parsedABI, err := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	if err != nil {
+		return "", err
+	}
 	amountOutMin := big.NewInt(1000000000000000) // 0.001 ETH
 	path := []common.Address{sampleAddr, wethAddr}
 	deadline := big.NewInt(time.Now().Unix() + 1800)
@@ -276,7 +256,10 @@ func ExceedAmountSwapExactTokensForETHTxHex() string {
 
 // ------- addLiquidity ---------
 func BuildAddLiquidityTxHex(recipient common.Address) (string, error) {
-	parsedABI, _ := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	parsedABI, err := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	if err != nil {
+		return "", err
+	}
 	amtDesired := big.NewInt(1_000_000_000_000_000_000) // 1 token/ETH
 	amtMin := big.NewInt(900_000_000_000_000_000)       // 0.9
 	deadline := big.NewInt(time.Now().Unix() + 1800)
@@ -294,17 +277,29 @@ func ValidAddLiquidityTxHex() string {
 
 func InvalidTokenAddLiquidityTxHex() string {
 	wrongToken := common.HexToAddress("0x000000000000000000000000000000000000dead")
-	parsedABI, _ := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	parsedABI, err := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	if err != nil {
+		return "" // Return empty string if ABI parsing fails
+	}
 	amt := big.NewInt(1_000_000_000_000_000_000)
 	deadline := big.NewInt(time.Now().Unix() + 1800)
-	data, _ := parsedABI.Pack("addLiquidity", wrongToken, sampleAddr, amt, amt, amt, amt, whitelistTo, deadline)
-	hexStr, _ := buildTxHex(data, big.NewInt(0))
+	data, err := parsedABI.Pack("addLiquidity", wrongToken, sampleAddr, amt, amt, amt, amt, whitelistTo, deadline)
+	if err != nil {
+		return "" // Return empty string if packing fails
+	}
+	hexStr, err := buildTxHex(data, big.NewInt(0))
+	if err != nil {
+		return "" // Return empty string if tx building fails
+	}
 	return hexStr
 }
 
 // ------- removeLiquidity ---------
 func BuildRemoveLiquidityTxHex(recipient common.Address) (string, error) {
-	parsedABI, _ := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	parsedABI, err := abi.JSON(strings.NewReader(uniswapV2RouterABI))
+	if err != nil {
+		return "", err
+	}
 	liquidity := big.NewInt(1_000_000_000_000_000_000)
 	amtMin := big.NewInt(1)
 	deadline := big.NewInt(time.Now().Unix() + 1800)
