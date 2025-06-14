@@ -451,13 +451,23 @@ func (v *UniswapV2Validator) validateAddresses(params map[string]interface{}) er
 
 	for _, paramName := range addressParams {
 		if paramValue, ok := params[paramName]; ok {
-			if addrStr, ok := paramValue.(string); ok {
-				if !common.IsHexAddress(addrStr) {
-					return fmt.Errorf("parameter %s must be a valid Ethereum address, got: %s", paramName, addrStr)
+			switch addr := paramValue.(type) {
+			case string:
+				if !common.IsHexAddress(addr) {
+					return fmt.Errorf("parameter %s must be a valid Ethereum address, got: %s", paramName, addr)
 				}
-				if addrStr == "0x0000000000000000000000000000000000000000" {
+				// Use common.HexToAddress for proper zero address detection
+				address := common.HexToAddress(addr)
+				if address == (common.Address{}) {
 					return fmt.Errorf("parameter %s cannot be zero address", paramName)
 				}
+			case common.Address:
+				// For common.Address type, check if it's the zero address
+				if addr == (common.Address{}) {
+					return fmt.Errorf("parameter %s cannot be zero address", paramName)
+				}
+			default:
+				return fmt.Errorf("parameter %s must be a string or common.Address, got: %T", paramName, paramValue)
 			}
 		}
 	}

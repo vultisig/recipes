@@ -2,8 +2,11 @@ package ethereum
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestUniswapV2Validator_ValidateTransaction(t *testing.T) {
@@ -198,7 +201,93 @@ func TestUniswapV2Validator_GetProtocolID(t *testing.T) {
 	}
 }
 
+func TestUniswapV2Validator_ValidateAddresses(t *testing.T) {
+	validator := NewUniswapV2Validator()
+
+	tests := []struct {
+		name          string
+		params        map[string]interface{}
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "Valid string address",
+			params: map[string]interface{}{
+				"to": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid common.Address",
+			params: map[string]interface{}{
+				"to": common.HexToAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"),
+			},
+			expectError: false,
+		},
+		{
+			name: "Zero address string (lowercase)",
+			params: map[string]interface{}{
+				"to": "0x0000000000000000000000000000000000000000",
+			},
+			expectError:   true,
+			errorContains: "cannot be zero address",
+		},
+		{
+			name: "Zero address string (uppercase)",
+			params: map[string]interface{}{
+				"to": "0X0000000000000000000000000000000000000000",
+			},
+			expectError:   true,
+			errorContains: "cannot be zero address",
+		},
+		{
+			name: "Zero address common.Address",
+			params: map[string]interface{}{
+				"to": common.Address{},
+			},
+			expectError:   true,
+			errorContains: "cannot be zero address",
+		},
+		{
+			name: "Invalid address string",
+			params: map[string]interface{}{
+				"to": "invalid-address",
+			},
+			expectError:   true,
+			errorContains: "must be a valid Ethereum address",
+		},
+		{
+			name: "Invalid address type",
+			params: map[string]interface{}{
+				"to": 12345,
+			},
+			expectError:   true,
+			errorContains: "must be a string or common.Address",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.validateAddresses(tt.params)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+					return
+				}
+				if tt.errorContains != "" && !contains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain '%s', but got: %s", tt.errorContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %s", err.Error())
+				}
+			}
+		})
+	}
+}
+
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || (len(s) > len(substr) && contains(s[1:], substr) || s[:len(substr)] == substr))
+	return strings.Contains(s, substr)
 }
