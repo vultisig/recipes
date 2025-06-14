@@ -92,15 +92,3 @@ func TestThorchainProtocolFunctions(t *testing.T) {
 	_, err = runeProtocol.GetFunction("invalid")
 	assert.Error(t, err)
 }
-
-func TestThorchainWithNetwork(t *testing.T) {
-	// Test with custom network
-	testnetChain := NewThorchainWithNetwork("testnet")
-	assert.Equal(t, "thorchain", testnetChain.ID())
-	assert.Equal(t, "Thorchain", testnetChain.Name())
-
-	// Test that it still supports the same protocols
-	protocols := testnetChain.SupportedProtocols()
-	assert.Contains(t, protocols, "rune")
-	assert.Contains(t, protocols, "tcy")
-}

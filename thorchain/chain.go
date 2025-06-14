@@ -10,9 +10,7 @@ import (
 )
 
 // Thorchain implements the Chain interface for the Thorchain blockchain
-type Thorchain struct {
-	network string // mainnet, testnet, etc.
-}
+type Thorchain struct{}
 
 // ID returns the unique identifier for the Thorchain
 func (t *Thorchain) ID() string {
@@ -101,37 +99,7 @@ func (t *Thorchain) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespon
 	return hash, nil
 }
 
-// GetNetwork returns the network configuration (mainnet, testnet, etc.)
-func (t *Thorchain) GetNetwork() string {
-	return t.network
-}
-
 // NewThorchain creates a new Thorchain instance
 func NewThorchain() types.Chain {
-	return &Thorchain{
-		network: "mainnet", // Default to mainnet
-	}
-}
-
-// NewThorchainWithNetwork creates a new Thorchain instance with specified network
-func NewThorchainWithNetwork(network string) types.Chain {
-	return &Thorchain{
-		network: network,
-	}
-}
-
-// ValidateNetwork validates the network parameter
-func ValidateNetwork(network string) error {
-	validNetworks := map[string]bool{
-		"mainnet":  true,
-		"testnet":  true,
-		"stagenet": true,
-		"chaosnet": true,
-	}
-
-	if !validNetworks[network] {
-		return fmt.Errorf("invalid network: %s, must be one of: mainnet, testnet, stagenet, chaosnet", network)
-	}
-
-	return nil
+	return &Thorchain{}
 }
