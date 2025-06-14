@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/vultisig/recipes/protocol"
 	"github.com/vultisig/recipes/types"
@@ -12,10 +13,24 @@ import (
 // DefaultERC20ABIPath is the path to the default ERC20 ABI definition
 const DefaultERC20ABIPath = "abis/erc20.json"
 
+// sync.Once to ensure validators are registered only once
+var registerValidatorsOnce sync.Once
+var registerValidatorsError error
+
 // RegisterEthereumProtocols registers all Ethereum protocols
 func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 	// Register native ETH protocol
 	protocol.RegisterProtocol(NewETH())
+
+	// Register protocol validators only once
+	registerValidatorsOnce.Do(func() {
+		registerValidatorsError = registerProtocolValidators()
+	})
+
+	// Check if validator registration failed
+	if registerValidatorsError != nil {
+		return fmt.Errorf("failed to register protocol validators: %w", registerValidatorsError)
+	}
 
 	// Register token protocols from token list with dynamically loaded ERC20 functions
 	if ethereumChain.tokenList != nil && erc20ABI != nil {
@@ -70,9 +85,22 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 		// Skip registering the ERC20 ABI directly, as it's used for tokens
 		if name != "erc20" {
 			description := fmt.Sprintf("Protocol generated from %s ABI", name)
+
+			// Use the generic ABI protocol creation - validators are automatically applied
 			abiProtocol := NewABIProtocol(name, name, description, abi)
 			protocol.RegisterProtocol(abiProtocol)
 		}
+	}
+
+	return nil
+}
+
+// registerProtocolValidators registers all available protocol validators
+func registerProtocolValidators() error {
+	// Register Uniswap v2 validator
+	uniswapValidator := NewUniswapV2Validator()
+	if err := GlobalValidatorRegistry.RegisterValidator(uniswapValidator.GetProtocolID(), uniswapValidator); err != nil {
+		return fmt.Errorf("failed to register Uniswap v2 validator: %w", err)
 	}
 
 	return nil

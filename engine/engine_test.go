@@ -3,11 +3,15 @@ package engine
 import (
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/vultisig/recipes/chain"
+	"github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/testdata"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -15,6 +19,7 @@ var testVectors = []struct {
 	policyPath string
 	chainStr   string
 	txHex      string
+	txHexFunc  func() string
 	shouldPass bool
 }{
 	{
@@ -41,7 +46,59 @@ var testVectors = []struct {
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: false,
 	},
+	// Uniswap test cases
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.ValidSwapExactETHForTokensTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.InvalidRecipientSwapExactETHForTokensTxHex,
+		shouldPass: false,
+	},
+	// additional Uniswap tests
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.ExceedAmountSwapExactTokensForETHTxHex,
+		shouldPass: false,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.ValidSwapExactTokensForETHTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.ValidAddLiquidityTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.InvalidTokenAddLiquidityTxHex,
+		shouldPass: false,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.ValidRemoveLiquidityTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/uniswap_policy.json",
+		chainStr:   "ethereum",
+		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
+		shouldPass: false,
+	},
 }
+
+var registerOnce sync.Once
 
 func TestEngine(t *testing.T) {
 	engine := NewEngine()
@@ -65,7 +122,30 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to get chain: %v", err)
 			}
 
-			tx, err := c.ParseTransaction(tv.txHex)
+			// For Uniswap tests, ensure the Uniswap ABI is loaded and protocols registered
+			if strings.Contains(tv.policyPath, "uniswap_policy") && tv.chainStr == "ethereum" {
+				ethChain := c.(*ethereum.Ethereum)
+				abiBytes, err := os.ReadFile("../abi/uniswapV2_router.json")
+				if err != nil {
+					t.Fatalf("Failed to read Uniswap ABI: %v", err)
+				}
+				if err := ethChain.LoadABI("uniswapv2_router", abiBytes); err != nil {
+					t.Fatalf("Failed to load Uniswap ABI: %v", err)
+				}
+				// Register protocols (no token list, no ERC20 ABI needed for this test)
+				registerOnce.Do(func() {
+					if err := ethereum.RegisterEthereumProtocols(ethChain, nil); err != nil {
+						t.Fatalf("Failed to register Ethereum protocols: %v", err)
+					}
+				})
+			}
+
+			txHex := tv.txHex
+			if tv.txHexFunc != nil {
+				txHex = tv.txHexFunc()
+			}
+
+			tx, err := c.ParseTransaction(txHex)
 			if err != nil {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}

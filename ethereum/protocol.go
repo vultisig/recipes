@@ -82,7 +82,37 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			if actualValueBigInt.Cmp(maxValueBigInt) > 0 { // actual > max
 				return false, nil // Constraint not met
 			}
-
+		case *types.Constraint_MinValue:
+			actualBig, ok := paramValue.(*big.Int)
+			if !ok {
+				return false, fmt.Errorf("parameter %q expected *big.Int for MinValue, got %T", paramName, paramValue)
+			}
+			minBig, ok := new(big.Int).SetString(cVal.MinValue, 10)
+			if !ok {
+				return false, fmt.Errorf("invalid MinValue string %q in policy for parameter %q", cVal.MinValue, paramName)
+			}
+			if actualBig.Cmp(minBig) < 0 {
+				return false, nil
+			}
+		case *types.Constraint_RangeValue:
+			actualBig, ok := paramValue.(*big.Int)
+			if !ok {
+				return false, fmt.Errorf("parameter %q expected *big.Int for RangeValue, got %T", paramName, paramValue)
+			}
+			minBig, minOk := new(big.Int).SetString(cVal.RangeValue.Min, 10)
+			if !minOk {
+				return false, fmt.Errorf("invalid RangeValue.Min string %q in policy for parameter %q", cVal.RangeValue.Min, paramName)
+			}
+			maxBig, maxOk := new(big.Int).SetString(cVal.RangeValue.Max, 10)
+			if !maxOk {
+				return false, fmt.Errorf("invalid RangeValue.Max string %q in policy for parameter %q", cVal.RangeValue.Max, paramName)
+			}
+			if minBig.Cmp(maxBig) > 0 {
+				return false, fmt.Errorf("invalid range for parameter %q: min (%s) is greater than max (%s)", paramName, cVal.RangeValue.Min, cVal.RangeValue.Max)
+			}
+			if actualBig.Cmp(minBig) < 0 || actualBig.Cmp(maxBig) > 0 {
+				return false, nil
+			}
 		default:
 			return false, fmt.Errorf("unsupported constraint value type: %T for parameter %q", constraint.Value, paramName)
 		}
@@ -228,7 +258,8 @@ func (p *ETH) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 // ABIProtocol implements a protocol defined by an ABI
 type ABIProtocol struct {
 	BaseProtocol
-	abiParsed *abi.ABI // Store the parsed go-ethereum ABI object
+	abiParsed *abi.ABI          // Store the parsed go-ethereum ABI object
+	validator ProtocolValidator // Generic protocol validator for enhanced validation
 }
 
 // FunctionCustomizer is a function that customizes a generated function
@@ -273,16 +304,29 @@ func NewABIProtocolWithCustomization(id string, name string, description string,
 			Description: fmt.Sprintf("Call the %s function on %s", domainAbiFunc.Name, name),
 			Parameters:  params,
 		}
-		if customizer != nil {
+
+		// Check if there's a registered validator for this protocol
+		if validator, exists := GlobalValidatorRegistry.GetValidator(id); exists {
+			validator.CustomizeFunctions(function, &domainAbiFunc)
+		} else if customizer != nil {
+			// Fallback to old customizer for backward compatibility
 			customizer(function, &domainAbiFunc)
 		}
+
 		functions = append(functions, function)
 	}
 
-	return &ABIProtocol{
+	protocol := &ABIProtocol{
 		BaseProtocol: BaseProtocol{id: id, name: name, description: description, functions: functions},
 		abiParsed:    &parsedGoEthABI,
 	}
+
+	// Set the validator if one is registered for this protocol
+	if validator, exists := GlobalValidatorRegistry.GetValidator(id); exists {
+		protocol.validator = validator
+	}
+
+	return protocol
 }
 
 // NewABIProtocol creates a new protocol from an ABI
@@ -358,6 +402,13 @@ func (p *ABIProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, poli
 
 	if !constraintsMet {
 		return false, nil, nil // Constraints not met
+	}
+
+	// Apply Uniswap-specific validation if this is a Uniswap protocol
+	if p.validator != nil {
+		if err := p.validator.ValidateTransaction(policyMatcher.FunctionID, extractedParams); err != nil {
+			return false, nil, fmt.Errorf("validation failed for %s: %w", policyMatcher.FunctionID, err)
+		}
 	}
 
 	return true, extractedParams, nil

@@ -65,13 +65,50 @@ func (c *MyChain) SupportedProtocols() []string {
 chain.RegisterChain(&MyChain{})
 ```
 
+#### Adding a New Protocol
+
+1. Create a protocol validator:
+```go
+type MyValidator struct{}
+
+func (v *MyValidator) ValidateTransaction(tx *Transaction) error {
+    return nil
+}
+```
+
+2. Register the validator:
+```go
+validator.RegisterValidator("my-protocol", &MyValidator{})
+```
+
 ## Development
 
 ### Running Tests
 
+Run all tests:
 ```bash
 go test ./...
 ```
+
+Run specific test suites:
+```bash
+go test ./validator/... # Run validator tests
+go test ./chain/...    # Run chain tests
+```
+
+Run test engine with coverage:
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+### Test Guidelines
+
+- Write unit tests for all new validators
+- Include both positive and negative test cases
+- Mock external dependencies when testing
+- Use test helpers from `testdata` package
+- Follow table-driven test patterns
 
 ### Documentation
 
