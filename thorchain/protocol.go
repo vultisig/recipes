@@ -152,6 +152,15 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 		return false, nil, nil // This protocol only supports transfer operations
 	}
 
+	// Check denomination - only match RUNE transactions
+	if thorchainTx, ok := decodedTx.(*ParsedThorchainTransaction); ok {
+		if thorchainTx.GetDenom() != "rune" {
+			return false, nil, nil // Not a RUNE transaction, don't match
+		}
+	} else {
+		return false, nil, nil // Not a Thorchain transaction type
+	}
+
 	// Add sanity checks to ensure transaction has valid data
 	recipient := decodedTx.To()
 	if recipient == "" {
@@ -166,6 +175,7 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 	params := map[string]interface{}{
 		"recipient": strings.ToLower(recipient),
 		"amount":    amount,
+		"denom":     "rune", // Add denomination to params for validation
 	}
 
 	// Add memo if present
@@ -196,6 +206,15 @@ func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 		return false, nil, nil // This protocol only supports transfer operations
 	}
 
+	// Check denomination - only match TCY transactions
+	if thorchainTx, ok := decodedTx.(*ParsedThorchainTransaction); ok {
+		if thorchainTx.GetDenom() != "tcy" {
+			return false, nil, nil // Not a TCY transaction, don't match
+		}
+	} else {
+		return false, nil, nil // Not a Thorchain transaction type
+	}
+
 	// Add sanity checks to ensure transaction has valid data
 	recipient := decodedTx.To()
 	if recipient == "" {
@@ -210,6 +229,7 @@ func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	params := map[string]interface{}{
 		"recipient": strings.ToLower(recipient),
 		"amount":    amount,
+		"denom":     "tcy", // Add denomination to params for validation
 	}
 
 	// Add memo if present
@@ -265,7 +285,14 @@ func evaluateBasicConstraintsHelper(params map[string]interface{}, constraints [
 		// Handle basic constraint types (focus on most common ones)
 		switch constraint.GetType() {
 		case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-			valStr := fmt.Sprintf("%v", paramValue)
+			var valStr string
+			// Handle *big.Int values properly (convert to numeric string, not memory address)
+			if bigIntVal, ok := paramValue.(*big.Int); ok {
+				valStr = bigIntVal.String()
+			} else {
+				valStr = fmt.Sprintf("%v", paramValue)
+			}
+
 			if !strings.EqualFold(valStr, constraint.GetFixedValue()) {
 				return false, nil
 			}
