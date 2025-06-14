@@ -1,42 +1,46 @@
 package thorchain
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/std"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 func TestParseThorchainTransaction(t *testing.T) {
-	// Test with valid hex data
-	txHex := "0x1234567890abcdef"
+	// Test with invalid hex data (not valid protobuf) - should now return error
+	txHex := "0x1234567890abcdef1234567890abcdef1234567890abcdef"
 
-	decodedTx, err := ParseThorchainTransaction(txHex)
-	require.NoError(t, err)
-
-	// Test DecodedTransaction interface implementation
-	assert.Equal(t, "thorchain", decodedTx.ChainIdentifier())
-	assert.NotEmpty(t, decodedTx.Hash())
-
-	// Test default values for transaction fields
-	assert.Equal(t, "", decodedTx.From())
-	assert.Equal(t, "", decodedTx.To())
-	assert.Equal(t, big.NewInt(0), decodedTx.Value())
-	assert.Equal(t, uint64(0), decodedTx.Nonce())
-	assert.Equal(t, big.NewInt(0), decodedTx.GasPrice())
-	assert.Equal(t, uint64(200000), decodedTx.GasLimit()) // Standard Cosmos gas limit
+	_, err := ParseThorchainTransaction(txHex)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode protobuf transaction")
 }
 
 func TestParseThorchainTransactionWithoutPrefix(t *testing.T) {
-	// Test without 0x prefix
-	txHex := "1234567890abcdef"
+	// Test without 0x prefix (still invalid protobuf) - should return error
+	txHex := "1234567890abcdef1234567890abcdef1234567890abcdef"
 
-	decodedTx, err := ParseThorchainTransaction(txHex)
-	require.NoError(t, err)
+	_, err := ParseThorchainTransaction(txHex)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode protobuf transaction")
+}
 
-	assert.Equal(t, "thorchain", decodedTx.ChainIdentifier())
-	assert.NotEmpty(t, decodedTx.Hash())
+func TestParseThorchainTransactionTooShort(t *testing.T) {
+	// Test with transaction data that's too short
+	txHex := "0x12345678" // Only 4 bytes
+
+	_, err := ParseThorchainTransaction(txHex)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transaction too short")
 }
 
 func TestParseThorchainTransactionInvalidHex(t *testing.T) {
@@ -187,4 +191,158 @@ func TestComputeThorchainTxHash(t *testing.T) {
 	// Hash should be uppercase hex (like Cosmos)
 	assert.Equal(t, 64, len(hash1)) // SHA256 = 32 bytes = 64 hex chars
 	assert.Regexp(t, "^[A-F0-9]+$", hash1)
+}
+
+func TestRealCosmosTransactionParsing(t *testing.T) {
+	// Create a real Cosmos SDK transaction for testing
+	interfaceRegistry := types.NewInterfaceRegistry()
+	std.RegisterInterfaces(interfaceRegistry)
+	banktypes.RegisterInterfaces(interfaceRegistry)
+	cdc := codec.NewProtoCodec(interfaceRegistry)
+
+	// Create a sample MsgSend
+	fromAddr := "thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw"
+	toAddr := "thor1x8ef0n5m6d6hbgdgq0lrzjyfw3gm5dz8mwfx4e"
+	amount := sdktypes.NewInt64Coin("rune", 100000000) // 1 RUNE
+
+	msgSend := &banktypes.MsgSend{
+		FromAddress: fromAddr,
+		ToAddress:   toAddr,
+		Amount:      []sdktypes.Coin{amount},
+	}
+
+	// Create message Any
+	msgAny, err := types.NewAnyWithValue(msgSend)
+	require.NoError(t, err)
+
+	// Create transaction body
+	txBody := &tx.TxBody{
+		Messages: []*types.Any{msgAny},
+		Memo:     "test transfer",
+	}
+
+	// Create auth info with gas and fee
+	fee := &tx.Fee{
+		Amount:   []sdktypes.Coin{sdktypes.NewInt64Coin("rune", 2000000)}, // Fee amount (2M to get integer gas price)
+		GasLimit: 200000,
+	}
+
+	authInfo := &tx.AuthInfo{
+		Fee: fee,
+		SignerInfos: []*tx.SignerInfo{
+			{
+				Sequence: 5,
+			},
+		},
+	}
+
+	// Create the complete transaction
+	cosmosTx := &tx.Tx{
+		Body:     txBody,
+		AuthInfo: authInfo,
+	}
+
+	// Encode the transaction to bytes
+	txBytes, err := cdc.Marshal(cosmosTx)
+	require.NoError(t, err)
+
+	// Convert to hex string
+	txHex := "0x" + hex.EncodeToString(txBytes)
+
+	// Parse the transaction using our implementation
+	decodedTx, err := ParseThorchainTransaction(txHex)
+	require.NoError(t, err)
+
+	// Verify extracted values
+	assert.Equal(t, "thorchain", decodedTx.ChainIdentifier())
+	assert.NotEmpty(t, decodedTx.Hash())
+
+	// Test that actual values were extracted
+	assert.Equal(t, fromAddr, decodedTx.From())
+	assert.Equal(t, toAddr, decodedTx.To())
+	assert.Equal(t, big.NewInt(100000000), decodedTx.Value())
+	assert.Equal(t, uint64(200000), decodedTx.GasLimit())
+	assert.Equal(t, uint64(5), decodedTx.Nonce()) // sequence
+	assert.Equal(t, []byte("test transfer"), decodedTx.Data())
+
+	// Test Thorchain-specific methods
+	parsed := decodedTx.(*ParsedThorchainTransaction)
+	assert.Equal(t, "test transfer", parsed.GetMemo())
+	assert.Equal(t, "rune", parsed.GetDenom())
+	assert.Equal(t, "MsgSend", parsed.GetMsgType())
+	assert.Equal(t, uint64(5), parsed.GetSequence())
+
+	// Test gas price calculation (fee amount / gas limit)
+	expectedGasPrice := big.NewInt(10) // 2000000 / 200000 = 10
+	assert.Equal(t, expectedGasPrice, decodedTx.GasPrice())
+}
+
+func TestCosmosTransactionParsingWithMultipleCoins(t *testing.T) {
+	// Test with transaction containing multiple coins
+	interfaceRegistry := types.NewInterfaceRegistry()
+	std.RegisterInterfaces(interfaceRegistry)
+	banktypes.RegisterInterfaces(interfaceRegistry)
+	cdc := codec.NewProtoCodec(interfaceRegistry)
+
+	fromAddr := "thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw"
+	toAddr := "thor1x8ef0n5m6d6hbgdgq0lrzjyfw3gm5dz8mwfx4e"
+
+	// Multiple coins with TCY as first coin
+	coins := []sdktypes.Coin{
+		sdktypes.NewInt64Coin("tcy", 50000000),   // 0.5 TCY (first coin)
+		sdktypes.NewInt64Coin("rune", 100000000), // 1 RUNE
+	}
+
+	msgSend := &banktypes.MsgSend{
+		FromAddress: fromAddr,
+		ToAddress:   toAddr,
+		Amount:      coins,
+	}
+
+	msgAny, err := types.NewAnyWithValue(msgSend)
+	require.NoError(t, err)
+
+	txBody := &tx.TxBody{
+		Messages: []*types.Any{msgAny},
+		Memo:     "multi-coin transfer",
+	}
+
+	authInfo := &tx.AuthInfo{
+		Fee: &tx.Fee{
+			Amount:   []sdktypes.Coin{sdktypes.NewInt64Coin("rune", 2000)},
+			GasLimit: 250000,
+		},
+		SignerInfos: []*tx.SignerInfo{{Sequence: 10}},
+	}
+
+	cosmosTx := &tx.Tx{
+		Body:     txBody,
+		AuthInfo: authInfo,
+	}
+
+	txBytes, err := cdc.Marshal(cosmosTx)
+	require.NoError(t, err)
+
+	txHex := hex.EncodeToString(txBytes)
+
+	// Parse the transaction
+	decodedTx, err := ParseThorchainTransaction(txHex)
+	require.NoError(t, err)
+
+	// Should extract first coin (TCY)
+	assert.Equal(t, big.NewInt(50000000), decodedTx.Value())
+
+	parsed := decodedTx.(*ParsedThorchainTransaction)
+	assert.Equal(t, "tcy", parsed.GetDenom()) // First coin denomination
+	assert.Equal(t, "multi-coin transfer", parsed.GetMemo())
+	assert.Equal(t, uint64(10), parsed.GetSequence())
+}
+
+func TestInvalidProtobufTransaction(t *testing.T) {
+	// Test with invalid protobuf data (should return an error now)
+	invalidHex := "deadbeefcafebabe1234567890abcdef"
+
+	_, err := ParseThorchainTransaction(invalidHex)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode protobuf transaction")
 }

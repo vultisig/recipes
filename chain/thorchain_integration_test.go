@@ -53,13 +53,11 @@ func TestThorchainTransactionParsing(t *testing.T) {
 	thorchainFromRegistry, err := GetChain("thorchain")
 	require.NoError(t, err)
 
-	// Test parsing a sample transaction
+	// Test parsing with invalid protobuf data (should return error now)
 	txHex := "0x1234567890abcdef1234567890abcdef"
-	decodedTx, err := thorchainFromRegistry.ParseTransaction(txHex)
-	require.NoError(t, err)
-
-	assert.Equal(t, "thorchain", decodedTx.ChainIdentifier())
-	assert.NotEmpty(t, decodedTx.Hash())
+	_, err = thorchainFromRegistry.ParseTransaction(txHex)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode protobuf transaction")
 }
 
 func TestThorchainProtocolFunctionality(t *testing.T) {

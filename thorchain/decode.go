@@ -7,7 +7,13 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/vultisig/recipes/types"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/std"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	vultisigTypes "github.com/vultisig/recipes/types"
 )
 
 // Thorchain network configuration
@@ -111,38 +117,119 @@ func (p *ParsedThorchainTransaction) GetAccountNumber() uint64 {
 	return p.accountNum
 }
 
-// ParseThorchainTransaction decodes a raw Thorchain transaction from its hex representation
-func ParseThorchainTransaction(txHex string) (types.DecodedTransaction, error) {
+// createCosmosCodec creates a codec for decoding Cosmos SDK transactions
+func createCosmosCodec() codec.Codec {
+	interfaceRegistry := types.NewInterfaceRegistry()
+	std.RegisterInterfaces(interfaceRegistry)
+	banktypes.RegisterInterfaces(interfaceRegistry)
+
+	return codec.NewProtoCodec(interfaceRegistry)
+}
+
+// ParseThorchainTransaction decodes a raw Thorchain transaction using Cosmos SDK protobuf parsing
+func ParseThorchainTransaction(txHex string) (vultisigTypes.DecodedTransaction, error) {
 	// Remove 0x prefix if present
 	txHex = strings.TrimPrefix(txHex, "0x")
 
-	// Decode hex to bytes
+	// Validate hex format and decode to bytes
 	rawTxBytes, err := hex.DecodeString(txHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex transaction: %w", err)
 	}
 
-	// Generate transaction hash
+	// Validate minimum transaction size
+	if len(rawTxBytes) < 10 {
+		return nil, fmt.Errorf("transaction too short: %d bytes (minimum ~10 bytes expected)", len(rawTxBytes))
+	}
+
+	// Generate transaction hash using Cosmos SDK standard
 	txHash := computeThorchainTxHash(rawTxBytes)
 
-	// Create parsed transaction for Thorchain transfers
+	// Create codec for transaction decoding
+	cdc := createCosmosCodec()
+
+	// Decode the transaction using Cosmos SDK protobuf
+	var cosmosSDKTx tx.Tx
+	err = cdc.Unmarshal(rawTxBytes, &cosmosSDKTx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode protobuf transaction: %w", err)
+	}
+
+	// Extract transaction information from decoded Cosmos SDK transaction
 	parsed := &ParsedThorchainTransaction{
-		txHash:     txHash,
-		rawData:    rawTxBytes,
-		fromAddr:   "",            // Sender address (extracted from transaction context)
-		toAddr:     "",            // Recipient address (extracted from transaction context)
-		amount:     big.NewInt(0), // Transfer amount (extracted from transaction context)
-		denom:      "rune",        // Token denomination (default to RUNE)
-		memo:       "",            // Transaction memo (extracted from transaction context)
-		msgType:    "MsgSend",     // Cosmos message type (default to send)
-		gasPrice:   big.NewInt(0), // Gas price for transaction
-		gasLimit:   200000,        // Standard Cosmos transaction gas limit
-		nonce:      0,             // Transaction nonce
-		sequence:   0,             // Account sequence number
-		accountNum: 0,             // Account number
+		txHash:  txHash,
+		rawData: rawTxBytes,
+	}
+
+	// Extract auth info (gas, fee, sequence, account number)
+	if cosmosSDKTx.AuthInfo != nil {
+		if cosmosSDKTx.AuthInfo.Fee != nil {
+			parsed.gasLimit = cosmosSDKTx.AuthInfo.Fee.GasLimit
+			if len(cosmosSDKTx.AuthInfo.Fee.Amount) > 0 {
+				// Calculate gas price from fee amount / gas limit
+				if parsed.gasLimit > 0 {
+					feeAmount := cosmosSDKTx.AuthInfo.Fee.Amount[0].Amount.BigInt()
+					gasLimit := big.NewInt(int64(parsed.gasLimit))
+					parsed.gasPrice = new(big.Int).Div(feeAmount, gasLimit)
+				}
+			}
+		}
+
+		if len(cosmosSDKTx.AuthInfo.SignerInfos) > 0 {
+			parsed.sequence = cosmosSDKTx.AuthInfo.SignerInfos[0].Sequence
+		}
+	}
+
+	// Extract message information
+	if cosmosSDKTx.Body != nil {
+		parsed.memo = cosmosSDKTx.Body.Memo
+
+		if len(cosmosSDKTx.Body.Messages) > 0 {
+			// Handle the first message (most common case for transfers)
+			msg := cosmosSDKTx.Body.Messages[0]
+
+			// Decode the message based on type URL
+			switch msg.TypeUrl {
+			case "/cosmos.bank.v1beta1.MsgSend":
+				parsed.msgType = "MsgSend"
+
+				var bankMsg banktypes.MsgSend
+				err = cdc.Unmarshal(msg.Value, &bankMsg)
+				if err == nil {
+					parsed.fromAddr = bankMsg.FromAddress
+					parsed.toAddr = bankMsg.ToAddress
+
+					if len(bankMsg.Amount) > 0 {
+						coin := bankMsg.Amount[0]
+						parsed.amount = coin.Amount.BigInt()
+						parsed.denom = coin.Denom
+					}
+				}
+
+			default:
+				// Handle other message types or set as unknown
+				parsed.msgType = extractMessageType(msg.TypeUrl)
+			}
+		}
 	}
 
 	return parsed, nil
+}
+
+// extractMessageType extracts a readable message type from the type URL
+func extractMessageType(typeURL string) string {
+	// Extract the message type from the full type URL
+	// e.g., "/cosmos.bank.v1beta1.MsgSend" -> "MsgSend"
+	parts := strings.Split(typeURL, ".")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return "Unknown"
+}
+
+// ValidateThorchainTransactionHex is an alias for backward compatibility
+func ValidateThorchainTransactionHex(txHex string) (vultisigTypes.DecodedTransaction, error) {
+	return ParseThorchainTransaction(txHex)
 }
 
 // computeThorchainTxHash generates a transaction hash using SHA256 (like Cosmos)
