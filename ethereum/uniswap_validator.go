@@ -275,8 +275,22 @@ func (v *UniswapV2Validator) validateSwapTransaction(functionName string, params
 			for i, addr := range pathArray {
 				pathAddresses[i] = strings.ToLower(addr.Hex())
 			}
+		} else if pathArray, ok := path.([]string); ok {
+			pathLength = len(pathArray)
+			if pathLength < 2 {
+				return fmt.Errorf("swap path must contain at least 2 addresses (input and output tokens)")
+			}
+			if pathLength > 4 {
+				return fmt.Errorf("swap path too long, maximum 4 tokens supported for optimal gas usage")
+			}
+
+			// Convert []string to lowercase
+			pathAddresses = make([]string, pathLength)
+			for i, addr := range pathArray {
+				pathAddresses[i] = strings.ToLower(addr)
+			}
 		} else {
-			return fmt.Errorf("invalid path type: expected []interface{} or []common.Address, got %T", path)
+			return fmt.Errorf("invalid path type: expected []interface{}, []common.Address, or []string, got %T", path)
 		}
 
 		// Validate each address in path

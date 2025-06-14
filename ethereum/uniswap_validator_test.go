@@ -287,6 +287,118 @@ func TestUniswapV2Validator_ValidateAddresses(t *testing.T) {
 	}
 }
 
+func TestUniswapV2Validator_ValidateSwapPath(t *testing.T) {
+	validator := NewUniswapV2Validator()
+
+	tests := []struct {
+		name          string
+		params        map[string]interface{}
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "Valid []interface{} path",
+			params: map[string]interface{}{
+				"path": []interface{}{
+					"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+					"0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+				},
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid []common.Address path",
+			params: map[string]interface{}{
+				"path": []common.Address{
+					common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+					common.HexToAddress("0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"),
+				},
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid []string path",
+			params: map[string]interface{}{
+				"path": []string{
+					"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+					"0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+				},
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid path type",
+			params: map[string]interface{}{
+				"path":         12345,
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError:   true,
+			errorContains: "invalid path type: expected []interface{}, []common.Address, or []string",
+		},
+		{
+			name: "Path too short ([]string)",
+			params: map[string]interface{}{
+				"path": []string{
+					"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+				},
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError:   true,
+			errorContains: "swap path must contain at least 2 addresses",
+		},
+		{
+			name: "Path too long ([]string)",
+			params: map[string]interface{}{
+				"path": []string{
+					"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+					"0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+					"0xA0b86a33E6BA3b1b3b3b3b3b3b3b3b3b3b3b3b3b",
+					"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+					"0x742d35cc6671FbF82f0a8C2A9C8fBc9b8b8b8b8b",
+				},
+				"amountOutMin": big.NewInt(1000000000000000000),
+				"to":           "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+				"deadline":     big.NewInt(time.Now().Unix() + 1800),
+			},
+			expectError:   true,
+			errorContains: "swap path too long, maximum 4 tokens supported",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.validateSwapTransaction("swapExactETHForTokens", tt.params)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+					return
+				}
+				if tt.errorContains != "" && !contains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain '%s', but got: %s", tt.errorContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %s", err.Error())
+				}
+			}
+		})
+	}
+}
+
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
