@@ -28,10 +28,23 @@ func (v *ThorchainValidator) ValidateTransfer(params map[string]interface{}) err
 		return fmt.Errorf("recipient address is required for transfers")
 	}
 
+	// Get denomination from params, default to "rune"
+	denom := "rune"
+	if denomParam, ok := params["denom"]; ok {
+		if denomStr, ok := denomParam.(string); ok {
+			denom = denomStr
+		}
+	}
+
+	// Validate denomination is supported
+	if denom != "rune" && denom != "tcy" {
+		return fmt.Errorf("unsupported denomination: %s (must be 'rune' or 'tcy')", denom)
+	}
+
 	// Validate amount
 	if amount, ok := params["amount"]; ok {
 		if amountBig, ok := amount.(*big.Int); ok {
-			if err := ValidateAmount(amountBig, "rune"); err != nil {
+			if err := ValidateAmount(amountBig, denom); err != nil {
 				return fmt.Errorf("invalid transfer amount: %w", err)
 			}
 		} else {

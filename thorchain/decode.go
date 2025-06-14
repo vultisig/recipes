@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/btcsuite/btcutil/bech32"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/std"
@@ -149,11 +150,30 @@ func ParseThorchainTransaction(txHex string) (vultisigTypes.DecodedTransaction, 
 	cdc := createCosmosCodec()
 
 	// Decode the transaction using Cosmos SDK protobuf
-	var cosmosSDKTx tx.Tx
-	err = cdc.Unmarshal(rawTxBytes, &cosmosSDKTx)
+	var cosmosTxRaw tx.TxRaw
+	err = cdc.Unmarshal(rawTxBytes, &cosmosTxRaw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode protobuf transaction: %w", err)
 	}
+
+	// Decode the TxRaw into a proper Tx structure
+	var cosmosSDKTx tx.Tx
+
+	// Initialize and unmarshal TxBody
+	cosmosSDKTx.Body = &tx.TxBody{}
+	err = cdc.Unmarshal(cosmosTxRaw.BodyBytes, cosmosSDKTx.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode transaction body: %w", err)
+	}
+
+	// Initialize and unmarshal AuthInfo
+	cosmosSDKTx.AuthInfo = &tx.AuthInfo{}
+	err = cdc.Unmarshal(cosmosTxRaw.AuthInfoBytes, cosmosSDKTx.AuthInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode auth info: %w", err)
+	}
+
+	cosmosSDKTx.Signatures = cosmosTxRaw.Signatures
 
 	// Extract transaction information from decoded Cosmos SDK transaction
 	parsed := &ParsedThorchainTransaction{
@@ -165,11 +185,17 @@ func ParseThorchainTransaction(txHex string) (vultisigTypes.DecodedTransaction, 
 	if cosmosSDKTx.AuthInfo != nil {
 		if cosmosSDKTx.AuthInfo.Fee != nil {
 			parsed.gasLimit = cosmosSDKTx.AuthInfo.Fee.GasLimit
-			if len(cosmosSDKTx.AuthInfo.Fee.Amount) > 0 {
-				// Calculate gas price from fee amount / gas limit
-				if parsed.gasLimit > 0 {
-					feeAmount := cosmosSDKTx.AuthInfo.Fee.Amount[0].Amount.BigInt()
+
+			// Calculate gas price with proper validation
+			if len(cosmosSDKTx.AuthInfo.Fee.Amount) > 0 && parsed.gasLimit > 0 {
+				feeCoin := cosmosSDKTx.AuthInfo.Fee.Amount[0]
+
+				// Verify fee denomination matches native token (rune) or known tokens
+				if feeCoin.Denom == "rune" || feeCoin.Denom == "tcy" {
+					feeAmount := feeCoin.Amount.BigInt()
 					gasLimit := big.NewInt(int64(parsed.gasLimit))
+
+					// Calculate gas price (fee amount / gas limit)
 					parsed.gasPrice = new(big.Int).Div(feeAmount, gasLimit)
 				}
 			}
@@ -238,30 +264,36 @@ func computeThorchainTxHash(txBytes []byte) string {
 	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
 
-// ValidateThorchainAddress validates a Thorchain address format
+// ValidateThorchainAddress validates a Thorchain address format and checksum
 func ValidateThorchainAddress(address string) error {
 	if address == "" {
 		return fmt.Errorf("address cannot be empty")
 	}
 
+	// Check prefix
 	if !strings.HasPrefix(address, ThorchainBech32Prefix) {
-		return fmt.Errorf("invalid Thorchain address: must start with '%s'", ThorchainBech32Prefix)
+		return fmt.Errorf("address must start with '%s'", ThorchainBech32Prefix)
 	}
 
+	// Check length
 	if len(address) < ThorchainMinAddrLength || len(address) > ThorchainMaxAddrLength {
-		return fmt.Errorf("invalid Thorchain address length: expected %d-%d characters, got %d",
-			ThorchainMinAddrLength, ThorchainMaxAddrLength, len(address))
+		return fmt.Errorf("address length must be between %d and %d characters", ThorchainMinAddrLength, ThorchainMaxAddrLength)
 	}
 
-	// Basic character validation for bech32
-	validChars := "0123456789abcdefghijklmnopqrstuvwxyz"
-	addressBody := address[len(ThorchainBech32Prefix):]
+	// Use bech32 library to decode and validate checksum
+	hrp, data, err := bech32.Decode(address)
+	if err != nil {
+		return fmt.Errorf("invalid bech32 address: %w", err)
+	}
 
-	for i, char := range addressBody {
-		if !strings.ContainsRune(validChars, char) {
-			return fmt.Errorf("invalid character '%c' at position %d in Thorchain address",
-				char, i+len(ThorchainBech32Prefix))
-		}
+	// Verify the human-readable part matches expected prefix
+	if hrp != ThorchainBech32Prefix {
+		return fmt.Errorf("expected address prefix %s, got %s", ThorchainBech32Prefix, hrp)
+	}
+
+	// Verify decoded data is not empty
+	if len(data) == 0 {
+		return fmt.Errorf("address contains no data")
 	}
 
 	return nil

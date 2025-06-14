@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/vultisig/mobile-tss-lib/tss"
-	"github.com/vultisig/recipes/types"
+	vultisigtypes "github.com/vultisig/recipes/types"
 )
 
 // Thorchain implements the Chain interface for the Thorchain blockchain
@@ -33,12 +34,12 @@ func (t *Thorchain) SupportedProtocols() []string {
 }
 
 // ParseTransaction decodes a raw Thorchain transaction from its hex representation
-func (t *Thorchain) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
+func (t *Thorchain) ParseTransaction(txHex string) (vultisigtypes.DecodedTransaction, error) {
 	return ParseThorchainTransaction(txHex)
 }
 
 // GetProtocol returns a protocol handler for the given ID
-func (t *Thorchain) GetProtocol(id string) (types.Protocol, error) {
+func (t *Thorchain) GetProtocol(id string) (vultisigtypes.Protocol, error) {
 	lowerID := strings.ToLower(id)
 	switch lowerID {
 	case "rune":
@@ -60,19 +61,30 @@ func (t *Thorchain) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespon
 	// Remove 0x prefix if present
 	proposedTxHex = strings.TrimPrefix(proposedTxHex, "0x")
 
+	// Check for empty transaction hex
+	if proposedTxHex == "" {
+		return "", fmt.Errorf("transaction hex is invalid or empty")
+	}
+
 	// Decode the proposed transaction
 	txBytes, err := hex.DecodeString(proposedTxHex)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode transaction hex: %w", err)
 	}
 
-	// Create signed transaction bytes by combining original transaction with signatures
-	// This follows the Cosmos SDK pattern where signatures are appended to the transaction
-	signedTxData := make([]byte, 0, len(txBytes)+len(sigs)*96) // Estimate signature size
-	signedTxData = append(signedTxData, txBytes...)
+	// Create codec for transaction handling
+	cdc := createCosmosCodec()
 
-	// Apply signatures to the transaction data
-	for _, sig := range sigs {
+	// Unmarshal the transaction into proper Cosmos SDK Tx structure
+	var cosmosTx tx.Tx
+	err = cdc.Unmarshal(txBytes, &cosmosTx)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal transaction: %w", err)
+	}
+
+	// Prepare signatures for injection
+	signatures := make([][]byte, len(sigs))
+	for i, sig := range sigs {
 		// Convert signature components to bytes
 		rBytes, err := hex.DecodeString(sig.R)
 		if err != nil {
@@ -87,19 +99,35 @@ func (t *Thorchain) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespon
 			return "", fmt.Errorf("invalid recovery ID: %w", err)
 		}
 
-		// Append signature data in standard format
-		signedTxData = append(signedTxData, rBytes...)
-		signedTxData = append(signedTxData, sBytes...)
-		signedTxData = append(signedTxData, recoveryBytes...)
+		// Combine signature components in standard format
+		sigBytes := make([]byte, 0, len(rBytes)+len(sBytes)+len(recoveryBytes))
+		sigBytes = append(sigBytes, rBytes...)
+		sigBytes = append(sigBytes, sBytes...)
+		sigBytes = append(sigBytes, recoveryBytes...)
+		signatures[i] = sigBytes
+	}
+
+	// Inject signatures into the transaction's AuthInfo
+	if cosmosTx.AuthInfo == nil {
+		return "", fmt.Errorf("transaction AuthInfo is nil")
+	}
+
+	// Update signatures in the transaction (not AuthInfo)
+	cosmosTx.Signatures = signatures
+
+	// Marshal the signed transaction back to bytes
+	signedTxBytes, err := cdc.Marshal(&cosmosTx)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal signed transaction: %w", err)
 	}
 
 	// Compute the final transaction hash using SHA256 (standard for Cosmos)
-	hash := computeThorchainTxHash(signedTxData)
+	hash := computeThorchainTxHash(signedTxBytes)
 
 	return hash, nil
 }
 
 // NewThorchain creates a new Thorchain instance
-func NewThorchain() types.Chain {
+func NewThorchain() vultisigtypes.Chain {
 	return &Thorchain{}
 }

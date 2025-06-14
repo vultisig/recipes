@@ -152,9 +152,20 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 		return false, nil, nil // This protocol only supports transfer operations
 	}
 
+	// Add sanity checks to ensure transaction has valid data
+	recipient := decodedTx.To()
+	if recipient == "" {
+		return false, nil, nil // No recipient, not a valid transfer
+	}
+
+	amount := decodedTx.Value()
+	if amount == nil || amount.Cmp(big.NewInt(0)) <= 0 {
+		return false, nil, nil // No amount or zero amount, not a valid transfer
+	}
+
 	params := map[string]interface{}{
-		"recipient": strings.ToLower(decodedTx.To()),
-		"amount":    decodedTx.Value(),
+		"recipient": strings.ToLower(recipient),
+		"amount":    amount,
 	}
 
 	// Add memo if present
@@ -185,9 +196,20 @@ func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 		return false, nil, nil // This protocol only supports transfer operations
 	}
 
+	// Add sanity checks to ensure transaction has valid data
+	recipient := decodedTx.To()
+	if recipient == "" {
+		return false, nil, nil // No recipient, not a valid transfer
+	}
+
+	amount := decodedTx.Value()
+	if amount == nil || amount.Cmp(big.NewInt(0)) <= 0 {
+		return false, nil, nil // No amount or zero amount, not a valid transfer
+	}
+
 	params := map[string]interface{}{
-		"recipient": strings.ToLower(decodedTx.To()),
-		"amount":    decodedTx.Value(),
+		"recipient": strings.ToLower(recipient),
+		"amount":    amount,
 	}
 
 	// Add memo if present
@@ -210,6 +232,16 @@ func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 
 // evaluateBasicConstraints provides simplified constraint evaluation
 func (r *RUNE) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
+	return evaluateBasicConstraintsHelper(params, constraints)
+}
+
+// evaluateBasicConstraints for TCY - uses shared helper
+func (t *TCY) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
+	return evaluateBasicConstraintsHelper(params, constraints)
+}
+
+// evaluateBasicConstraintsHelper provides shared constraint evaluation logic for both RUNE and TCY
+func evaluateBasicConstraintsHelper(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
 	for _, pc := range constraints {
 		if pc == nil {
 			continue
@@ -248,13 +280,12 @@ func (r *RUNE) evaluateBasicConstraints(params map[string]interface{}, constrain
 					return false, nil
 				}
 			}
+
+		default:
+			// Return false for unsupported constraint types to prevent bypassing restrictions
+			return false, fmt.Errorf("unsupported constraint type: %v for parameter %s", constraint.GetType(), paramName)
 		}
 	}
 
 	return true, nil
-}
-
-// evaluateBasicConstraints for TCY - same as RUNE for basic transfers
-func (t *TCY) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
-	return (&RUNE{}).evaluateBasicConstraints(params, constraints)
 }

@@ -89,21 +89,18 @@ func TestParsedThorchainTransactionInterface(t *testing.T) {
 }
 
 func TestValidateThorchainAddress(t *testing.T) {
-	// Test valid addresses (proper length and format)
+	// Test valid addresses with proper bech32 checksums
 	validAddresses := []string{
-		"thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw", // Actual format
-		"thor1234567890abcdefghijklmnpqrstuvwxyz123",   // Valid length but may have invalid chars
+		"thor1jkndhpfauwmtn2uk7ytmruu0yywz5e66mq94e2", // Valid Thorchain address
+		"thor13m8mqtcv7c2srnpr4efucwkrdu29tq3ejgu52r", // Another valid Thorchain address
 	}
 
 	for _, addr := range validAddresses {
-		// Only test the first address which is realistic
-		if addr == "thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw" {
-			err := ValidateThorchainAddress(addr)
-			assert.NoError(t, err, "Address %s should be valid", addr)
-		}
+		err := ValidateThorchainAddress(addr)
+		assert.NoError(t, err, "Address %s should be valid", addr)
 	}
 
-	// Test invalid addresses
+	// Test invalid addresses that should definitely fail
 	invalidAddresses := []string{
 		"eth0x1234567890abcdef", // Wrong prefix
 		"thor123",               // Too short
@@ -111,12 +108,23 @@ func TestValidateThorchainAddress(t *testing.T) {
 		"", // Empty
 		"thor1234567890abcdefghijklmnopqrstuvwxyz12345", // Too long (45 chars)
 		"thor123456789@abcdefghijklmnopqrstuvwxyz123",   // Invalid character (@)
+		"thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw",  // Invalid checksum
 	}
 
 	for _, addr := range invalidAddresses {
 		err := ValidateThorchainAddress(addr)
 		assert.Error(t, err, "Address %s should be invalid", addr)
 	}
+
+	// Test that empty address fails
+	err := ValidateThorchainAddress("")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "address cannot be empty")
+
+	// Test that wrong prefix fails
+	err = ValidateThorchainAddress("cosmos1234567890abcdefghijklmnopqrstuvwxyz123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "address must start with 'thor'")
 }
 
 func TestValidateMemo(t *testing.T) {
@@ -200,9 +208,9 @@ func TestRealCosmosTransactionParsing(t *testing.T) {
 	banktypes.RegisterInterfaces(interfaceRegistry)
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 
-	// Create a sample MsgSend
-	fromAddr := "thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw"
-	toAddr := "thor1x8ef0n5m6d6hbgdgq0lrzjyfw3gm5dz8mwfx4e"
+	// Use real valid Thorchain addresses for proper testing
+	fromAddr := "thor1jkndhpfauwmtn2uk7ytmruu0yywz5e66mq94e2"
+	toAddr := "thor13m8mqtcv7c2srnpr4efucwkrdu29tq3ejgu52r"
 	amount := sdktypes.NewInt64Coin("rune", 100000000) // 1 RUNE
 
 	msgSend := &banktypes.MsgSend{
@@ -284,8 +292,9 @@ func TestCosmosTransactionParsingWithMultipleCoins(t *testing.T) {
 	banktypes.RegisterInterfaces(interfaceRegistry)
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 
-	fromAddr := "thor1qpyxw8nhed4afrxjgwru5vrtaz3mr3hskr6tkmw"
-	toAddr := "thor1x8ef0n5m6d6hbgdgq0lrzjyfw3gm5dz8mwfx4e"
+	// Use real valid Thorchain addresses for proper testing
+	fromAddr := "thor1jkndhpfauwmtn2uk7ytmruu0yywz5e66mq94e2"
+	toAddr := "thor13m8mqtcv7c2srnpr4efucwkrdu29tq3ejgu52r"
 
 	// Multiple coins with TCY as first coin
 	coins := []sdktypes.Coin{
