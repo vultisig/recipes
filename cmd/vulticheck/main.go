@@ -14,6 +14,7 @@ import (
 
 func main() {
 	policyPath := flag.String("policy", "", "Path to the policy.json file")
+	schemaPath := flag.String("schema", "", "Path to the schema.json file")
 	txHex := flag.String("tx", "", "Hex-encoded transaction string")
 	chainID := flag.String("chain", "ethereum", "Chain ID (e.g., 'ethereum', 'bitcoin')")
 	flag.Parse()
@@ -38,7 +39,23 @@ func main() {
 	}
 	log.Printf("Successfully loaded policy: %s (Name: %s)\n", policy.GetId(), policy.GetName())
 
-	// 2. Initialize Chain based on chainID flag
+	// 2. Load and Parse Schema (if path given)
+	var schema *types.RecipeSchema
+	if *schemaPath != "" {
+		schemaFileBytes, err := os.ReadFile(*schemaPath)
+		if err != nil {
+			log.Fatalf("Failed to read schema file %s: %v", *schemaPath, err)
+		}
+
+		schema = &types.RecipeSchema{}
+		if err := protojson.Unmarshal(schemaFileBytes, schema); err != nil {
+			log.Fatalf("Failed to unmarshal schema JSON: %v", err)
+		}
+		log.Printf("Successfully loaded schema for plugin: %s (Version: %d)",
+			schema.GetPluginName(), schema.GetPluginVersion())
+	}
+
+	// 3. Initialize Chain based on chainID flag
 	selectedChain, err := chain.GetChain(*chainID)
 	if err != nil {
 		log.Fatalf("Failed to get chain %s: %v", *chainID, err)
