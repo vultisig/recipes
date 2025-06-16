@@ -150,7 +150,7 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
 
-			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx)
+			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, nil, c, tx)
 			if err != nil {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
