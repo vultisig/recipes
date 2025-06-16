@@ -2808,6 +2808,90 @@ Transfer Wrapped Ether tokens from one address to another
 ```
 
 
+### thorchain.rune.transfer
+
+**Chain:** Thorchain  
+**Protocol:** RUNE  
+**Function:** Transfer RUNE  
+
+Transfer RUNE tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Thorchain recipient address (thor... format) |
+| amount | decimal | The amount of RUNE to transfer (8 decimals) |
+| memo | string | Optional memo field (max 80 characters) |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "thorchain.rune.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### thorchain.tcy.transfer
+
+**Chain:** Thorchain  
+**Protocol:** TCY  
+**Function:** Transfer TCY  
+
+Transfer TCY tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Thorchain recipient address (thor... format) |
+| amount | decimal | The amount of TCY to transfer (8 decimals) |
+| memo | string | Optional memo field |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "thorchain.tcy.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 
 ## Using Wildcards
 
