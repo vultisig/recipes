@@ -29,8 +29,8 @@ func (e *Engine) Evaluate(policy *types.Policy, schema *types.RecipeSchema, chai
 		supportedResources = make(map[string]bool)
 		for _, resourcePattern := range schema.GetSupportedResources() {
 			if resourcePattern.GetResourcePath() != nil {
-				resourcePath := resourcePattern.GetResourcePath().Full
-				supportedResources[resourcePath] = true
+				p, _ := util.ParseResource(resourcePattern.GetResourcePath().Full)
+				supportedResources[p.String()] = true
 			}
 		}
 		e.logger.Printf("Schema provided: plugin supports %d resources", len(supportedResources))
