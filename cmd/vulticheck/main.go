@@ -72,7 +72,7 @@ func main() {
 
 	eng := engine.NewEngine()
 	eng.SetLogger(log.Default())
-	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, schema, selectedChain, decodedTx)
+	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
 	if err != nil {
 		log.Printf("Failed to evaluate transaction: %v", err)
 	}
