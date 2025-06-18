@@ -23,19 +23,7 @@ func (e *Engine) SetLogger(log *log.Logger) {
 	e.logger = log
 }
 
-func (e *Engine) Evaluate(policy *types.Policy, schema *types.RecipeSchema, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
-	var supportedResources map[string]bool
-	if schema != nil {
-		supportedResources = make(map[string]bool)
-		for _, resourcePattern := range schema.GetSupportedResources() {
-			if resourcePattern.GetResourcePath() != nil {
-				p, _ := util.ParseResource(resourcePattern.GetResourcePath().Full)
-				supportedResources[p.String()] = true
-			}
-		}
-		e.logger.Printf("Schema provided: plugin supports %d resources", len(supportedResources))
-	}
-
+func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
 	for _, rule := range policy.GetRules() {
 		if rule == nil {
 			continue
@@ -50,12 +38,6 @@ func (e *Engine) Evaluate(policy *types.Policy, schema *types.RecipeSchema, chai
 
 		if resourcePath.ChainId != chain.ID() {
 			e.logger.Printf("Skipping rule %s: target chain %s is not '%s'", rule.GetId(), resourcePath.ChainId, chain.ID())
-			continue
-		}
-
-		if schema != nil && !supportedResources[resourcePathString] {
-			e.logger.Printf("Skipping rule %s: resource %s not supported by plugin schema",
-				rule.GetId(), resourcePathString)
 			continue
 		}
 
