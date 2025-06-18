@@ -22,9 +22,6 @@ func main() {
 	if *policyPath == "" {
 		log.Fatal("Error: -policy flag is required")
 	}
-	if *txHex == "" {
-		log.Fatal("Error: -tx flag is required")
-	}
 
 	// 1. Load and Parse Policy
 	policyFileBytes, err := os.ReadFile(*policyPath)
@@ -39,7 +36,11 @@ func main() {
 	}
 	log.Printf("Successfully loaded policy: %s (Name: %s)\n", policy.GetId(), policy.GetName())
 
-	// 2. Load and Parse Schema (if path given)
+	// 2. Initialize Engine
+	eng := engine.NewEngine()
+	eng.SetLogger(log.Default())
+
+	// 3. Load Schema and ValidatePolicy (if path given)
 	var schema *types.RecipeSchema
 	if *schemaPath != "" {
 		schemaFileBytes, err := os.ReadFile(*schemaPath)
@@ -53,30 +54,41 @@ func main() {
 		}
 		log.Printf("Successfully loaded schema for plugin: %s (Version: %d)",
 			schema.GetPluginName(), schema.GetPluginVersion())
+
+		err = eng.ValidatePolicyWithSchema(&policy, schema)
+		if err != nil {
+			log.Fatalf("Failed to validate policy: %v", err)
+		}
 	}
 
-	// 3. Initialize Chain based on chainID flag
-	selectedChain, err := chain.GetChain(*chainID)
-	if err != nil {
-		log.Fatalf("Failed to get chain %s: %v", *chainID, err)
-	}
-	log.Printf("Using chain: %s (%s)\n", selectedChain.ID(), selectedChain.Name())
+	// 4. Decode and Evaluate transaction (if tx flag given)
+	if *txHex != "" {
+		// Initialise chain
+		selectedChain, err := chain.GetChain(*chainID)
+		if err != nil {
+			log.Fatalf("Failed to get chain %s: %v", *chainID, err)
+		}
+		log.Printf("Using chain: %s (%s)\n", selectedChain.ID(), selectedChain.Name())
 
-	// Attempt to parse the transaction once, as it's the same for all rules on this chain.
-	decodedTx, err := selectedChain.ParseTransaction(*txHex)
-	if err != nil {
-		log.Fatalf("Failed to parse %s transaction '%s': %v. Cannot proceed.", *chainID, *txHex, err)
-	}
-	log.Printf("Successfully parsed transaction: Hash=%s, From=%s, To=%s, Value=%s\n",
-		decodedTx.Hash(), decodedTx.From(), decodedTx.To(), decodedTx.Value().String())
+		// Attempt to parse the transaction once, as it's the same for all rules on this chain.
+		decodedTx, err := selectedChain.ParseTransaction(*txHex)
+		if err != nil {
+			log.Fatalf("Failed to parse %s transaction '%s': %v. Cannot proceed.", *chainID, *txHex, err)
+		}
+		log.Printf("Successfully parsed transaction: Hash=%s, From=%s, To=%s, Value=%s\n",
+			decodedTx.Hash(), decodedTx.From(), decodedTx.To(), decodedTx.Value().String())
 
-	eng := engine.NewEngine()
-	eng.SetLogger(log.Default())
-	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
-	if err != nil {
-		log.Printf("Failed to evaluate transaction: %v", err)
+		transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
+		if err != nil {
+			log.Printf("Failed to evaluate transaction: %v", err)
+		}
+
+		log.Printf("Transaction allowed by policy: %t", transactionAllowedByPolicy)
+		log.Printf("Matching rule: %s", matchingRule.GetId())
 	}
 
-	log.Printf("Transaction allowed by policy: %t", transactionAllowedByPolicy)
-	log.Printf("Matching rule: %s", matchingRule.GetId())
+	// 5. Final check, either txHex or Schema should be present
+	if *schemaPath == "" && *txHex == "" {
+		log.Fatal("Must provide -schema or -tx")
+	}
 }
