@@ -1,5 +1,5 @@
 {
-  "id": "sample-multi-chain-transfer-policy-v1",
+  "id": "vultisig-payroll-0000",
   "name": "Sample Multi-Chain Transfer Policy",
   "description": "Allows sending up to 1 native ETH to Bob's address and up to 0.1 BTC to Alice's address.",
   "rules": [
