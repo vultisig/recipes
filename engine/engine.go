@@ -81,6 +81,11 @@ func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.Re
 		return fmt.Errorf("policy has no rules")
 	}
 
+	if policy.GetId() != schema.GetPluginId() {
+		return fmt.Errorf("policy ID %s does not match schema plugin ID %s",
+			policy.GetId(), schema.GetPluginId())
+	}
+
 	// Build supported resources map from schema
 	supportedResources := make(map[string]*types.ResourcePattern)
 	for _, resourcePattern := range schema.GetSupportedResources() {

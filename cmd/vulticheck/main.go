@@ -59,6 +59,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to validate policy: %v", err)
 		}
+		log.Printf("Successfully validated policy: %s", policy.GetName())
 	}
 
 	// 4. Decode and Evaluate transaction (if tx flag given)
