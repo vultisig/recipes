@@ -155,7 +155,7 @@ func (sdk *SDK) appendSignature(inTx UnsignedTx, r, s, v []byte) (*types.Transac
 		return nil, fmt.Errorf("reth.DecodeUnsignedPayload: %w", err)
 	}
 
-	outTx, err := types.NewTx(inTxDecoded).WithSignature(types.NewPragueSigner(sdk.chainID), sig)
+	outTx, err := types.NewTx(inTxDecoded).WithSignature(types.LatestSignerForChainID(sdk.chainID), sig)
 	if err != nil {
 		return nil, fmt.Errorf("types.NewTx.WithSignature: %w", err)
 	}
@@ -179,7 +179,7 @@ func (sdk *SDK) estimateTx(
 			Value: value,
 		})
 		if e != nil {
-			return fmt.Errorf("p.rpcClient.EstimateGas: %v", e)
+			return fmt.Errorf("sdk.rpcClient.EstimateGas: %v", e)
 		}
 		gasLimit = r
 		return nil
@@ -189,7 +189,7 @@ func (sdk *SDK) estimateTx(
 	eg.Go(func() error {
 		r, e := sdk.rpcClient.SuggestGasTipCap(ctx)
 		if e != nil {
-			return fmt.Errorf("p.rpcClient.SuggestGasTipCap: %v", e)
+			return fmt.Errorf("sdk.rpcClient.SuggestGasTipCap: %v", e)
 		}
 		gasTipCap = r
 		return nil
@@ -199,7 +199,7 @@ func (sdk *SDK) estimateTx(
 	eg.Go(func() error {
 		feeHistory, e := sdk.rpcClient.FeeHistory(ctx, 1, nil, nil)
 		if e != nil {
-			return fmt.Errorf("p.rpcClient.FeeHistory: %v", e)
+			return fmt.Errorf("sdk.rpcClient.FeeHistory: %v", e)
 		}
 		if len(feeHistory.BaseFee) == 0 {
 			return fmt.Errorf("feeHistory.BaseFee is empty")
@@ -224,6 +224,26 @@ func (sdk *SDK) estimateTx(
 
 	maxFeePerGas := new(big.Int).Add(gasTipCap, baseFee)
 
+	gasTipCapHex := "0x0"
+	if gasTipCap != nil {
+		gasTipCapHex = "0x" + common.Bytes2Hex(gasTipCap.Bytes())
+	}
+
+	maxFeePerGasHex := "0x0"
+	if maxFeePerGas != nil {
+		maxFeePerGasHex = "0x" + common.Bytes2Hex(maxFeePerGas.Bytes())
+	}
+
+	valueHex := "0x0"
+	if value != nil {
+		valueHex = "0x" + common.Bytes2Hex(value.Bytes())
+	}
+
+	var dataHex string // omitempty in JSON
+	if data != nil {
+		dataHex = "0x" + common.Bytes2Hex(data)
+	}
+
 	type createAccessListArgs struct {
 		From                 string `json:"from,omitempty"`
 		To                   string `json:"to,omitempty"`
@@ -247,16 +267,16 @@ func (sdk *SDK) estimateTx(
 				From:                 from.Hex(),
 				To:                   to.Hex(),
 				Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
-				MaxPriorityFeePerGas: "0x" + common.Bytes2Hex(gasTipCap.Bytes()),
-				MaxFeePerGas:         "0x" + common.Bytes2Hex(maxFeePerGas.Bytes()),
-				Value:                "0x" + common.Bytes2Hex(value.Bytes()),
-				Data:                 "0x" + common.Bytes2Hex(data),
+				MaxPriorityFeePerGas: gasTipCapHex,
+				MaxFeePerGas:         maxFeePerGasHex,
+				Value:                valueHex,
+				Data:                 dataHex,
 			},
 			"latest",
 		},
 	)
 	if err != nil {
-		return 0, 0, nil, nil, nil, fmt.Errorf("p.rpcClient.Client().CallContext: %v", err)
+		return 0, 0, nil, nil, nil, fmt.Errorf("sdk.rpcClientRaw.CallContext: %v", err)
 	}
 
 	return nonce, gasLimit, gasTipCap, maxFeePerGas, createAccessListRes.AccessList, nil
