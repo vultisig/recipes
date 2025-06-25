@@ -3,9 +3,10 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -231,6 +232,11 @@ func NewEthereum() vultisigTypes.Chain {
 		panic(fmt.Sprintf("FATAL: Failed to parse internal generic ERC20 ABI: %v", err))
 	}
 	return ethChain
+}
+
+// ValidateInvariants implements types.Chain.
+func (e *Ethereum) ValidateInvariants(tx vultisigTypes.DecodedTransaction) error {
+	panic("unimplemented")
 }
 
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)

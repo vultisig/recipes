@@ -28,4 +28,6 @@ type Chain interface {
 	// `sigs` is slice, not a map, because we need to preserve the order of signatures
 	// for R,S ordered apply for BTC for example
 	ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse) (string, error)
+
+	ValidateInvariants(tx DecodedTransaction) error
 }
