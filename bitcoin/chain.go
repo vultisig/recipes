@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
@@ -96,6 +97,26 @@ func (b *Bitcoin) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse
 	}
 
 	return tx.TxHash().String(), nil
+}
+
+// ValidateInvariants ensures that a btc transfer always has a change output to prevent malicious transactions
+func (b *Bitcoin) ValidateInvariants(tx types.DecodedTransaction) error {
+	btcTx, ok := tx.(*ParsedBitcoinTransaction)
+	if !ok {
+		return fmt.Errorf("expected Bitcoin transaction, got %T", tx)
+	}
+	// Get all outputs
+	outputs := btcTx.GetAllOutputs()
+
+	// Validate that there are exactly 2 outputs
+	if len(outputs) != 2 {
+		return fmt.Errorf("transaction must have exactly 2 outputs, got %d", len(outputs))
+	}
+
+	// TODO: Validate that the last output address is the sender as the change output
+	// Placeholder - need to implement sender address extraction from inputs
+	_ = outputs[1]
+	return nil
 }
 
 // NewBitcoin creates a new Bitcoin chain instance
