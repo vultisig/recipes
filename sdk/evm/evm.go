@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	reth "github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -77,7 +78,13 @@ func (sdk *SDK) MakeTxTransferNative(
 	from, to common.Address,
 	value *big.Int,
 ) (UnsignedTx, error) {
-	tx, err := sdk.MakeTx(ctx, from, to, value, nil)
+	tx, err := sdk.MakeTx(
+		ctx,
+		from,
+		to,
+		value,
+		nil,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.MakeTx: %w", err)
 	}
@@ -89,9 +96,17 @@ func (sdk *SDK) MakeTxTransferERC20(
 	from, to, contractAddress common.Address,
 	amount *big.Int,
 ) (UnsignedTx, error) {
-	// TODO: webpiratt: make codegen any solidity interfaces -> go bindings,
-	//  ERC20 for now, Uniswap router in near future for DCA plugin usage
-	return nil, nil
+	tx, err := sdk.MakeTx(
+		ctx,
+		from,
+		contractAddress,
+		big.NewInt(0),
+		erc20.NewErc20().PackTransfer(to, amount),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.MakeTx: %w", err)
+	}
+	return tx, nil
 }
 
 func (sdk *SDK) MakeTx(
