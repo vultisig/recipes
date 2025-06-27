@@ -1,0 +1,136 @@
+package evm
+
+import (
+	"context"
+	"math/big"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	reth "github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
+)
+
+func TestSDK_MakeTx_unit(t *testing.T) {
+	ctx := context.Background()
+
+	from := common.HexToAddress("0x74823625c397ae30B0a549B9931DF49DF24E3a48")
+	to := common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
+	value := big.NewInt(0)
+	data := erc20.NewErc20().PackTransfer(
+		common.HexToAddress("0x9756752DC9f0a947366B6C91bb0487D6c6Bf4d17"),
+		big.NewInt(9767000),
+	)
+
+	mockRpcClient := newMock_rpcClient(t)
+	gasLimit := uint64(84000)
+	mockRpcClient.On("EstimateGas", ctx, ethereum.CallMsg{
+		From:  from,
+		To:    &to,
+		Data:  data,
+		Value: value,
+	}).Return(gasLimit, nil)
+
+	gasTipCap := big.NewInt(1000)
+	mockRpcClient.On("SuggestGasTipCap", ctx).Return(gasTipCap, nil)
+
+	feeHistory := &ethereum.FeeHistory{
+		BaseFee: []*big.Int{big.NewInt(1000)},
+	}
+	mockRpcClient.On(
+		"FeeHistory",
+		ctx,
+		uint64(1),
+		mock.Anything,
+		mock.Anything,
+	).Return(feeHistory, nil)
+
+	nonce := uint64(1)
+	mockRpcClient.On("PendingNonceAt", ctx, from).Return(nonce, nil)
+
+	mockRpcClientRaw := newMock_rpcClientRaw(t)
+	gasFeeCap := new(big.Int).Add(gasTipCap, feeHistory.BaseFee[0])
+	mockRpcClientRaw.On(
+		"CallContext",
+		ctx,
+		mock.Anything,
+		"eth_createAccessList",
+		[]interface{}{
+			createAccessListArgs{
+				From:                 from.Hex(),
+				To:                   to.Hex(),
+				Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
+				MaxPriorityFeePerGas: "0x" + common.Bytes2Hex(gasTipCap.Bytes()),
+				MaxFeePerGas:         "0x" + common.Bytes2Hex(gasFeeCap.Bytes()),
+				Value:                "0x" + common.Bytes2Hex(value.Bytes()),
+				Data:                 "0x" + common.Bytes2Hex(data),
+			},
+			"latest",
+		},
+	).Return(nil)
+
+	sdk := NewSDK(big.NewInt(1), mockRpcClient, mockRpcClientRaw)
+	tx, err := sdk.MakeTx(
+		ctx,
+		from,
+		to,
+		value,
+		data,
+	)
+	require.NoError(t, err)
+
+	decoded, err := reth.DecodeUnsignedPayload(tx)
+	require.NoError(t, err)
+	decodedTx := types.NewTx(decoded)
+	require.Equal(t, &to, decodedTx.To())
+	require.Equal(t, value, decodedTx.Value())
+	require.Equal(t, data, decodedTx.Data())
+	require.Equal(t, gasLimit, decodedTx.Gas())
+	require.Equal(t, gasTipCap, decodedTx.GasTipCap())
+	require.Equal(t, gasFeeCap, decodedTx.GasFeeCap())
+	require.Equal(t, nonce, decodedTx.Nonce())
+
+	mockRpcClient.AssertExpectations(t)
+	mockRpcClientRaw.AssertExpectations(t)
+}
+
+func TestSDK_MakeTx_e2e(t *testing.T) {
+	const rpcURL = "https://eth.llamarpc.com"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	rpc, err := ethclient.DialContext(ctx, rpcURL)
+	require.NoError(t, err)
+
+	from := common.HexToAddress("0x74823625c397ae30B0a549B9931DF49DF24E3a48")
+	to := common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
+	value := big.NewInt(0)
+	data := erc20.NewErc20().PackTransfer(
+		common.HexToAddress("0x9756752DC9f0a947366B6C91bb0487D6c6Bf4d17"),
+		big.NewInt(9767000),
+	)
+
+	sdk := NewSDK(big.NewInt(1), rpc, rpc.Client())
+	tx, err := sdk.MakeTx(
+		ctx,
+		from,
+		to,
+		value,
+		data,
+	)
+	require.NoError(t, err)
+
+	decoded, err := reth.DecodeUnsignedPayload(tx)
+	require.NoError(t, err)
+	decodedTx := types.NewTx(decoded)
+	require.Equal(t, &to, decodedTx.To())
+	require.Equal(t, value, decodedTx.Value())
+	require.Equal(t, data, decodedTx.Data())
+}

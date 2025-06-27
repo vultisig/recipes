@@ -178,6 +178,22 @@ func (sdk *SDK) appendSignature(inTx UnsignedTx, r, s, v []byte) (*types.Transac
 	return outTx, nil
 }
 
+type createAccessListArgs struct {
+	From                 string `json:"from,omitempty"`
+	To                   string `json:"to,omitempty"`
+	Gas                  string `json:"gas,omitempty"`
+	GasPrice             string `json:"gasPrice,omitempty"`
+	MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas,omitempty"`
+	MaxFeePerGas         string `json:"maxFeePerGas,omitempty"`
+	Value                string `json:"value,omitempty"`
+	Data                 string `json:"data,omitempty"`
+}
+
+type createAccessListRes struct {
+	AccessList types.AccessList `json:"accessList"`
+	GasUsed    string           `json:"gasUsed"`
+}
+
 func (sdk *SDK) estimateTx(
 	ctx context.Context,
 	from, to common.Address,
@@ -259,42 +275,27 @@ func (sdk *SDK) estimateTx(
 		dataHex = "0x" + common.Bytes2Hex(data)
 	}
 
-	type createAccessListArgs struct {
-		From                 string `json:"from,omitempty"`
-		To                   string `json:"to,omitempty"`
-		Gas                  string `json:"gas,omitempty"`
-		GasPrice             string `json:"gasPrice,omitempty"`
-		MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas,omitempty"`
-		MaxFeePerGas         string `json:"maxFeePerGas,omitempty"`
-		Value                string `json:"value,omitempty"`
-		Data                 string `json:"data,omitempty"`
-	}
-	createAccessListRes := struct {
-		AccessList types.AccessList `json:"accessList"`
-		GasUsed    string           `json:"gasUsed"`
-	}{}
+	var callRes createAccessListRes
 	err = sdk.rpcClientRaw.CallContext(
 		ctx,
-		&createAccessListRes,
+		&callRes,
 		"eth_createAccessList",
-		[]interface{}{
-			createAccessListArgs{
-				From:                 from.Hex(),
-				To:                   to.Hex(),
-				Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
-				MaxPriorityFeePerGas: gasTipCapHex,
-				MaxFeePerGas:         maxFeePerGasHex,
-				Value:                valueHex,
-				Data:                 dataHex,
-			},
-			"latest",
+		createAccessListArgs{
+			From:                 from.Hex(),
+			To:                   to.Hex(),
+			Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
+			MaxPriorityFeePerGas: gasTipCapHex,
+			MaxFeePerGas:         maxFeePerGasHex,
+			Value:                valueHex,
+			Data:                 dataHex,
 		},
+		"latest",
 	)
 	if err != nil {
 		return 0, 0, nil, nil, nil, fmt.Errorf("sdk.rpcClientRaw.CallContext: %v", err)
 	}
 
-	return nonce, gasLimit, gasTipCap, maxFeePerGas, createAccessListRes.AccessList, nil
+	return nonce, gasLimit, gasTipCap, maxFeePerGas, callRes.AccessList, nil
 }
 
 func (sdk *SDK) encodeDynamicFeeTx(
