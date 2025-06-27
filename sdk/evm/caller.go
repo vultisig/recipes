@@ -17,7 +17,7 @@ type callableContract interface {
 //
 // Example:
 // import "github.com/vultisig/recipes/sdk/evm/codegen/erc20"
-// balance, err := evm.CallReadonly(ctx, rpc, erc20.NewErc20(), usdtContractAddress, erc20.PackBalanceOf(owner), erc20.UnpackBalanceOf, nil)
+// balance, err := evm.CallReadonly(ctx, rpc, erc20.NewErc20(), usdtContractAddress, erc20.NewErc20().PackBalanceOf(owner), erc20.NewErc20().UnpackBalanceOf, nil)
 //
 // Note: for non-view functions, use SDK.MakeTx method.
 func CallReadonly[T any](
