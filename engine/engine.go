@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"io"
 	"log"
 
@@ -72,4 +73,83 @@ func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.Deco
 	}
 
 	return false, nil, nil
+}
+
+func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.RecipeSchema) error {
+	// Basic policy validation
+	if len(policy.GetRules()) == 0 {
+		return fmt.Errorf("policy has no rules")
+	}
+
+	if policy.GetId() != schema.GetPluginId() {
+		return fmt.Errorf("policy ID %s does not match schema plugin ID %s",
+			policy.GetId(), schema.GetPluginId())
+	}
+
+	// Build supported resources map from schema
+	supportedResources := make(map[string]*types.ResourcePattern)
+	for _, resourcePattern := range schema.GetSupportedResources() {
+		if resourcePattern.GetResourcePath() != nil {
+			resourcePath := resourcePattern.GetResourcePath().GetFull()
+			supportedResources[resourcePath] = resourcePattern
+		}
+	}
+
+	// Validate each rule
+	for _, rule := range policy.GetRules() {
+		if rule == nil {
+			continue
+		}
+
+		// Check if resource is supported
+		resourcePattern, supported := supportedResources[rule.GetResource()]
+		if !supported {
+			return fmt.Errorf("rule %s uses unsupported resource: %s",
+				rule.GetId(), rule.GetResource())
+		}
+
+		// Validate parameter constraints against schema capabilities
+		if err := e.validateParameterConstraints(rule, resourcePattern); err != nil {
+			return fmt.Errorf("rule %s constraint validation failed: %w",
+				rule.GetId(), err)
+		}
+	}
+
+	return nil
+}
+
+func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
+	// Build map of parameter capabilities from schema
+	paramCapabilities := make(map[string]*types.ParameterConstraintCapability)
+	for _, paramCap := range resourcePattern.GetParameterCapabilities() {
+		paramCapabilities[paramCap.GetParameterName()] = paramCap
+	}
+
+	// Check each parameter constraint in the rule
+	for _, paramConstraint := range rule.GetParameterConstraints() {
+		paramName := paramConstraint.GetParameterName()
+
+		// Check if parameter is supported
+		paramCap, exists := paramCapabilities[paramName]
+		if !exists {
+			return fmt.Errorf("parameter %s not supported by schema", paramName)
+		}
+
+		// Check if constraint type is supported
+		constraintType := paramConstraint.GetConstraint().GetType()
+		supported := false
+		for _, supportedType := range paramCap.GetSupportedTypes() {
+			if supportedType == constraintType {
+				supported = true
+				break
+			}
+		}
+
+		if !supported {
+			return fmt.Errorf("parameter %s does not support constraint type %s",
+				paramName, constraintType.String())
+		}
+	}
+
+	return nil
 }
