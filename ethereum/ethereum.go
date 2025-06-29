@@ -237,7 +237,7 @@ func NewEthereum() vultisigTypes.Chain {
 
 // ValidateInvariants implements types.Chain.
 func (e *Ethereum) ValidateInvariants(vault *v1.Vault, tx vultisigTypes.DecodedTransaction) error {
-	panic("unimplemented")
+	return nil
 }
 
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)

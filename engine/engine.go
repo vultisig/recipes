@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 
+	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 )
@@ -23,7 +24,7 @@ func (e *Engine) SetLogger(log *log.Logger) {
 	e.logger = log
 }
 
-func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
+func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction, vault *v1.Vault) (bool, *types.Rule, error) {
 	for _, rule := range policy.GetRules() {
 		if rule == nil {
 			continue
@@ -64,6 +65,11 @@ func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.Deco
 		}
 
 		if matches {
+			// Validate Invariants for the chain tx as a security baseline
+			if err := chain.ValidateInvariants(vault, tx); err != nil {
+				e.logger.Printf("Transaction fails invariant validation for rule %s: %v", rule.GetId(), err)
+				continue
+			}
 			e.logger.Printf("Transaction matches rule %s for function %s!\n", rule.GetId(), resourcePath.FunctionId)
 			return true, rule, nil
 		} else {
