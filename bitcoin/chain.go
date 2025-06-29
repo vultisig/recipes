@@ -7,8 +7,11 @@ import (
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
+	"github.com/vultisig/recipes/address"
+	"github.com/vultisig/recipes/common"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -99,24 +102,81 @@ func (b *Bitcoin) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse
 	return tx.TxHash().String(), nil
 }
 
-// ValidateInvariants ensures that a btc transfer always has a change output to prevent malicious transactions
-func (b *Bitcoin) ValidateInvariants(tx types.DecodedTransaction) error {
+// ValidateInvariants ensures that a btc transfer follows required invariants
+func (b *Bitcoin) ValidateInvariants(vault *v1.Vault, tx types.DecodedTransaction) error {
 	btcTx, ok := tx.(*ParsedBitcoinTransaction)
 	if !ok {
 		return fmt.Errorf("expected Bitcoin transaction, got %T", tx)
 	}
-	// Get all outputs
-	outputs := btcTx.GetAllOutputs()
 
-	// Validate that there are exactly 2 outputs
-	if len(outputs) != 2 {
-		return fmt.Errorf("transaction must have exactly 2 outputs, got %d", len(outputs))
+	if vault == nil {
+		return fmt.Errorf("vault is required for Bitcoin invariant validation")
 	}
 
-	// TODO: Validate that the last output address is the sender as the change output
-	// Placeholder - need to implement sender address extraction from inputs
-	_ = outputs[1]
+	// 1. Validate transaction structure (extensible for future tx types)
+	if err := b.checkTransactionStructure(btcTx); err != nil {
+		return fmt.Errorf("transaction structure validation failed: %w", err)
+	}
+
+	// 2. Validate change output back to sender (derived from vault)
+	if err := b.validateChangeOutput(vault, btcTx); err != nil {
+		return fmt.Errorf("change output validation failed: %w", err)
+	}
+
 	return nil
+}
+
+// checkTransactionStructure validates basic structure requirements
+func (b *Bitcoin) checkTransactionStructure(btcTx *ParsedBitcoinTransaction) error {
+	outputs := btcTx.GetAllOutputs()
+
+	// Currently only support standard transfers (2 outputs)
+	// Can expand to other transaction types here
+	if len(outputs) != 2 {
+		return fmt.Errorf("transaction must have exactly 2 outputs for standard transfer, got %d", len(outputs))
+	}
+
+	return nil
+}
+
+// validateChangeOutput validates that the last output goes back to vault-derived address
+func (b *Bitcoin) validateChangeOutput(vault *v1.Vault, btcTx *ParsedBitcoinTransaction) error {
+	outputs := btcTx.GetAllOutputs()
+	if len(outputs) == 0 {
+		return fmt.Errorf("transaction has no outputs")
+	}
+
+	// Last output should always be change back to sender (vault)
+	lastOutput := outputs[len(outputs)-1]
+
+	// Derive expected vault address for this chain
+	expectedChangeAddr, err := b.deriveVaultAddress(vault)
+	if err != nil {
+		return fmt.Errorf("failed to derive vault address: %w", err)
+	}
+
+	// Check if last output matches vault address
+	if lastOutput.Address != expectedChangeAddr {
+		return fmt.Errorf("last output address %s does not match vault address %s",
+			lastOutput.Address, expectedChangeAddr)
+	}
+
+	return nil
+}
+
+// deriveVaultAddress derives the Bitcoin address from vault
+func (b *Bitcoin) deriveVaultAddress(vault *v1.Vault) (string, error) {
+	// Use your address derivation utilities
+	vaultAddr, _, _, err := address.GetAddress(
+		vault.PublicKeyEcdsa,
+		vault.HexChainCode,
+		common.Bitcoin,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to derive Bitcoin address: %w", err)
+	}
+
+	return vaultAddr, nil
 }
 
 // NewBitcoin creates a new Bitcoin chain instance
