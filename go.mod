@@ -16,7 +16,7 @@ require (
 	github.com/ltcsuite/ltcd/ltcutil v1.1.3
 	github.com/stretchr/testify v1.10.0
 	github.com/ulikunitz/xz v0.5.12
-	github.com/vultisig/commondata v0.0.0-20241001024659-50cb6f1ca345
+	github.com/vultisig/commondata v0.0.0-20250430024109-a2492623ef05
 	github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74
 	golang.org/x/crypto v0.36.0
 	golang.org/x/sync v0.12.0

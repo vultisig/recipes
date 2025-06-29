@@ -672,8 +672,8 @@ github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyC
 github.com/valyala/fasttemplate v1.2.1/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
 github.com/valyala/fasttemplate v1.2.2 h1:lxLXG0uE3Qnshl9QyaK6XJxMXlQZELvChBOCmQD0Loo=
 github.com/valyala/fasttemplate v1.2.2/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
-github.com/vultisig/commondata v0.0.0-20241001024659-50cb6f1ca345 h1:rz3sVaCV1uJIpdbTnMukoup1tNkevvrxHwidRpKIqP4=
-github.com/vultisig/commondata v0.0.0-20241001024659-50cb6f1ca345/go.mod h1:UMc5q0Myab+BvzAe67UQrXTXwKGYNxK7bky7DJM+dl8=
+github.com/vultisig/commondata v0.0.0-20250430024109-a2492623ef05 h1:yNZhAu3L1PrbWzVEmwZcSOdU8rGe8WbghsQxMuoO6KA=
+github.com/vultisig/commondata v0.0.0-20250430024109-a2492623ef05/go.mod h1:UMc5q0Myab+BvzAe67UQrXTXwKGYNxK7bky7DJM+dl8=
 github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74 h1:goqwk4nQ/NEVIb3OPP9SUx7/u9ZfsUIcd5fIN/e4DVU=
 github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74/go.mod h1:nOykk4nOy1L3yXtLSlYvVsgizBnCQ3tR2N5uwGPdvaM=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
