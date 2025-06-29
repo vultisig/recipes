@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/vultisig/verifier/common"
+	"github.com/vultisig/recipes/common"
 )
 
 func TestGetDotAddress(t *testing.T) {
