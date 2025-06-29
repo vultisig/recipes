@@ -9,6 +9,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/testdata"
@@ -21,6 +22,7 @@ var testVectors = []struct {
 	txHex      string
 	txHexFunc  func() string
 	shouldPass bool
+	vault      *v1.Vault
 }{
 	{
 		policyPath: "../testdata/payroll.json",
@@ -31,8 +33,9 @@ var testVectors = []struct {
 	{
 		policyPath: "../testdata/payroll.json",
 		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000fdffffff0280969800000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac809698000000000016001431534c2f291e04ad8404f653f35a0bee167a504d00000000",
 		shouldPass: true,
+		vault:      createMockBitcoinVault(),
 	},
 	{
 		policyPath: "../testdata/payroll.json",
@@ -40,11 +43,13 @@ var testVectors = []struct {
 		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
 		shouldPass: false,
 	},
+	// Should fail because of invalid recipient address
 	{
 		policyPath: "../testdata/payroll.json",
 		chainStr:   "bitcoin",
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: false,
+		vault:      createMockBitcoinVault(),
 	},
 	// Uniswap test cases
 	{
@@ -150,7 +155,7 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
 
-			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx)
+			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx, tv.vault)
 			if err != nil {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
@@ -163,5 +168,13 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("No matching rule found")
 			}
 		})
+	}
+}
+
+func createMockBitcoinVault() *v1.Vault {
+	return &v1.Vault{
+		Name:           "test-bitcoin-vault",
+		PublicKeyEcdsa: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+		HexChainCode:   "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 	}
 }
