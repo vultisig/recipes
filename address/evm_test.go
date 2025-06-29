@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
-	"github.com/vultisig/verifier/common"
+	"github.com/vultisig/recipes/common"
 )
 
 func TestEVMAddress(t *testing.T) {
