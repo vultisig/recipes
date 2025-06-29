@@ -5,7 +5,7 @@ import (
 
 	"github.com/vultisig/mobile-tss-lib/tss"
 
-	"github.com/vultisig/verifier/common"
+	"github.com/vultisig/recipes/common"
 )
 
 // GetAddress returns the address, public key, isEdDSA, and error for the given public key and chain.
