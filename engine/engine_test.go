@@ -32,22 +32,48 @@ var testVectors = []struct {
 	},
 	{
 		policyPath: "../testdata/payroll.json",
+		chainStr:   "ethereum",
+		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
+		shouldPass: false,
+	},
+	// Bitcoin test cases
+	// Single input Single output
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "bitcoin",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		shouldPass: true,
+		vault:      createMockBitcoinVault(),
+	},
+	// Single input, 2 outputs. One to recipient, one change UTXO back to sender
+	{
+		policyPath: "../testdata/payroll.json",
 		chainStr:   "bitcoin",
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000fdffffff0280969800000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac809698000000000016001431534c2f291e04ad8404f653f35a0bee167a504d00000000",
 		shouldPass: true,
 		vault:      createMockBitcoinVault(),
 	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "ethereum",
-		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
-		shouldPass: false,
-	},
-	// Should fail because of invalid recipient address
+	// Single input Single output. Should fail because of invalid recipient address
 	{
 		policyPath: "../testdata/payroll.json",
 		chainStr:   "bitcoin",
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		shouldPass: false,
+		vault:      createMockBitcoinVault(),
+	},
+	// Single input, 2 outputs. One to recipient, one change UTXO to wrong address
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "bitcoin",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000fdffffff0280969800000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac80969800000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		shouldPass: false,
+		vault:      createMockBitcoinVault(),
+	},
+	// Single input, 4 outputs. Should fail, unsupported transaction structure
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "bitcoin",
+		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000fdffffff04404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: false,
 		vault:      createMockBitcoinVault(),
 	},

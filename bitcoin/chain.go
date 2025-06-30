@@ -130,9 +130,11 @@ func (b *Bitcoin) ValidateInvariants(vault *v1.Vault, tx types.DecodedTransactio
 func (b *Bitcoin) checkTransactionStructure(btcTx *ParsedBitcoinTransaction) error {
 	outputs := btcTx.GetAllOutputs()
 
-	// Currently only support standard transfers (2 outputs)
+	// Support standard patterns:
+	// 1 output: entire UTXO spent (no change)
+	// 2 outputs: recipient + change
 	// Can expand to other transaction types here
-	if len(outputs) != 2 {
+	if len(outputs) > 2 {
 		return fmt.Errorf("transaction must have exactly 2 outputs for standard transfer, got %d", len(outputs))
 	}
 
@@ -144,6 +146,11 @@ func (b *Bitcoin) validateChangeOutput(vault *v1.Vault, btcTx *ParsedBitcoinTran
 	outputs := btcTx.GetAllOutputs()
 	if len(outputs) == 0 {
 		return fmt.Errorf("transaction has no outputs")
+	}
+
+	// For 1-output transactions, no change validation needed (entire UTXO spent)
+	if len(outputs) == 1 {
+		return nil
 	}
 
 	// Last output should always be change back to sender (vault)
