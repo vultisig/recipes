@@ -1,0 +1,32 @@
+{
+  "id": "vultisig-payroll-0000",
+  "name": "Sample XRP Transfer Policy",
+  "description": "Allows sending up to 100 XRP to Charlie's address.",
+  "rules": [
+    {
+      "id": "allow-xrp-transfer-to-charlie-max-100xrp",
+      "description": "Allow transfer of XRP to Charlie's address, up to 100 XRP.",
+      "resource": "xrp.xrp.transfer",
+      "parameter_constraints": [
+        {
+          "parameter_name": "recipient",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_FIXED",
+            "fixed_value": "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
+            "required": true
+          }
+        },
+        {
+          "parameter_name": "amount",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_MAX",
+            "max_value": "100000000",
+            "denominated_in": "drops",
+            "required": true
+          }
+        }
+      ],
+      "effect": "EFFECT_ALLOW"
+    }
+  ]
+}
