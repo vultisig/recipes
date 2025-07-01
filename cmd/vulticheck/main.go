@@ -7,7 +7,9 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/recipes/chain"
+	utils "github.com/vultisig/recipes/common"
 	"github.com/vultisig/recipes/engine"
 	"github.com/vultisig/recipes/types"
 )
@@ -16,6 +18,8 @@ func main() {
 	policyPath := flag.String("policy", "", "Path to the policy.json file")
 	txHex := flag.String("tx", "", "Hex-encoded transaction string")
 	chainID := flag.String("chain", "ethereum", "Chain ID (e.g., 'ethereum', 'bitcoin')")
+	vaultPath := flag.String("vault", "testdata/test_vault.vult", "Path to the vault file")
+	vaultPassword := flag.String("password", "", "Password for encrypted vault (if needed)")
 	flag.Parse()
 
 	if *policyPath == "" {
@@ -38,6 +42,20 @@ func main() {
 	}
 	log.Printf("Successfully loaded policy: %s (Name: %s)\n", policy.GetId(), policy.GetName())
 
+	var vault *v1.Vault
+	if *vaultPath != "" {
+		vaultBackupRaw, err := os.ReadFile(*vaultPath)
+		if err != nil {
+			log.Fatalf("Failed to read vault file %s: %v", *vaultPath, err)
+		}
+
+		vault, err = utils.DecryptVaultFromBackup(*vaultPassword, vaultBackupRaw)
+		if err != nil {
+			log.Fatalf("Failed to decrypt vault from %s: %v", *vaultPath, err)
+		}
+		log.Printf("Successfully loaded vault: %s\n", vault.Name)
+	}
+
 	// 2. Initialize Chain based on chainID flag
 	selectedChain, err := chain.GetChain(*chainID)
 	if err != nil {
@@ -55,7 +73,7 @@ func main() {
 
 	eng := engine.NewEngine()
 	eng.SetLogger(log.Default())
-	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
+	transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx, vault)
 	if err != nil {
 		log.Printf("Failed to evaluate transaction: %v", err)
 	}
