@@ -2822,7 +2822,7 @@ Transfer RUNE tokens to another address
 |------|------|-------------|
 | recipient | address | The Thorchain recipient address (thor... format) |
 | amount | decimal | The amount of RUNE to transfer (8 decimals) |
-| memo | string | Optional memo field (max 80 characters) |
+| memo | string | Optional memo field |
 
 
 **Example Policy Rule:**
