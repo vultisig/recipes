@@ -21,10 +21,11 @@ const (
 
 // BaseProtocol provides common functionality for Thorchain protocols
 type BaseProtocol struct {
-	id          string
-	name        string
-	description string
-	functions   []*types.Function
+	id           string
+	name         string
+	description  string
+	denomination string
+	functions    []*types.Function
 }
 
 // ID returns the protocol identifier
@@ -62,6 +63,40 @@ func (p *BaseProtocol) GetFunction(id string) (*types.Function, error) {
 	return nil, fmt.Errorf("function %q not found in protocol %q", id, p.id)
 }
 
+// Factory function to create Thorchain token protocols
+func newThorchainTokenProtocol(id, denom, name, description string) BaseProtocol {
+	return BaseProtocol{
+		id:           id,
+		name:         name,
+		description:  description,
+		denomination: denom,
+		functions: []*types.Function{
+			{
+				ID:          "transfer",
+				Name:        fmt.Sprintf("Transfer %s", name),
+				Description: fmt.Sprintf("Transfer %s tokens to another address", name),
+				Parameters: []*types.FunctionParam{
+					{
+						Name:        "recipient",
+						Type:        "address",
+						Description: "The Thorchain recipient address (thor... format)",
+					},
+					{
+						Name:        "amount",
+						Type:        "decimal",
+						Description: fmt.Sprintf("The amount of %s to transfer (8 decimals)", name),
+					},
+					{
+						Name:        "memo",
+						Type:        "string",
+						Description: "Optional memo field",
+					},
+				},
+			},
+		},
+	}
+}
+
 // RUNE implements the native RUNE protocol
 type RUNE struct {
 	BaseProtocol
@@ -70,35 +105,12 @@ type RUNE struct {
 // NewRUNE creates a new RUNE protocol instance
 func NewRUNE() types.Protocol {
 	return &RUNE{
-		BaseProtocol: BaseProtocol{
-			id:          "rune",
-			name:        "RUNE",
-			description: "Native RUNE token of the Thorchain blockchain",
-			functions: []*types.Function{
-				{
-					ID:          "transfer",
-					Name:        "Transfer RUNE",
-					Description: "Transfer RUNE tokens to another address",
-					Parameters: []*types.FunctionParam{
-						{
-							Name:        "recipient",
-							Type:        "address",
-							Description: "The Thorchain recipient address (thor... format)",
-						},
-						{
-							Name:        "amount",
-							Type:        "decimal",
-							Description: "The amount of RUNE to transfer (8 decimals)",
-						},
-						{
-							Name:        "memo",
-							Type:        "string",
-							Description: "Optional memo field (max 80 characters)",
-						},
-					},
-				},
-			},
-		},
+		BaseProtocol: newThorchainTokenProtocol(
+			"rune",
+			"rune",
+			"RUNE",
+			"Native RUNE token of the Thorchain blockchain",
+		),
 	}
 }
 
@@ -110,40 +122,16 @@ type TCY struct {
 // NewTCY creates a new TCY protocol instance
 func NewTCY() types.Protocol {
 	return &TCY{
-		BaseProtocol: BaseProtocol{
-			id:          "tcy",
-			name:        "TCY",
-			description: "TCY token on the Thorchain blockchain",
-			functions: []*types.Function{
-				{
-					ID:          "transfer",
-					Name:        "Transfer TCY",
-					Description: "Transfer TCY tokens to another address",
-					Parameters: []*types.FunctionParam{
-						{
-							Name:        "recipient",
-							Type:        "address",
-							Description: "The Thorchain recipient address (thor... format)",
-						},
-						{
-							Name:        "amount",
-							Type:        "decimal",
-							Description: "The amount of TCY to transfer (8 decimals)",
-						},
-						{
-							Name:        "memo",
-							Type:        "string",
-							Description: "Optional memo field",
-						},
-					},
-				},
-			},
-		},
+		BaseProtocol: newThorchainTokenProtocol(
+			"tcy",
+			"tcy",
+			"TCY",
+			"TCY token on the Thorchain blockchain",
+		),
 	}
 }
 
-// MatchFunctionCall for RUNE protocol
-func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
+func (p *BaseProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
 	if decodedTx.ChainIdentifier() != "thorchain" {
 		return false, nil, fmt.Errorf("expected Thorchain transaction, got %s", decodedTx.ChainIdentifier())
 	}
@@ -152,10 +140,10 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 		return false, nil, nil // This protocol only supports transfer operations
 	}
 
-	// Check denomination - only match RUNE transactions
+	// Check denomination - only match transactions for this protocol's denomination
 	if thorchainTx, ok := decodedTx.(*ParsedThorchainTransaction); ok {
-		if thorchainTx.GetDenom() != "rune" {
-			return false, nil, nil // Not a RUNE transaction, don't match
+		if thorchainTx.GetDenom() != p.denomination {
+			return false, nil, nil // Not this protocol's denomination, don't match
 		}
 	} else {
 		return false, nil, nil // Not a Thorchain transaction type
@@ -175,7 +163,7 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 	params := map[string]interface{}{
 		"recipient": strings.ToLower(recipient),
 		"amount":    amount,
-		"denom":     "rune", // Add denomination to params for validation
+		"denom":     p.denomination,
 	}
 
 	// Add memo if present
@@ -184,61 +172,7 @@ func (r *RUNE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 	}
 
 	// Basic constraint evaluation
-	constraintsMet, err := r.evaluateBasicConstraints(params, policyMatcher.Constraints)
-	if err != nil {
-		return false, nil, fmt.Errorf("error evaluating constraints: %w", err)
-	}
-
-	if !constraintsMet {
-		return false, nil, nil
-	}
-
-	return true, params, nil
-}
-
-// MatchFunctionCall for TCY protocol
-func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
-	if decodedTx.ChainIdentifier() != "thorchain" {
-		return false, nil, fmt.Errorf("expected Thorchain transaction, got %s", decodedTx.ChainIdentifier())
-	}
-
-	if policyMatcher.FunctionID != "transfer" {
-		return false, nil, nil // This protocol only supports transfer operations
-	}
-
-	// Check denomination - only match TCY transactions
-	if thorchainTx, ok := decodedTx.(*ParsedThorchainTransaction); ok {
-		if thorchainTx.GetDenom() != "tcy" {
-			return false, nil, nil // Not a TCY transaction, don't match
-		}
-	} else {
-		return false, nil, nil // Not a Thorchain transaction type
-	}
-
-	// Add sanity checks to ensure transaction has valid data
-	recipient := decodedTx.To()
-	if recipient == "" {
-		return false, nil, nil // No recipient, not a valid transfer
-	}
-
-	amount := decodedTx.Value()
-	if amount == nil || amount.Cmp(big.NewInt(0)) <= 0 {
-		return false, nil, nil // No amount or zero amount, not a valid transfer
-	}
-
-	params := map[string]interface{}{
-		"recipient": strings.ToLower(recipient),
-		"amount":    amount,
-		"denom":     "tcy", // Add denomination to params for validation
-	}
-
-	// Add memo if present
-	if len(decodedTx.Data()) > 0 {
-		params["memo"] = string(decodedTx.Data())
-	}
-
-	// Basic constraint evaluation
-	constraintsMet, err := t.evaluateBasicConstraints(params, policyMatcher.Constraints)
+	constraintsMet, err := p.evaluateBasicConstraints(params, policyMatcher.Constraints)
 	if err != nil {
 		return false, nil, fmt.Errorf("error evaluating constraints: %w", err)
 	}
@@ -251,12 +185,7 @@ func (t *TCY) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 }
 
 // evaluateBasicConstraints provides simplified constraint evaluation
-func (r *RUNE) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
-	return evaluateBasicConstraintsHelper(params, constraints)
-}
-
-// evaluateBasicConstraints for TCY - uses shared helper
-func (t *TCY) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
+func (p *BaseProtocol) evaluateBasicConstraints(params map[string]interface{}, constraints []*types.ParameterConstraint) (bool, error) {
 	return evaluateBasicConstraintsHelper(params, constraints)
 }
 
