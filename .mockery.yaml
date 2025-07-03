@@ -1,0 +1,16 @@
+## https://github.com/vektra/mockery?tab=readme-ov-file
+#
+## Install mockery cli
+# brew install mockery
+## Regenerate mocks if interfaces changed
+# mockery
+
+template: testify
+dir: "{{.InterfaceDir}}"
+filename: "mocks.go"
+pkgname: "{{.SrcPackageName}}"
+structname: "mock_{{.InterfaceName}}"
+packages:
+  github.com/vultisig/recipes/sdk/evm:
+    config:
+      all: true
