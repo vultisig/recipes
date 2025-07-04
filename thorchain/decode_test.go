@@ -82,6 +82,7 @@ func TestParsedThorchainTransactionInterface(t *testing.T) {
 
 	// Test Thorchain-specific methods
 	assert.Equal(t, "test memo", parsed.GetMemo())
+	assert.Equal(t, MemoTypeTransfer, parsed.GetParsedMemo().Type)
 	assert.Equal(t, "rune", parsed.GetDenom())
 	assert.Equal(t, "MsgSend", parsed.GetMsgType())
 	assert.Equal(t, uint64(1), parsed.GetSequence())
@@ -276,6 +277,7 @@ func TestRealCosmosTransactionParsing(t *testing.T) {
 	// Test Thorchain-specific methods
 	parsed := decodedTx.(*ParsedThorchainTransaction)
 	assert.Equal(t, "test transfer", parsed.GetMemo())
+	assert.Equal(t, MemoTypeTransfer, parsed.GetParsedMemo().Type)
 	assert.Equal(t, "rune", parsed.GetDenom())
 	assert.Equal(t, "MsgSend", parsed.GetMsgType())
 	assert.Equal(t, uint64(5), parsed.GetSequence())
@@ -344,6 +346,7 @@ func TestCosmosTransactionParsingWithMultipleCoins(t *testing.T) {
 	parsed := decodedTx.(*ParsedThorchainTransaction)
 	assert.Equal(t, "tcy", parsed.GetDenom()) // First coin denomination
 	assert.Equal(t, "multi-coin transfer", parsed.GetMemo())
+	assert.Equal(t, MemoTypeTransfer, parsed.GetParsedMemo().Type)
 	assert.Equal(t, uint64(10), parsed.GetSequence())
 }
 

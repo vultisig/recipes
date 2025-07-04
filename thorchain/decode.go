@@ -40,6 +40,7 @@ type ParsedThorchainTransaction struct {
 	nonce      uint64
 	sequence   uint64
 	accountNum uint64
+	parsedMemo *ParsedMemo
 }
 
 // ChainIdentifier returns "thorchain"
@@ -116,6 +117,17 @@ func (p *ParsedThorchainTransaction) GetSequence() uint64 {
 // GetAccountNumber returns the account number
 func (p *ParsedThorchainTransaction) GetAccountNumber() uint64 {
 	return p.accountNum
+}
+
+func (p *ParsedThorchainTransaction) GetParsedMemo() *ParsedMemo {
+	return p.parsedMemo
+}
+
+func (p *ParsedThorchainTransaction) GetMemoType() MemoType {
+	if p.parsedMemo != nil {
+		return p.parsedMemo.Type
+	}
+	return MemoTypeTransfer
 }
 
 // createCosmosCodec creates a codec for decoding Cosmos SDK transactions
@@ -209,6 +221,7 @@ func ParseThorchainTransaction(txHex string) (vultisigTypes.DecodedTransaction, 
 	// Extract message information
 	if cosmosSDKTx.Body != nil {
 		parsed.memo = cosmosSDKTx.Body.Memo
+		parsed.parsedMemo = ParseThorchainMemo(cosmosSDKTx.Body.Memo)
 
 		if len(cosmosSDKTx.Body.Messages) > 0 {
 			// Handle the first message (most common case for transfers)
