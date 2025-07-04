@@ -61,6 +61,7 @@ func TestParsedThorchainTransactionInterface(t *testing.T) {
 		amount:     big.NewInt(1000000000), // 10 RUNE (8 decimals)
 		denom:      "rune",
 		memo:       "test memo",
+		parsedMemo: ParseThorchainMemo("test memo"),
 		msgType:    "MsgSend",
 		gasPrice:   big.NewInt(100),
 		gasLimit:   200000,
