@@ -8,6 +8,7 @@ import (
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/internal/generator"
+	"github.com/vultisig/recipes/thorchain"
 )
 
 func main() {
@@ -46,6 +47,10 @@ func registerChains(tokenListPath, abiDirPath string) error {
 		return fmt.Errorf("error initializing Ethereum: %w", err)
 	}
 	chain.RegisterChain(ethereumChain)
+
+	// Register Thorchain
+	thorchainChain := thorchain.NewThorchain()
+	chain.RegisterChain(thorchainChain)
 
 	return nil
 }
