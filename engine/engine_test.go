@@ -96,6 +96,37 @@ var testVectors = []struct {
 		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
 		shouldPass: false,
 	},
+	// Thorchain test cases
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "thorchain",
+		txHexFunc:  testdata.ValidRuneTransferMaxTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "thorchain",
+		txHexFunc:  testdata.ValidRuneTransferUnderLimitTxHex,
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "thorchain",
+		txHexFunc:  testdata.ExceedAmountRuneTransferTxHex,
+		shouldPass: false,
+	},
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "thorchain",
+		txHexFunc:  testdata.InvalidRecipientRuneTransferTxHex,
+		shouldPass: false,
+	},
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "thorchain",
+		txHexFunc:  testdata.InvalidDenomTCYTransferTxHex,
+		shouldPass: false,
+	},
 }
 
 var registerOnce sync.Once

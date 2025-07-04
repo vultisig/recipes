@@ -9,6 +9,7 @@ type MemoType string
 
 const (
 	MemoTypeSwap MemoType = "SWAP"
+	// TODO: Implement additional memo types in future versions
 	// MemoTypeAdd      MemoType = "ADD"
 	// MemoTypeWithdraw MemoType = "WITHDRAW"
 	// MemoTypeDonate   MemoType = "DONATE"
