@@ -3,9 +3,10 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -58,27 +59,35 @@ func (p *ParsedEthereumTransaction) GasPrice() *big.Int { return p.tx.GasPrice()
 // GasLimit returns the transaction gas limit.
 func (p *ParsedEthereumTransaction) GasLimit() uint64 { return p.tx.Gas() }
 
+// EVMBaseChain provides common functionality for EVM-compatible chains
+type EVMBaseChain struct {
+	abiRegistry     map[string]*ABI
+	tokenList       *TokenList
+	genericERC20ABI *ABI
+	chainID         *big.Int
+	id              string
+	name            string
+	description     string
+}
+
 // Ethereum implements the Chain interface for the Ethereum blockchain
 type Ethereum struct {
-	abiRegistry     map[string]*ABI // Changed from *ABI to *types.ABI
-	tokenList       *TokenList
-	genericERC20ABI *ABI // Changed from *ABI to *types.ABI
-	chainID         *big.Int
+	*EVMBaseChain
 }
 
 // ID returns the unique identifier for the Ethereum chain
 func (e *Ethereum) ID() string {
-	return "ethereum"
+	return e.id
 }
 
 // Name returns a human-readable name for the Ethereum chain
 func (e *Ethereum) Name() string {
-	return "Ethereum"
+	return e.name
 }
 
 // Description returns a detailed description of the Ethereum chain
 func (e *Ethereum) Description() string {
-	return "Ethereum is a decentralized, open-source blockchain with smart contract functionality."
+	return e.description
 }
 
 // SupportedProtocols returns the list of protocol IDs supported by the Ethereum chain
@@ -131,6 +140,16 @@ func (e *Ethereum) LoadTokenList(tokenListJSON []byte) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter tokens by chainId
+	filteredTokens := make([]Token, 0)
+	for _, token := range tokenList.Tokens {
+		if int64(token.ChainId) == e.chainID.Int64() {
+			filteredTokens = append(filteredTokens, token)
+		}
+	}
+
+	tokenList.Tokens = filteredTokens
 	e.tokenList = tokenList
 	// Optionally, pre-load ABIs for all tokens if a generic ERC20 ABI is available
 	// Or do it on-demand in GetProtocol
@@ -218,19 +237,25 @@ func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespons
 // NewEthereum creates a new Ethereum chain instance
 // It now also attempts to preload the generic ERC20 ABI.
 func NewEthereum() vultisigTypes.Chain {
-	ethChain := &Ethereum{
-		abiRegistry: make(map[string]*ABI), // Changed to *types.ABI
+	evmBaseChain := &EVMBaseChain{
+		abiRegistry: make(map[string]*ABI),
+		chainID:     big.NewInt(1), // Ethereum mainnet
+		id:          "ethereum",
+		name:        "Ethereum",
+		description: "Ethereum is a decentralized, open-source blockchain with smart contract functionality.",
 	}
 	// Pre-load the generic ERC20 ABI
 	var err error
 	// This ParseABI must return *types.ABI
-	ethChain.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
+	evmBaseChain.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
 	if err != nil {
 		// This is a critical internal ABI; panic or log an error.
 		// For a CLI tool, panicking might be okay if it's considered essential.
 		panic(fmt.Sprintf("FATAL: Failed to parse internal generic ERC20 ABI: %v", err))
 	}
-	return ethChain
+	return &Ethereum{
+		EVMBaseChain: evmBaseChain,
+	}
 }
 
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)
