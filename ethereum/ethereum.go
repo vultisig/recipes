@@ -28,7 +28,7 @@ type ParsedEthereumTransaction struct {
 }
 
 // ChainIdentifier returns "ethereum".
-func (p *ParsedEthereumTransaction) ChainIdentifier() string { return "ethereum" }
+func (p *ParsedEthereumTransaction) ChainIdentifier() string { return p.chainID.String() }
 
 // Hash returns the transaction hash.
 func (p *ParsedEthereumTransaction) Hash() string { return p.tx.Hash().Hex() }
@@ -138,7 +138,7 @@ func (e *Ethereum) ParseTransaction(txHex string) (vultisigTypes.DecodedTransact
 
 	zeroAddress := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-	return &ParsedEthereumTransaction{tx: tx, sender: zeroAddress, chainID: nil}, nil
+	return &ParsedEthereumTransaction{tx: tx, sender: zeroAddress, chainID: e.chainID}, nil
 }
 
 // LoadABI loads an ABI definition and registers it with a given name
