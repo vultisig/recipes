@@ -147,7 +147,7 @@ func TestEngine(t *testing.T) {
 				}
 				// Register protocols (no token list, no ERC20 ABI needed for this test)
 				registerOnce.Do(func() {
-					if err := ethereum.RegisterEthereumProtocols(ethChain, nil); err != nil {
+					if err := ethChain.RegisterEthereumProtocols(nil); err != nil {
 						t.Fatalf("Failed to register Ethereum protocols: %v", err)
 					}
 				})
