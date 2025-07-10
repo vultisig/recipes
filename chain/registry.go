@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/arbitrum"
+	"github.com/vultisig/recipes/base"
 	"github.com/vultisig/recipes/bitcoin"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
@@ -81,4 +82,5 @@ func init() {
 	RegisterChain(bitcoin.NewChain())
 	RegisterChain(ethereum.NewEthereum())
 	RegisterChain(arbitrum.NewArbitrum())
+	RegisterChain(base.NewBase())
 }

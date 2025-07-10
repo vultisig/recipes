@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/vultisig/recipes/arbitrum"
+	"github.com/vultisig/recipes/base"
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/internal/generator"
@@ -53,9 +54,17 @@ func registerChains(tokenListPath, abiDirPath string) error {
 	arbitrumChain := arbitrum.NewArbitrum()
 	err = arbitrumChain.InitEthereum(tokenListPath, abiDirPath)
 	if err != nil {
-		return fmt.Errorf("error initializing Ethereum: %w", err)
+		return fmt.Errorf("error initializing Arbitrum: %w", err)
 	}
 	chain.RegisterChain(arbitrumChain)
+
+	// Register Arbitrum chain with token list and ABIs if provided
+	baseChain := base.NewBase()
+	err = baseChain.InitEthereum(tokenListPath, abiDirPath)
+	if err != nil {
+		return fmt.Errorf("error initializing Base: %w", err)
+	}
+	chain.RegisterChain(baseChain)
 
 	return nil
 }

@@ -629,6 +629,336 @@ Transfer Tether USD tokens from one address to another
 ```
 
 
+### base.eth.transfer
+
+**Chain:** Base  
+**Protocol:** Base  
+**Function:** Transfer Base ETH  
+
+Transfer Ether to another address on Base
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Base address of the recipient |
+| amount | decimal | The amount of Ether to transfer |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.eth.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### base.usdc.allowance
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin allowance  
+
+Get the amount of USD Coin tokens allowed to be spent by an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| owner | address | owner parameter of type address |
+| spender | address | spender parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.allowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "owner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### base.usdc.approve
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin approve  
+
+Approve an address to spend USD Coin tokens
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| spender | address | spender parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.approve",
+  "effect": "ALLOW",
+  "constraints": {
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### base.usdc.balanceOf
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin balanceOf  
+
+Get the USD Coin token balance of an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### base.usdc.decimals
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin decimals  
+
+Call the decimals function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.decimals",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### base.usdc.name
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin name  
+
+Call the name function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### base.usdc.symbol
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin symbol  
+
+Call the symbol function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### base.usdc.totalSupply
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin totalSupply  
+
+Call the totalSupply function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### base.usdc.transfer
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin transfer  
+
+Transfer USD Coin tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### base.usdc.transferFrom
+
+**Chain:** Base  
+**Protocol:** USD Coin  
+**Function:** USD Coin transferFrom  
+
+Transfer USD Coin tokens from one address to another
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "base.usdc.transferFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "sender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### bitcoin.btc.transfer
 
 **Chain:** Bitcoin  
