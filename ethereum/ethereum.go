@@ -68,6 +68,7 @@ type Ethereum struct {
 	id              string
 	name            string
 	description     string
+	supportedABIs   map[string]bool
 }
 
 // ID returns the unique identifier for the Ethereum chain
@@ -103,6 +104,11 @@ func (e *Ethereum) SetName(name string) {
 // SetDescription sets the description for the Ethereum instance
 func (e *Ethereum) SetDescription(description string) {
 	e.description = description
+}
+
+// SetDescription sets the description for the Ethereum instance
+func (e *Ethereum) SetSupportedABIs(supportedABIs map[string]bool) {
+	e.supportedABIs = supportedABIs
 }
 
 // GetChainID returns the chain ID (useful for verification)
@@ -203,7 +209,7 @@ func (e *Ethereum) GetToken(symbol string) (*Token, bool) {
 func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 	lowerID := strings.ToLower(id)
 	if lowerID == "eth" {
-		return NewETH(), nil
+		return NewETH(e.ID(), e.Name()), nil
 	}
 
 	// Check if it's a token symbol from the loaded token list
@@ -220,13 +226,13 @@ func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 		}
 		// The protocol ID for ABIProtocol should be the token symbol for clarity.
 		// The name and description can also come from the token.
-		return NewABIProtocol(token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
+		return NewABIProtocol(e.chainID.String(), token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
 	}
 
 	// Check if an ABI was specifically loaded for this ID
 	if abi, ok := e.GetABI(lowerID); ok {
 		// This is for contracts registered directly by name/address via LoadABI
-		return NewABIProtocol(id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
+		return NewABIProtocol(e.chainID.String(), id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
 	}
 
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
@@ -256,13 +262,17 @@ func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespons
 
 // NewEthereum creates a new Ethereum chain instance
 // It now also attempts to preload the generic ERC20 ABI.
-func NewEthereum() vultisigTypes.Chain {
+func NewEthereum() *Ethereum {
 	ethereum := &Ethereum{
 		abiRegistry: make(map[string]*ABI),
 		chainID:     big.NewInt(1), // Ethereum mainnet
 		id:          "ethereum",
 		name:        "Ethereum",
 		description: "Ethereum is a decentralized, open-source blockchain with smart contract functionality.",
+		supportedABIs: map[string]bool{
+			"erc20":            true,
+			"uniswapV2_router": true,
+		},
 	}
 	// Pre-load the generic ERC20 ABI
 	var err error

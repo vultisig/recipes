@@ -38,16 +38,18 @@ func (a *Arbitrum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespons
 }
 
 // Constructor
-func NewArbitrum() types.Chain {
+func NewArbitrum() *Arbitrum {
 	ethChain := ethereum.NewEthereum()
-	// Set Arbitrum-specific values after creation
-	if eth, ok := ethChain.(*ethereum.Ethereum); ok {
-		eth.SetChainID(big.NewInt(42161))
-		eth.SetID("arbitrum")
-		eth.SetName("Arbitrum One")
-		eth.SetDescription("Arbitrum One is an Optimistic Rollup Layer 2 scaling solution for Ethereum.")
-	}
+
+	ethChain.SetChainID(big.NewInt(42161))
+	ethChain.SetID("arbitrum")
+	ethChain.SetName("Arbitrum One")
+	ethChain.SetDescription("Arbitrum One is an Optimistic Rollup Layer 2 scaling solution for Ethereum.")
+	ethChain.SetSupportedABIs(map[string]bool{
+		"erc20": true,
+	})
+
 	return &Arbitrum{
-		Ethereum: ethChain.(*ethereum.Ethereum),
+		Ethereum: ethChain,
 	}
 }

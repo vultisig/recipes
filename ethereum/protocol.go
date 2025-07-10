@@ -149,6 +149,7 @@ func paramValueToString(paramValue interface{}) (string, bool) {
 // BaseProtocol provides common functionality for Ethereum protocols
 type BaseProtocol struct {
 	id          string
+	chainId     string
 	name        string
 	description string
 	functions   []*types.Function
@@ -166,7 +167,7 @@ func (p *BaseProtocol) Name() string {
 
 // ChainID returns the chain identifier
 func (p *BaseProtocol) ChainID() string {
-	return "ethereum"
+	return p.chainId
 }
 
 // Description returns the protocol description
@@ -195,19 +196,20 @@ type ETH struct {
 }
 
 // NewETH creates a new ETH protocol
-func NewETH() types.Protocol {
+func NewETH(chainId, chainName string) types.Protocol {
 	return &ETH{
 		BaseProtocol: BaseProtocol{
 			id:          "eth",
-			name:        "Ethereum",
-			description: "Native Ether currency of the Ethereum blockchain",
+			name:        chainName,
+			chainId:     chainId,
+			description: fmt.Sprintf("Native Ether currency of the %s blockchain", chainName),
 			functions: []*types.Function{
 				{
 					ID:          "transfer",
-					Name:        "Transfer ETH",
-					Description: "Transfer Ether to another address",
+					Name:        fmt.Sprintf("Transfer %s ETH", chainName),
+					Description: fmt.Sprintf("Transfer Ether to another address on %s", chainName),
 					Parameters: []*types.FunctionParam{
-						{Name: "recipient", Type: "address", Description: "The Ethereum address of the recipient"},
+						{Name: "recipient", Type: "address", Description: fmt.Sprintf("The %s address of the recipient", chainName)},
 						{Name: "amount", Type: "decimal", Description: "The amount of Ether to transfer"},
 					},
 				},
@@ -266,7 +268,7 @@ type ABIProtocol struct {
 type FunctionCustomizer func(f *types.Function, abiFunc *ABIFunction)
 
 // NewABIProtocolWithCustomization creates a new protocol from an ABI with customization
-func NewABIProtocolWithCustomization(id string, name string, description string, localDomainABI *ABI, customizer FunctionCustomizer) types.Protocol {
+func NewABIProtocolWithCustomization(chainId string, id string, name string, description string, localDomainABI *ABI, customizer FunctionCustomizer) types.Protocol {
 	parsedGoEthABI, err := abi.JSON(strings.NewReader(localDomainABI.RawJson)) // Assuming ABI struct has RawJson string
 	if err != nil {
 		// Handle error: couldn't parse ABI. Maybe panic or return an error-protocol type.
@@ -317,7 +319,7 @@ func NewABIProtocolWithCustomization(id string, name string, description string,
 	}
 
 	protocol := &ABIProtocol{
-		BaseProtocol: BaseProtocol{id: id, name: name, description: description, functions: functions},
+		BaseProtocol: BaseProtocol{id: id, chainId: chainId, name: name, description: description, functions: functions},
 		abiParsed:    &parsedGoEthABI,
 	}
 
@@ -330,8 +332,8 @@ func NewABIProtocolWithCustomization(id string, name string, description string,
 }
 
 // NewABIProtocol creates a new protocol from an ABI
-func NewABIProtocol(id string, name string, description string, localDomainABI *ABI) types.Protocol {
-	return NewABIProtocolWithCustomization(id, name, description, localDomainABI, nil)
+func NewABIProtocol(chainId string, id string, name string, description string, localDomainABI *ABI) types.Protocol {
+	return NewABIProtocolWithCustomization(chainId, id, name, description, localDomainABI, nil)
 }
 
 // MatchFunctionCall for ABIProtocol (e.g., ERC20 transfer)

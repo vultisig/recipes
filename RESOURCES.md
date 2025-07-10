@@ -6,6 +6,629 @@ Each resource represents an action that can be performed by a plugin, subject to
 ## Available Resources
 
 
+### arbitrum.eth.transfer
+
+**Chain:** Arbitrum One  
+**Protocol:** Arbitrum One  
+**Function:** Transfer Arbitrum One ETH  
+
+Transfer Ether to another address on Arbitrum One
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Arbitrum One address of the recipient |
+| amount | decimal | The amount of Ether to transfer |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.eth.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdc.allowance
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin allowance  
+
+Get the amount of USD Coin tokens allowed to be spent by an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| owner | address | owner parameter of type address |
+| spender | address | spender parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.allowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "owner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdc.approve
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin approve  
+
+Approve an address to spend USD Coin tokens
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| spender | address | spender parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.approve",
+  "effect": "ALLOW",
+  "constraints": {
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdc.balanceOf
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin balanceOf  
+
+Get the USD Coin token balance of an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdc.decimals
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin decimals  
+
+Call the decimals function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.decimals",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdc.name
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin name  
+
+Call the name function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdc.symbol
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin symbol  
+
+Call the symbol function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdc.totalSupply
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin totalSupply  
+
+Call the totalSupply function on USD Coin token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdc.transfer
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin transfer  
+
+Transfer USD Coin tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdc.transferFrom
+
+**Chain:** Arbitrum One  
+**Protocol:** USD Coin  
+**Function:** USD Coin transferFrom  
+
+Transfer USD Coin tokens from one address to another
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of USD Coin tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdc.transferFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "sender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdt.allowance
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD allowance  
+
+Get the amount of Tether USD tokens allowed to be spent by an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| owner | address | owner parameter of type address |
+| spender | address | spender parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.allowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "owner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdt.approve
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD approve  
+
+Approve an address to spend Tether USD tokens
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| spender | address | spender parameter of type address |
+| amount | decimal | The amount of Tether USD tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.approve",
+  "effect": "ALLOW",
+  "constraints": {
+    "spender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdt.balanceOf
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD balanceOf  
+
+Get the Tether USD token balance of an address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdt.decimals
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD decimals  
+
+Call the decimals function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.decimals",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdt.name
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD name  
+
+Call the name function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.name",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdt.symbol
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD symbol  
+
+Call the symbol function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.symbol",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdt.totalSupply
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD totalSupply  
+
+Call the totalSupply function on Tether USD token
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.totalSupply",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### arbitrum.usdt.transfer
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD transfer  
+
+Transfer Tether USD tokens to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of Tether USD tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### arbitrum.usdt.transferFrom
+
+**Chain:** Arbitrum One  
+**Protocol:** Tether USD  
+**Function:** Tether USD transferFrom  
+
+Transfer Tether USD tokens from one address to another
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| sender | address | sender parameter of type address |
+| recipient | address | recipient parameter of type address |
+| amount | decimal | The amount of Tether USD tokens |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "arbitrum.usdt.transferFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "sender": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### bitcoin.btc.transfer
 
 **Chain:** Bitcoin  
@@ -340,9 +963,9 @@ Transfer Dai Stablecoin tokens from one address to another
 
 **Chain:** Ethereum  
 **Protocol:** Ethereum  
-**Function:** Transfer ETH  
+**Function:** Transfer Ethereum ETH  
 
-Transfer Ether to another address
+Transfer Ether to another address on Ethereum
 
 **Parameters:**
 

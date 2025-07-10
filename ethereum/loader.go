@@ -18,10 +18,11 @@ var registerValidatorsOnce sync.Once
 var registerValidatorsError error
 
 // RegisterEthereumProtocols registers all Ethereum protocols
-func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
+func (e *Ethereum) RegisterEthereumProtocols(erc20ABI *ABI) error {
 	// Register native ETH protocol
-	protocol.RegisterProtocol(NewETH())
+	protocol.RegisterProtocol(NewETH(e.ID(), e.Name()))
 
+	fmt.Printf("Created ETH protocol with chainID: %s\n", e.ID())
 	// Register protocol validators only once
 	registerValidatorsOnce.Do(func() {
 		registerValidatorsError = registerProtocolValidators()
@@ -33,8 +34,8 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 	}
 
 	// Register token protocols from token list with dynamically loaded ERC20 functions
-	if ethereumChain.tokenList != nil && erc20ABI != nil {
-		for _, token := range ethereumChain.tokenList.Tokens {
+	if e.tokenList != nil && erc20ABI != nil {
+		for _, token := range e.tokenList.Tokens {
 			// Create token-specific ERC20 protocol using ERC20 ABI
 			tokenProtocolID := token.Symbol
 			tokenName := token.Name
@@ -42,6 +43,7 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 
 			// Generate token-specific functions from ERC20 ABI
 			tokenProtocol := NewABIProtocolWithCustomization(
+				e.ID(),
 				tokenProtocolID,
 				tokenName,
 				tokenDescription,
@@ -77,17 +79,18 @@ func RegisterEthereumProtocols(ethereumChain *Ethereum, erc20ABI *ABI) error {
 			)
 
 			protocol.RegisterProtocol(tokenProtocol)
+			fmt.Printf("Created Token protocol with chainID: %s, name: %s\n", tokenProtocol.ChainID(), tokenProtocol.Name())
 		}
 	}
 
 	// Register ABI protocols (non-token contracts)
-	for name, abi := range ethereumChain.abiRegistry {
+	for name, abi := range e.abiRegistry {
 		// Skip registering the ERC20 ABI directly, as it's used for tokens
 		if name != "erc20" {
 			description := fmt.Sprintf("Protocol generated from %s ABI", name)
 
 			// Use the generic ABI protocol creation - validators are automatically applied
-			abiProtocol := NewABIProtocol(name, name, description, abi)
+			abiProtocol := NewABIProtocol(e.ID(), name, name, description, abi)
 			protocol.RegisterProtocol(abiProtocol)
 		}
 	}
@@ -107,7 +110,7 @@ func registerProtocolValidators() error {
 }
 
 // LoadTokenListFromFile loads a token list from a file
-func LoadTokenListFromFile(path string, ethereumChain *Ethereum) error {
+func (e *Ethereum) LoadTokenListFromFile(path string) error {
 	// Read the token list file
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -115,11 +118,11 @@ func LoadTokenListFromFile(path string, ethereumChain *Ethereum) error {
 	}
 
 	// Parse the token list
-	return ethereumChain.LoadTokenList(data)
+	return e.LoadTokenList(data)
 }
 
 // LoadABIFromFile loads an ABI from a file
-func LoadABIFromFile(path string, name string, ethereumChain *Ethereum) error {
+func (e *Ethereum) LoadABIFromFile(path string, name string) error {
 	// Read the ABI file
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -127,11 +130,11 @@ func LoadABIFromFile(path string, name string, ethereumChain *Ethereum) error {
 	}
 
 	// Parse the ABI
-	return ethereumChain.LoadABI(name, data)
+	return e.LoadABI(name, data)
 }
 
 // LoadABIsFromDirectory loads all ABIs from a directory
-func LoadABIsFromDirectory(dirPath string, ethereumChain *Ethereum) error {
+func (e *Ethereum) LoadABIsFromDirectory(dirPath string) error {
 	// Get all .json files in the directory
 	files, err := filepath.Glob(filepath.Join(dirPath, "*.json"))
 	if err != nil {
@@ -143,8 +146,12 @@ func LoadABIsFromDirectory(dirPath string, ethereumChain *Ethereum) error {
 		name := filepath.Base(filePath)
 		name = name[:len(name)-len(filepath.Ext(name))]
 
+		if !e.supportedABIs[name] {
+			fmt.Printf("Skipping ABI %s for chain %s (not supported)\n", name, e.ID())
+			continue
+		}
 		// Load the ABI
-		if err := LoadABIFromFile(filePath, name, ethereumChain); err != nil {
+		if err := e.LoadABIFromFile(filePath, name); err != nil {
 			return fmt.Errorf("error loading ABI from %s: %w", filePath, err)
 		}
 	}
@@ -153,46 +160,44 @@ func LoadABIsFromDirectory(dirPath string, ethereumChain *Ethereum) error {
 }
 
 // InitEthereum initializes Ethereum with token list and ABIs
-func InitEthereum(tokenListPath string, abiDirPath string) (types.Chain, error) {
-	// Create Ethereum chain
-	ethereumChain := NewEthereum().(*Ethereum)
+func (e *Ethereum) InitEthereum(tokenListPath string, abiDirPath string) error {
 
 	// Load token list if provided
 	if tokenListPath != "" {
-		if err := LoadTokenListFromFile(tokenListPath, ethereumChain); err != nil {
-			return nil, fmt.Errorf("error loading token list: %w", err)
+		if err := e.LoadTokenListFromFile(tokenListPath); err != nil {
+			return fmt.Errorf("error loading token list: %w", err)
 		}
 	}
 
 	// Load ABIs if directory provided
 	if abiDirPath != "" {
-		if err := LoadABIsFromDirectory(abiDirPath, ethereumChain); err != nil {
-			return nil, fmt.Errorf("error loading ABIs: %w", err)
+		if err := e.LoadABIsFromDirectory(abiDirPath); err != nil {
+			return fmt.Errorf("error loading ABIs: %w", err)
 		}
 	}
 
 	// Get the ERC20 ABI for token protocols
 	var erc20ABI *ABI
-	if abi, ok := ethereumChain.GetABI("erc20"); ok {
+	if abi, ok := e.GetABI("erc20"); ok {
 		erc20ABI = abi
 	} else {
 		// Try to load the default ERC20 ABI
 		fmt.Println("Searching for ERC20 ABI in", abiDirPath)
 		erc20Path := filepath.Join(abiDirPath, "erc20.json")
 		if _, err := os.Stat(erc20Path); err == nil {
-			if err := LoadABIFromFile(erc20Path, "erc20", ethereumChain); err != nil {
-				return nil, fmt.Errorf("error loading ERC20 ABI: %w", err)
+			if err := e.LoadABIFromFile(erc20Path, "erc20"); err != nil {
+				return fmt.Errorf("error loading ERC20 ABI: %w", err)
 			}
-			erc20ABI, _ = ethereumChain.GetABI("erc20")
+			erc20ABI, _ = e.GetABI("erc20")
 		} else {
-			return nil, fmt.Errorf("ERC20 ABI not found, required for token protocols")
+			return fmt.Errorf("ERC20 ABI not found, required for token protocols")
 		}
 	}
 
 	// Register protocols
-	if err := RegisterEthereumProtocols(ethereumChain, erc20ABI); err != nil {
-		return nil, fmt.Errorf("error registering protocols: %w", err)
+	if err := e.RegisterEthereumProtocols(erc20ABI); err != nil {
+		return fmt.Errorf("error registering protocols: %w", err)
 	}
 
-	return ethereumChain, nil
+	return nil
 }
