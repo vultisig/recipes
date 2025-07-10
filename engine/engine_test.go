@@ -18,6 +18,7 @@ import (
 var testVectors = []struct {
 	policyPath string
 	chainStr   string
+	schemaPath string
 	txHex      string
 	txHexFunc  func() string
 	shouldPass bool
@@ -96,6 +97,17 @@ var testVectors = []struct {
 		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
 		shouldPass: false,
 	},
+	// Schema validation tests
+	{
+		policyPath: "../testdata/payroll.json",
+		schemaPath: "../testdata/payroll_schema.json",
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/xrp_payroll.json",
+		schemaPath: "../testdata/payroll_schema.json",
+		shouldPass: false,
+	},
 }
 
 var registerOnce sync.Once
@@ -115,6 +127,26 @@ func TestEngine(t *testing.T) {
 			var policy types.Policy
 			if err := protojson.Unmarshal(policyFileBytes, &policy); err != nil {
 				t.Fatalf("Failed to unmarshal policy: %v", err)
+			}
+
+			var schema types.RecipeSchema
+			if tv.schemaPath != "" {
+				schemaFileBytes, err := os.ReadFile(tv.schemaPath)
+				if err != nil {
+					t.Fatalf("Failed to read schema file %s: %v", tv.schemaPath, err)
+				}
+
+				if err := protojson.Unmarshal(schemaFileBytes, &schema); err != nil {
+					t.Fatalf("Failed to unmarshal schema JSON: %v", err)
+				}
+				t.Logf("Successfully loaded schema for plugin: %s (Version: %d)",
+					schema.GetPluginName(), schema.GetPluginVersion())
+
+				err = engine.ValidatePolicyWithSchema(&policy, &schema)
+				if err != nil && tv.shouldPass {
+					t.Fatalf("Failed to validate policy: %v", err)
+				}
+				return
 			}
 
 			c, err := chain.GetChain(tv.chainStr)
