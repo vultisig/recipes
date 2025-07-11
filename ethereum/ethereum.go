@@ -3,9 +3,10 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -160,34 +161,24 @@ func (e *Ethereum) GetToken(symbol string) (*Token, bool) {
 	return nil, false
 }
 
-// GetProtocol returns a protocol handler for the given ID (e.g., "eth" or a token symbol).
+// GetProtocol returns a protocol handler for the given ID
+// eth.erc20.transfer -> eth.{id}.transfer
+// eth.eth.transfer -> eth.{id}.transfer
 func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
-	lowerID := strings.ToLower(id)
-	if lowerID == "eth" {
+	switch strings.ToLower(id) {
+	case "eth":
 		return NewETH(), nil
-	}
-
-	// Check if it's a token symbol from the loaded token list
-	if token, ok := e.GetToken(lowerID); ok {
-		// Use the generic ERC20 ABI for this token
-		// The NewABIProtocol will use this ABI to understand 'transfer', 'decimals', etc.
-		if e.genericERC20ABI == nil {
-			// Attempt to load generic ERC20 ABI if not already loaded (e.g. by NewEthereum)
-			var err error
-			e.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse internal generic ERC20 ABI: %w", err)
-			}
+	case "erc20":
+		abi, err := ParseABI([]byte(GenericERC20ABIJson))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse internal generic ERC20 ABI: %w", err)
 		}
-		// The protocol ID for ABIProtocol should be the token symbol for clarity.
-		// The name and description can also come from the token.
-		return NewABIProtocol(token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
-	}
-
-	// Check if an ABI was specifically loaded for this ID
-	if abi, ok := e.GetABI(lowerID); ok {
-		// This is for contracts registered directly by name/address via LoadABI
-		return NewABIProtocol(id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
+		return NewABIProtocol(
+			"erc20",
+			"erc20",
+			"ERC20 Token",
+			abi,
+		), nil
 	}
 
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
