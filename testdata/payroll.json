@@ -52,6 +52,31 @@
         }
       ],
       "effect": "EFFECT_ALLOW"
+    },
+    {
+      "id": "allow-rune-transfer-to-charlie-max-100rune",
+      "description": "Allow transfer of RUNE to Charlie's Thorchain address, up to 100 RUNE.",
+      "resource": "thorchain.rune.transfer",
+      "parameter_constraints": [
+        {
+          "parameter_name": "recipient",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_FIXED",
+            "fixed_value": "thor1c3xl04vgw7f7q9xrmqc4llr6s9l8p7qmgqwzsl",
+            "required": true
+          }
+        },
+        {
+          "parameter_name": "amount",
+          "constraint": {
+            "type": "CONSTRAINT_TYPE_MAX",
+            "max_value": "10000000000",
+            "denominated_in": "base_units",
+            "required": true
+          }
+        }
+      ],
+      "effect": "EFFECT_ALLOW"
     }
   ]
 }
