@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/vultisig/recipes/protocol"
@@ -146,10 +147,12 @@ func (e *Ethereum) LoadABIsFromDirectory(dirPath string) error {
 		name := filepath.Base(filePath)
 		name = name[:len(name)-len(filepath.Ext(name))]
 
-		if !e.supportedABIs[name] {
+		if !e.supportedABIs[strings.ToLower(name)] {
 			fmt.Printf("Skipping ABI %s for chain %s (not supported)\n", name, e.ID())
 			continue
 		}
+		fmt.Printf("Loading ABI %s for chain %s\n", name, e.ID())
+
 		// Load the ABI
 		if err := e.LoadABIFromFile(filePath, name); err != nil {
 			return fmt.Errorf("error loading ABI from %s: %w", filePath, err)
