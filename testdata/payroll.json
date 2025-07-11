@@ -54,7 +54,7 @@
       "effect": "EFFECT_ALLOW"
     },
     {
-      "id": "allow-eth-transfer-to-bob-max-1eth",
+      "id": "allow-arbitrum-eth-transfer-to-bob-max-1eth",
       "description": "Allow transfer of arbitrum ETH to Bob's address (0xb0b0000000000000000000000000000000000001), up to 1 ETH.",
       "resource": "arbitrum.eth.transfer",
       "parameter_constraints": [

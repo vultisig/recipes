@@ -58,7 +58,7 @@ func registerChains(tokenListPath, abiDirPath string) error {
 	}
 	chain.RegisterChain(arbitrumChain)
 
-	// Register Arbitrum chain with token list and ABIs if provided
+	// Register Base chain with token list and ABIs if provided
 	baseChain := base.NewBase()
 	err = baseChain.InitEthereum(tokenListPath, abiDirPath)
 	if err != nil {

@@ -106,7 +106,7 @@ func (e *Ethereum) SetDescription(description string) {
 	e.description = description
 }
 
-// SetDescription sets the description for the Ethereum instance
+// SetSupportedABIs sets the supported ABIs for the Ethereum instance
 func (e *Ethereum) SetSupportedABIs(supportedABIs map[string]bool) {
 	e.supportedABIs = supportedABIs
 }
@@ -271,7 +271,7 @@ func NewEthereum() *Ethereum {
 		description: "Ethereum is a decentralized, open-source blockchain with smart contract functionality.",
 		supportedABIs: map[string]bool{
 			"erc20":            true,
-			"uniswapV2_router": true,
+			"uniswapv2_router": true,
 		},
 	}
 	// Pre-load the generic ERC20 ABI
