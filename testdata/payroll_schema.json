@@ -60,6 +60,34 @@
         }
       ],
       "required": true
+    },
+    {
+      "resource_path": {
+        "chain_id": "thorchain",
+        "protocol_id": "rune",
+        "function_id": "transfer",
+        "full": "thorchain.rune.transfer"
+      },
+      "parameter_capabilities": [
+        {
+          "parameter_name": "recipient",
+          "supported_types": [
+            "CONSTRAINT_TYPE_FIXED",
+            "CONSTRAINT_TYPE_WHITELIST"
+          ],
+          "required": true
+        },
+        {
+          "parameter_name": "amount",
+          "supported_types": [
+            "CONSTRAINT_TYPE_FIXED",
+            "CONSTRAINT_TYPE_MAX",
+            "CONSTRAINT_TYPE_RANGE"
+          ],
+          "required": true
+        }
+      ],
+      "required": true
     }
   ],
   "scheduling": {
