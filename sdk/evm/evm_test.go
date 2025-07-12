@@ -3,12 +3,12 @@ package evm
 import (
 	"context"
 	"math/big"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/mock"
@@ -65,11 +65,11 @@ func TestSDK_MakeTx_unit(t *testing.T) {
 			createAccessListArgs{
 				From:                 from.Hex(),
 				To:                   to.Hex(),
-				Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
-				MaxPriorityFeePerGas: "0x" + common.Bytes2Hex(gasTipCap.Bytes()),
-				MaxFeePerGas:         "0x" + common.Bytes2Hex(gasFeeCap.Bytes()),
-				Value:                "0x" + common.Bytes2Hex(value.Bytes()),
-				Data:                 "0x" + common.Bytes2Hex(data),
+				Gas:                  hexutil.EncodeUint64(gasLimit),
+				MaxPriorityFeePerGas: hexutil.EncodeBig(gasTipCap),
+				MaxFeePerGas:         hexutil.EncodeBig(gasFeeCap),
+				Value:                hexutil.EncodeBig(value),
+				Data:                 hexutil.Encode(data),
 			},
 			"latest",
 		},
