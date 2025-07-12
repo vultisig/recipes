@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	reth "github.com/vultisig/recipes/ethereum"
@@ -257,23 +257,25 @@ func (sdk *SDK) estimateTx(
 
 	gasTipCapHex := "0x0"
 	if gasTipCap != nil {
-		gasTipCapHex = "0x" + common.Bytes2Hex(gasTipCap.Bytes())
+		gasTipCapHex = hexutil.EncodeBig(gasTipCap)
 	}
 
 	maxFeePerGasHex := "0x0"
 	if maxFeePerGas != nil {
-		maxFeePerGasHex = "0x" + common.Bytes2Hex(maxFeePerGas.Bytes())
+		maxFeePerGasHex = hexutil.EncodeBig(maxFeePerGas)
 	}
 
 	valueHex := "0x0"
 	if value != nil {
-		valueHex = "0x" + common.Bytes2Hex(value.Bytes())
+		valueHex = hexutil.EncodeBig(value)
 	}
 
 	var dataHex string // omitempty in JSON
 	if data != nil {
-		dataHex = "0x" + common.Bytes2Hex(data)
+		dataHex = hexutil.Encode(data)
 	}
+
+	gas := hexutil.EncodeUint64(gasLimit)
 
 	var callRes createAccessListRes
 	err = sdk.rpcClientRaw.CallContext(
@@ -283,7 +285,7 @@ func (sdk *SDK) estimateTx(
 		createAccessListArgs{
 			From:                 from.Hex(),
 			To:                   to.Hex(),
-			Gas:                  "0x" + strconv.FormatUint(gasLimit, 16),
+			Gas:                  gas,
 			MaxPriorityFeePerGas: gasTipCapHex,
 			MaxFeePerGas:         maxFeePerGasHex,
 			Value:                valueHex,
