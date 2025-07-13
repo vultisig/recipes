@@ -21,28 +21,34 @@ func NewRegistry() *Registry {
 	}
 }
 
+// buildKey creates a unique key from chainID and protocolID
+func (r *Registry) buildKey(chainID, protocolID string) string {
+	return fmt.Sprintf("%s.%s", chainID, protocolID)
+}
+
 // Register adds a protocol to the registry
 func (r *Registry) Register(protocol types.Protocol) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	id := protocol.ID()
-	if _, exists := r.protocols[id]; exists {
-		return fmt.Errorf("protocol with ID %q already registered", id)
+	key := r.buildKey(protocol.ChainID(), protocol.ID())
+	if _, exists := r.protocols[key]; exists {
+		return fmt.Errorf("protocol with Key %q already registered", key)
 	}
 
-	r.protocols[id] = protocol
+	r.protocols[key] = protocol
 	return nil
 }
 
 // Get retrieves a protocol from the registry by ID
-func (r *Registry) Get(id string) (types.Protocol, error) {
+func (r *Registry) Get(chainID, protocolID string) (types.Protocol, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	protocol, exists := r.protocols[id]
+	key := r.buildKey(chainID, protocolID)
+	protocol, exists := r.protocols[key]
 	if !exists {
-		return nil, fmt.Errorf("no protocol registered with ID %q", id)
+		return nil, fmt.Errorf("no protocol registered with Key %q", key)
 	}
 
 	return protocol, nil
@@ -86,11 +92,6 @@ func RegisterProtocol(protocol types.Protocol) {
 		// In production code, you might want to handle this differently
 		panic(err)
 	}
-}
-
-// GetProtocol retrieves a protocol from the default registry
-func GetProtocol(id string) (types.Protocol, error) {
-	return DefaultRegistry.Get(id)
 }
 
 // ListProtocols returns all registered protocols

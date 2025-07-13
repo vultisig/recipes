@@ -3,9 +3,10 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -27,7 +28,7 @@ type ParsedEthereumTransaction struct {
 }
 
 // ChainIdentifier returns "ethereum".
-func (p *ParsedEthereumTransaction) ChainIdentifier() string { return "ethereum" }
+func (p *ParsedEthereumTransaction) ChainIdentifier() string { return p.chainID.String() }
 
 // Hash returns the transaction hash.
 func (p *ParsedEthereumTransaction) Hash() string { return p.tx.Hash().Hex() }
@@ -60,25 +61,59 @@ func (p *ParsedEthereumTransaction) GasLimit() uint64 { return p.tx.Gas() }
 
 // Ethereum implements the Chain interface for the Ethereum blockchain
 type Ethereum struct {
-	abiRegistry     map[string]*ABI // Changed from *ABI to *types.ABI
+	abiRegistry     map[string]*ABI
 	tokenList       *TokenList
-	genericERC20ABI *ABI // Changed from *ABI to *types.ABI
+	genericERC20ABI *ABI
 	chainID         *big.Int
+	id              string
+	name            string
+	description     string
+	supportedABIs   map[string]bool
 }
 
 // ID returns the unique identifier for the Ethereum chain
 func (e *Ethereum) ID() string {
-	return "ethereum"
+	return e.id
 }
 
 // Name returns a human-readable name for the Ethereum chain
 func (e *Ethereum) Name() string {
-	return "Ethereum"
+	return e.name
 }
 
 // Description returns a detailed description of the Ethereum chain
 func (e *Ethereum) Description() string {
-	return "Ethereum is a decentralized, open-source blockchain with smart contract functionality."
+	return e.description
+}
+
+// SetChainID sets the chain ID for the Ethereum instance
+func (e *Ethereum) SetChainID(chainID *big.Int) {
+	e.chainID = chainID
+}
+
+// SetID sets the identifier for the Ethereum instance
+func (e *Ethereum) SetID(id string) {
+	e.id = id
+}
+
+// SetName sets the name for the Ethereum instance
+func (e *Ethereum) SetName(name string) {
+	e.name = name
+}
+
+// SetDescription sets the description for the Ethereum instance
+func (e *Ethereum) SetDescription(description string) {
+	e.description = description
+}
+
+// SetSupportedABIs sets the supported ABIs for the Ethereum instance
+func (e *Ethereum) SetSupportedABIs(supportedABIs map[string]bool) {
+	e.supportedABIs = supportedABIs
+}
+
+// GetChainID returns the chain ID (useful for verification)
+func (e *Ethereum) GetChainID() *big.Int {
+	return e.chainID
 }
 
 // SupportedProtocols returns the list of protocol IDs supported by the Ethereum chain
@@ -109,7 +144,7 @@ func (e *Ethereum) ParseTransaction(txHex string) (vultisigTypes.DecodedTransact
 
 	zeroAddress := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-	return &ParsedEthereumTransaction{tx: tx, sender: zeroAddress, chainID: nil}, nil
+	return &ParsedEthereumTransaction{tx: tx, sender: zeroAddress, chainID: e.chainID}, nil
 }
 
 // LoadABI loads an ABI definition and registers it with a given name
@@ -131,6 +166,16 @@ func (e *Ethereum) LoadTokenList(tokenListJSON []byte) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter tokens by chainId
+	filteredTokens := make([]Token, 0)
+	for _, token := range tokenList.Tokens {
+		if int64(token.ChainId) == e.chainID.Int64() {
+			filteredTokens = append(filteredTokens, token)
+		}
+	}
+
+	tokenList.Tokens = filteredTokens
 	e.tokenList = tokenList
 	// Optionally, pre-load ABIs for all tokens if a generic ERC20 ABI is available
 	// Or do it on-demand in GetProtocol
@@ -164,7 +209,7 @@ func (e *Ethereum) GetToken(symbol string) (*Token, bool) {
 func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 	lowerID := strings.ToLower(id)
 	if lowerID == "eth" {
-		return NewETH(), nil
+		return NewETH(e.ID(), e.Name()), nil
 	}
 
 	// Check if it's a token symbol from the loaded token list
@@ -181,13 +226,13 @@ func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 		}
 		// The protocol ID for ABIProtocol should be the token symbol for clarity.
 		// The name and description can also come from the token.
-		return NewABIProtocol(token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
+		return NewABIProtocol(e.chainID.String(), token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
 	}
 
 	// Check if an ABI was specifically loaded for this ID
 	if abi, ok := e.GetABI(lowerID); ok {
 		// This is for contracts registered directly by name/address via LoadABI
-		return NewABIProtocol(id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
+		return NewABIProtocol(e.chainID.String(), id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
 	}
 
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
@@ -217,20 +262,28 @@ func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespons
 
 // NewEthereum creates a new Ethereum chain instance
 // It now also attempts to preload the generic ERC20 ABI.
-func NewEthereum() vultisigTypes.Chain {
-	ethChain := &Ethereum{
-		abiRegistry: make(map[string]*ABI), // Changed to *types.ABI
+func NewEthereum() *Ethereum {
+	ethereum := &Ethereum{
+		abiRegistry: make(map[string]*ABI),
+		chainID:     big.NewInt(1), // Ethereum mainnet
+		id:          "ethereum",
+		name:        "Ethereum",
+		description: "Ethereum is a decentralized, open-source blockchain with smart contract functionality.",
+		supportedABIs: map[string]bool{
+			"erc20":            true,
+			"uniswapv2_router": true,
+		},
 	}
 	// Pre-load the generic ERC20 ABI
 	var err error
 	// This ParseABI must return *types.ABI
-	ethChain.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
+	ethereum.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
 	if err != nil {
 		// This is a critical internal ABI; panic or log an error.
 		// For a CLI tool, panicking might be okay if it's considered essential.
 		panic(fmt.Sprintf("FATAL: Failed to parse internal generic ERC20 ABI: %v", err))
 	}
-	return ethChain
+	return ethereum
 }
 
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)
