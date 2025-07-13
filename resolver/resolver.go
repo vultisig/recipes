@@ -14,17 +14,20 @@ func NewMagicResolver() *MagicResolver {
 	return &MagicResolver{
 		treasuryConfig: map[string]map[string]string{
 			"ethereum": {
-				"eth":  "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-				"usdc": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-				"dai":  "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-				"weth": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"eth":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"usdc":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"dai":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"weth":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
 			},
 			"bitcoin": {
-				"btc": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+				"btc":     "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+				"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
 			},
 			"arbitrum": {
-				"eth":  "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-				"usdc": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"eth":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"usdc":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
 			},
 		},
 	}
