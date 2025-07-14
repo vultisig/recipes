@@ -14,6 +14,8 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
+var magicResolver = resolver.NewMagicResolver()
+
 // evaluateParameterConstraints evaluates policy constraints against extracted transaction parameters.
 // This function assumes that types.ParameterConstraint is correctly defined and available from the types package (e.g., via types/policy.pb.go).
 func evaluateParameterConstraints(params map[string]interface{}, policyParamConstraints []*types.ParameterConstraint) (bool, error) {
@@ -43,14 +45,14 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 
 		switch cVal := constraint.Value.(type) { // Value is the oneof field
 		case *types.Constraint_MagicConstantValue:
-			r := resolver.NewMagicResolver()
+			r := magicResolver
 			magicConstant := constraint.GetMagicConstantValue()
 
 			// Get chain and asset from extractedParams
 			chainID, ok1 := params["chainId"].(string)
 			asset, ok2 := params["asset"].(string)
 			if !ok1 {
-				return false, fmt.Errorf("missing chain for magic constant resolution")
+				return false, fmt.Errorf("missing chainId parameter required for magic constant %v resolution", magicConstant)
 			}
 			// Some ABIs have no easy way to extract asset parameter, in this case fallback to default value based on chain
 			if !ok2 {
@@ -401,6 +403,7 @@ func (p *ABIProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, poli
 	// Normalize parameter names (e.g. _to -> to) and prepare for constraint evaluation
 	extractedParams := make(map[string]interface{}) // For policy constraints
 	extractedParams["chainId"] = policyMatcher.ResourcePath.ChainId
+	extractedParams["asset"] = policyMatcher.ResourcePath.ProtocolId
 
 	for _, input := range abiMethod.Inputs {
 		paramName := input.Name

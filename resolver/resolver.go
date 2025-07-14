@@ -22,7 +22,7 @@ func NewMagicResolver() *MagicResolver {
 			},
 			"bitcoin": {
 				"btc":     "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
-				"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+				"default": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
 			},
 			"arbitrum": {
 				"eth":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
@@ -52,6 +52,10 @@ func (r *MagicResolver) resolveTreasury(chainID, assetID string) (string, error)
 
 	address, exists := chainAddresses[assetID]
 	if !exists {
+		// Try fallback to default
+		if defaultAddress, defaultExists := chainAddresses["default"]; defaultExists {
+			return defaultAddress, nil
+		}
 		return "", fmt.Errorf("no treasury address configured for asset %s on chain %s", assetID, chainID)
 	}
 
