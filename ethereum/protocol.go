@@ -10,11 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/vultisig/recipes/resolver"
+	r "github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 )
 
-var magicResolver = resolver.NewMagicResolver()
+var magicResolverRegistry = r.NewMagicConstantRegistry()
 
 // evaluateParameterConstraints evaluates policy constraints against extracted transaction parameters.
 // This function assumes that types.ParameterConstraint is correctly defined and available from the types package (e.g., via types/policy.pb.go).
@@ -45,8 +45,12 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 
 		switch cVal := constraint.Value.(type) { // Value is the oneof field
 		case *types.Constraint_MagicConstantValue:
-			r := magicResolver
 			magicConstant := constraint.GetMagicConstantValue()
+
+			resolver, err := magicResolverRegistry.GetResolver(magicConstant)
+			if err != nil {
+				return false, fmt.Errorf("error when fetching resolver err: %v", err)
+			}
 
 			// Get chain and asset from extractedParams
 			chainID, ok1 := params["chainId"].(string)
@@ -59,8 +63,8 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 				asset = "default"
 			}
 
-			// Call the general resolver
-			expectedValue, err := r.Resolve(magicConstant, chainID, asset)
+			// Call the resolver
+			expectedValue, err := resolver.Resolve(magicConstant, chainID, asset)
 			if err != nil {
 				return false, fmt.Errorf("failed to resolve magic constant %v: %w", magicConstant, err)
 			}
