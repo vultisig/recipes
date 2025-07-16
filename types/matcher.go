@@ -6,4 +6,6 @@ type PolicyFunctionMatcher struct {
 	FunctionID string // The identifier of the function to match (e.g., "transfer", "approve").
 	// Constraints should hold the specific parameter constraints relevant to this function call.
 	Constraints []*ParameterConstraint // Changed from []*Constraint to []*ParameterConstraint
+
+	ResourcePath *ResourcePath
 }

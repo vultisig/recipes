@@ -13,6 +13,12 @@ enum ConstraintType {
   CONSTRAINT_TYPE_RANGE = 4;
   CONSTRAINT_TYPE_WHITELIST = 5;
   CONSTRAINT_TYPE_MAX_PER_PERIOD = 6;
+  CONSTRAINT_TYPE_MAGIC_CONSTANT = 7;
+}
+
+enum MagicConstant {
+  MAGIC_CONSTANT_UNSPECIFIED = 0;
+  MAGIC_CONSTANT_VULTISIG_TREASURY = 1;
 }
 
 // RangeValue represents a range constraint with min and max values
@@ -39,10 +45,11 @@ message Constraint {
     RangeValue range_value = 5;
     WhitelistValues whitelist_values = 6;
     int32 max_per_period_value = 7;
+    MagicConstant magic_constant_value = 8;
   }
 
   // Additional metadata for the constraint
-  string denominated_in = 8;
-  string period = 9;
-  bool required = 10;
+  string denominated_in = 9;
+  string period = 10;
+  bool required = 11;
 }
