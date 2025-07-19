@@ -212,7 +212,7 @@ func (sdk *SDK) estimateTx(
 		if e != nil {
 			return fmt.Errorf("sdk.rpcClient.EstimateGas: %v", e)
 		}
-		gasLimit = r
+		gasLimit = r + r/2
 		return nil
 	})
 
@@ -222,7 +222,7 @@ func (sdk *SDK) estimateTx(
 		if e != nil {
 			return fmt.Errorf("sdk.rpcClient.SuggestGasTipCap: %v", e)
 		}
-		gasTipCap = addGas(r, 3)
+		gasTipCap = addGas(r, 2)
 		return nil
 	})
 
@@ -235,7 +235,7 @@ func (sdk *SDK) estimateTx(
 		if len(feeHistory.BaseFee) == 0 {
 			return fmt.Errorf("feeHistory.BaseFee is empty")
 		}
-		baseFee = addGas(feeHistory.BaseFee[0], 3)
+		baseFee = addGas(feeHistory.BaseFee[0], 2)
 		return nil
 	})
 
