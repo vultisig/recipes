@@ -275,7 +275,8 @@ func (sdk *SDK) estimateTx(
 		dataHex = hexutil.Encode(data)
 	}
 
-	gas := hexutil.EncodeUint64(gasLimit)
+	// add 33%
+	gas := hexutil.EncodeUint64(gasLimit + gasLimit/3)
 
 	var callRes createAccessListRes
 	err = sdk.rpcClientRaw.CallContext(
