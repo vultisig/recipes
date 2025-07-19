@@ -212,7 +212,7 @@ func (sdk *SDK) estimateTx(
 		if e != nil {
 			return fmt.Errorf("sdk.rpcClient.EstimateGas: %v", e)
 		}
-		gasLimit = r
+		gasLimit = r + r/2
 		return nil
 	})
 
@@ -222,7 +222,7 @@ func (sdk *SDK) estimateTx(
 		if e != nil {
 			return fmt.Errorf("sdk.rpcClient.SuggestGasTipCap: %v", e)
 		}
-		gasTipCap = r
+		gasTipCap = addGas(r, 2)
 		return nil
 	})
 
@@ -235,7 +235,7 @@ func (sdk *SDK) estimateTx(
 		if len(feeHistory.BaseFee) == 0 {
 			return fmt.Errorf("feeHistory.BaseFee is empty")
 		}
-		baseFee = feeHistory.BaseFee[0]
+		baseFee = addGas(feeHistory.BaseFee[0], 2)
 		return nil
 	})
 
@@ -326,4 +326,9 @@ func (sdk *SDK) encodeDynamicFeeTx(
 
 	res := append([]byte{types.DynamicFeeTxType}, bytes...)
 	return res, nil
+}
+
+// addGas : in + in/v
+func addGas(in *big.Int, v uint64) *big.Int {
+	return new(big.Int).Add(in, new(big.Int).Div(in, new(big.Int).SetUint64(v)))
 }

@@ -27,5 +27,5 @@ type Chain interface {
 	// we need to properly decode tx bytes, append signature to it, and compute hash using the particular chain library
 	// `sigs` is slice, not a map, because we need to preserve the order of signatures
 	// for R,S ordered apply for BTC for example
-	ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse) (string, error)
+	ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error)
 }
