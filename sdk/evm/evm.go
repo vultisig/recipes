@@ -222,7 +222,7 @@ func (sdk *SDK) estimateTx(
 		if e != nil {
 			return fmt.Errorf("sdk.rpcClient.SuggestGasTipCap: %v", e)
 		}
-		gasTipCap = r
+		gasTipCap = addGas(r, 3)
 		return nil
 	})
 
@@ -235,7 +235,7 @@ func (sdk *SDK) estimateTx(
 		if len(feeHistory.BaseFee) == 0 {
 			return fmt.Errorf("feeHistory.BaseFee is empty")
 		}
-		baseFee = feeHistory.BaseFee[0]
+		baseFee = addGas(feeHistory.BaseFee[0], 3)
 		return nil
 	})
 
@@ -275,8 +275,7 @@ func (sdk *SDK) estimateTx(
 		dataHex = hexutil.Encode(data)
 	}
 
-	// add 33%
-	gas := hexutil.EncodeUint64(gasLimit + gasLimit/3)
+	gas := hexutil.EncodeUint64(gasLimit)
 
 	var callRes createAccessListRes
 	err = sdk.rpcClientRaw.CallContext(
@@ -327,4 +326,9 @@ func (sdk *SDK) encodeDynamicFeeTx(
 
 	res := append([]byte{types.DynamicFeeTxType}, bytes...)
 	return res, nil
+}
+
+// addGas : in + in/v
+func addGas(in *big.Int, v uint64) *big.Int {
+	return new(big.Int).Add(in, new(big.Int).Div(in, new(big.Int).SetUint64(v)))
 }
