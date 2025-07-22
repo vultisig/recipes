@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/bitcoin"
+	"github.com/vultisig/recipes/thorchain"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -107,4 +108,8 @@ func ListProtocolsByChain(chainID string) []types.Protocol {
 func init() {
 	// Register BTC protocol
 	RegisterProtocol(bitcoin.NewBTC())
+
+	// Register Thorchain protocols
+	RegisterProtocol(thorchain.NewRUNE())
+	RegisterProtocol(thorchain.NewTCY())
 }

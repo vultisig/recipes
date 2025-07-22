@@ -6,6 +6,7 @@ import (
 
 	"github.com/vultisig/recipes/bitcoin"
 	"github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/thorchain"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -79,4 +80,5 @@ func init() {
 	// Register Bitcoin chain
 	RegisterChain(bitcoin.NewChain())
 	RegisterChain(ethereum.NewEthereum())
+	RegisterChain(thorchain.NewThorchain())
 }
