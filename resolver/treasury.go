@@ -23,20 +23,20 @@ func NewDefaultTreasuryResolver() Resolver {
 func defaultTreasuryConfig() map[string]map[string]string {
 	return map[string]map[string]string{
 		"ethereum": {
-			"eth":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"usdc":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"dai":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"weth":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+			"eth":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"usdc":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"dai":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"weth":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"default": "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
 		},
 		"bitcoin": {
-			"btc":     "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
-			"default": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+			"btc":     "bc1qelza2cr7w92dmzgkmhdn0a4vcqpe9rfpfknr6a",
+			"default": "bc1qelza2cr7w92dmzgkmhdn0a4vcqpe9rfpfknr6a",
 		},
 		"arbitrum": {
-			"eth":     "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"usdc":    "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
-			"default": "0x742C4B65cc6cd34b45b3b99d50e3677b1e4b9b6e64",
+			"eth":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"usdc":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"default": "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
 		},
 	}
 }
