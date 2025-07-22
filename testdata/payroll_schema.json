@@ -69,6 +69,24 @@
   },
   "requirements": {
     "min_vultisig_version": 1,
-    "supported_chains": ["ethereum"]
+    "supported_chains": [
+      "ethereum"
+    ]
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "frequency": {
+        "type": "string",
+        "enum": [
+          "weekly",
+          "monthly",
+          "yearly"
+        ]
+      }
+    },
+    "required": [
+      "frequency"
+    ]
   }
 }

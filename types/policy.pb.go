@@ -9,6 +9,7 @@ package types
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -243,7 +244,9 @@ type Policy struct {
 	// Version of the scheduling specification
 	ScheduleVersion int32 `protobuf:"varint,10,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// FeePolicies defines the billing configuration for this policy
-	FeePolicies   []*FeePolicy `protobuf:"bytes,11,rep,name=fee_policies,json=feePolicies,proto3" json:"fee_policies,omitempty"`
+	FeePolicies []*FeePolicy `protobuf:"bytes,11,rep,name=fee_policies,json=feePolicies,proto3" json:"fee_policies,omitempty"`
+	// Plugin configuration
+	Configuration *structpb.Struct `protobuf:"bytes,12,opt,name=configuration,proto3" json:"configuration,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -355,6 +358,13 @@ func (x *Policy) GetFeePolicies() []*FeePolicy {
 	return nil
 }
 
+func (x *Policy) GetConfiguration() *structpb.Struct {
+	if x != nil {
+		return x.Configuration
+	}
+	return nil
+}
+
 // Schedule defines when and how often a policy should be executed
 type Schedule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -440,7 +450,7 @@ var File_policy_proto protoreflect.FileDescriptor
 
 const file_policy_proto_rawDesc = "" +
 	"\n" +
-	"\fpolicy.proto\x12\x05types\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\n" +
+	"\fpolicy.proto\x12\x05types\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\n" +
 	"rule.proto\x1a\x10scheduling.proto\"\xeb\x01\n" +
 	"\tFeePolicy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
@@ -449,7 +459,7 @@ const file_policy_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x129\n" +
 	"\n" +
 	"start_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xa6\x03\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xe5\x03\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -464,7 +474,8 @@ const file_policy_proto_rawDesc = "" +
 	"\bschedule\x18\t \x01(\v2\x0f.types.ScheduleR\bschedule\x12)\n" +
 	"\x10schedule_version\x18\n" +
 	" \x01(\x05R\x0fscheduleVersion\x123\n" +
-	"\ffee_policies\x18\v \x03(\v2\x10.types.FeePolicyR\vfeePolicies\"\xf7\x01\n" +
+	"\ffee_policies\x18\v \x03(\v2\x10.types.FeePolicyR\vfeePolicies\x12=\n" +
+	"\rconfiguration\x18\f \x01(\v2\x17.google.protobuf.StructR\rconfiguration\"\xf7\x01\n" +
 	"\bSchedule\x126\n" +
 	"\tfrequency\x18\x02 \x01(\x0e2\x18.types.ScheduleFrequencyR\tfrequency\x129\n" +
 	"\n" +
@@ -507,7 +518,8 @@ var file_policy_proto_goTypes = []any{
 	(*Schedule)(nil),              // 4: types.Schedule
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 	(*Rule)(nil),                  // 6: types.Rule
-	(ScheduleFrequency)(0),        // 7: types.ScheduleFrequency
+	(*structpb.Struct)(nil),       // 7: google.protobuf.Struct
+	(ScheduleFrequency)(0),        // 8: types.ScheduleFrequency
 }
 var file_policy_proto_depIdxs = []int32{
 	0,  // 0: types.FeePolicy.type:type_name -> types.FeeType
@@ -518,14 +530,15 @@ var file_policy_proto_depIdxs = []int32{
 	5,  // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 6: types.Policy.schedule:type_name -> types.Schedule
 	2,  // 7: types.Policy.fee_policies:type_name -> types.FeePolicy
-	7,  // 8: types.Schedule.frequency:type_name -> types.ScheduleFrequency
-	5,  // 9: types.Schedule.start_time:type_name -> google.protobuf.Timestamp
-	5,  // 10: types.Schedule.end_time:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	7,  // 8: types.Policy.configuration:type_name -> google.protobuf.Struct
+	8,  // 9: types.Schedule.frequency:type_name -> types.ScheduleFrequency
+	5,  // 10: types.Schedule.start_time:type_name -> google.protobuf.Timestamp
+	5,  // 11: types.Schedule.end_time:type_name -> google.protobuf.Timestamp
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_policy_proto_init() }
