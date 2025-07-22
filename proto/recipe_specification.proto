@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package types;
 
+import "google/protobuf/struct.proto";
 import "constraint.proto";
 import "resource.proto";
 import "scheduling.proto";
@@ -30,6 +31,9 @@ message RecipeSchema {
 
   // Plugin requirements
   PluginRequirements requirements = 8;
+
+  // Plugin configuration
+  google.protobuf.Struct configuration = 9;
 }
 
 // ResourcePattern defines a specific resource and what constraints its parameters support
