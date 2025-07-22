@@ -7,7 +7,7 @@ import (
 )
 
 func TestTreasuryResolverSupports(t *testing.T) {
-	resolver := NewTreasuryResolver()
+	resolver := NewDefaultTreasuryResolver()
 
 	// Test that it supports the treasury magic constant
 	if !resolver.Supports(types.MagicConstant_MAGIC_CONSTANT_VULTISIG_TREASURY) {
@@ -21,7 +21,7 @@ func TestTreasuryResolverSupports(t *testing.T) {
 }
 
 func TestTreasuryResolverResolve(t *testing.T) {
-	resolver := NewTreasuryResolver()
+	resolver := NewDefaultTreasuryResolver()
 
 	tests := []struct {
 		name     string
@@ -89,7 +89,7 @@ func TestTreasuryResolverResolve(t *testing.T) {
 }
 
 func TestTreasuryResolverResolveNonTreasuryConstant(t *testing.T) {
-	resolver := NewTreasuryResolver()
+	resolver := NewDefaultTreasuryResolver()
 
 	// Test with non-treasury magic constant
 	_, err := resolver.Resolve(types.MagicConstant_MAGIC_CONSTANT_UNSPECIFIED, "ethereum", "eth")
@@ -99,7 +99,7 @@ func TestTreasuryResolverResolveNonTreasuryConstant(t *testing.T) {
 }
 
 func TestTreasuryResolverConfigStructure(t *testing.T) {
-	resolver := NewTreasuryResolver().(*TreasuryResolver)
+	resolver := NewDefaultTreasuryResolver().(*TreasuryResolver)
 
 	// Test that the config has expected chains
 	expectedChains := []string{"ethereum", "bitcoin", "arbitrum"}

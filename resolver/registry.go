@@ -16,7 +16,7 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 	}
 
 	// Register all resolvers
-	registry.Register(NewTreasuryResolver())
+	registry.Register(NewDefaultTreasuryResolver())
 
 	return registry
 }
