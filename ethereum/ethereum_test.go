@@ -2,13 +2,14 @@ package ethereum
 
 import (
 	"bytes"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
-	"math/big"
-	"testing"
 )
 
 func TestEthereum_ComputeTxHash(t *testing.T) {
@@ -33,7 +34,7 @@ func TestEthereum_ComputeTxHash(t *testing.T) {
 	})
 	require.Nil(t, err, "rlp.Encode")
 
-	txHash, err := NewEthereum().ComputeTxHash(common.Bytes2Hex(buf.Bytes()), []tss.KeysignResponse{{
+	txHash, err := NewEthereum().ComputeTxHash(buf.Bytes(), []tss.KeysignResponse{{
 		R:          "d55e81731a80a10a66475fb52021b03b9173359a3220c10db76739b674355f7a",
 		S:          "6ebf679597e97da64d048e28fe418b2ca0ef08c2a0583b97d11703dc11cd727b",
 		RecoveryID: "01",

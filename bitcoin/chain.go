@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
@@ -45,16 +46,10 @@ func (b *Bitcoin) ParseTransaction(txHex string) (types.DecodedTransaction, erro
 	return ParseBitcoinTransaction(txHex)
 }
 
-func (b *Bitcoin) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse) (string, error) {
+func (b *Bitcoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
 	// TODO: @webpiratt: check and add unit tests for witness and non-witness transactions
-
-	txBytes, err := hex.DecodeString(proposedTxHex)
-	if err != nil {
-		return "", fmt.Errorf("hex.DecodeString: %w", err)
-	}
-
 	var tx wire.MsgTx
-	err = tx.Deserialize(bytes.NewReader(txBytes))
+	err := tx.Deserialize(bytes.NewReader(proposedTx))
 	if err != nil {
 		return "", fmt.Errorf("tx.Deserialize: %w", err)
 	}

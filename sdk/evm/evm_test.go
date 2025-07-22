@@ -55,7 +55,7 @@ func TestSDK_MakeTx_unit(t *testing.T) {
 	mockRpcClient.On("PendingNonceAt", ctx, from).Return(nonce, nil)
 
 	mockRpcClientRaw := newMock_rpcClientRaw(t)
-	gasFeeCap := new(big.Int).Add(gasTipCap, feeHistory.BaseFee[0])
+	gasFeeCap := new(big.Int).Add(addGas(gasTipCap, 2), addGas(feeHistory.BaseFee[0], 2))
 	mockRpcClientRaw.On(
 		"CallContext",
 		ctx,
@@ -65,8 +65,8 @@ func TestSDK_MakeTx_unit(t *testing.T) {
 			createAccessListArgs{
 				From:                 from.Hex(),
 				To:                   to.Hex(),
-				Gas:                  hexutil.EncodeUint64(gasLimit),
-				MaxPriorityFeePerGas: hexutil.EncodeBig(gasTipCap),
+				Gas:                  hexutil.EncodeUint64(gasLimit + gasLimit/2),
+				MaxPriorityFeePerGas: hexutil.EncodeBig(addGas(gasTipCap, 2)),
 				MaxFeePerGas:         hexutil.EncodeBig(gasFeeCap),
 				Value:                hexutil.EncodeBig(value),
 				Data:                 hexutil.Encode(data),
@@ -91,8 +91,8 @@ func TestSDK_MakeTx_unit(t *testing.T) {
 	require.Equal(t, &to, decodedTx.To())
 	require.Equal(t, value, decodedTx.Value())
 	require.Equal(t, data, decodedTx.Data())
-	require.Equal(t, gasLimit, decodedTx.Gas())
-	require.Equal(t, gasTipCap, decodedTx.GasTipCap())
+	require.Equal(t, gasLimit+gasLimit/2, decodedTx.Gas())
+	require.Equal(t, addGas(gasTipCap, 2), decodedTx.GasTipCap())
 	require.Equal(t, gasFeeCap, decodedTx.GasFeeCap())
 	require.Equal(t, nonce, decodedTx.Nonce())
 

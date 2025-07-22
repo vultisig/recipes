@@ -3,9 +3,10 @@ package ethereum
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/vultisig/mobile-tss-lib/tss"
 	"math/big"
 	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -193,12 +194,12 @@ func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
 }
 
-func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignResponse) (string, error) {
+func (e *Ethereum) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
 	if len(sigs) != 1 {
 		return "", fmt.Errorf("expected exactly one signature, got %d", len(sigs))
 	}
 
-	payloadDecoded, err := DecodeUnsignedPayload(common.FromHex(proposedTxHex))
+	payloadDecoded, err := DecodeUnsignedPayload(proposedTx)
 	if err != nil {
 		return "", fmt.Errorf("ethereum.DecodeUnsignedPayload: %w", err)
 	}
@@ -208,7 +209,7 @@ func (e *Ethereum) ComputeTxHash(proposedTxHex string, sigs []tss.KeysignRespons
 	sig = append(sig, common.FromHex(sigs[0].S)...)
 	sig = append(sig, common.FromHex(sigs[0].RecoveryID)...)
 
-	tx, err := types.NewTx(payloadDecoded).WithSignature(types.NewPragueSigner(big.NewInt(ethEvmChainID)), sig)
+	tx, err := types.NewTx(payloadDecoded).WithSignature(types.LatestSignerForChainID(big.NewInt(ethEvmChainID)), sig)
 	if err != nil {
 		return "", fmt.Errorf("gethtypes.NewTx.WithSignature: %w", err)
 	}
