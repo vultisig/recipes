@@ -108,6 +108,11 @@ var testVectors = []struct {
 		schemaPath: "../testdata/payroll_schema.json",
 		shouldPass: false,
 	},
+	{
+		policyPath: "../testdata/invalid_configuration_payroll.json",
+		schemaPath: "../testdata/payroll_schema.json",
+		shouldPass: false,
+	},
 }
 
 var registerOnce sync.Once
@@ -144,7 +149,7 @@ func TestEngine(t *testing.T) {
 
 				err = engine.ValidatePolicyWithSchema(&policy, &schema)
 				if err != nil && tv.shouldPass {
-					t.Fatalf("Failed to validate policy: %v", err)
+					t.Fatalf("Failed to validate policy: %s vs. %s: %v", tv.policyPath, tv.schemaPath, err)
 				}
 				return
 			}

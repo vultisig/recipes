@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package types;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "rule.proto";
 import "scheduling.proto";
@@ -77,6 +78,9 @@ message Policy {
 
   // FeePolicies defines the billing configuration for this policy
   repeated FeePolicy fee_policies = 11;
+
+  // Plugin configuration
+  google.protobuf.Struct configuration = 12;
 }
 
 // Schedule defines when and how often a policy should be executed

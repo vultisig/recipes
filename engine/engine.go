@@ -2,11 +2,14 @@ package engine
 
 import (
 	"fmt"
+	"encoding/json"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	"github.com/kaptinlin/jsonschema"
 )
 
 type Engine struct {
@@ -87,6 +90,10 @@ func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.Re
 			policy.GetId(), schema.GetPluginId())
 	}
 
+	if err := e.validateConfiguration(policy, schema); err != nil {
+		return fmt.Errorf("configuration validation failed: %w", err)
+	}
+
 	// Build supported resources map from schema
 	supportedResources := make(map[string]*types.ResourcePattern)
 	for _, resourcePattern := range schema.GetSupportedResources() {
@@ -118,6 +125,39 @@ func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.Re
 
 	return nil
 }
+
+func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.RecipeSchema) error {
+	configJson, err := json.Marshal(schema.GetConfiguration())
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema: %w", err)
+	}
+
+	compiler := jsonschema.NewCompiler()
+	jsonSchema, err := compiler.Compile(configJson)
+	if err != nil {
+		return fmt.Errorf("failed to compile schema: %w", err)
+	}
+
+	policyJson, err := json.Marshal(policy.GetConfiguration())
+	if err != nil {
+		return fmt.Errorf("failed to marshal policy: %w", err)
+	}
+
+	result := jsonSchema.Validate(policyJson)
+	if !result.IsValid() {
+		joinedErrors := ""
+		errorMessages := []string{}
+		for _, err := range result.Errors {
+			errorMessages = append(errorMessages, err.Error())
+		}
+		joinedErrors = strings.Join(errorMessages, ", ")
+
+		return fmt.Errorf("failed to validate policy configuration data: %s", joinedErrors)
+	}
+
+	return nil
+}
+
 
 func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
 	// Build map of parameter capabilities from schema
