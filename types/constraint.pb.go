@@ -89,19 +89,19 @@ func (ConstraintType) EnumDescriptor() ([]byte, []int) {
 type MagicConstant int32
 
 const (
-	MagicConstant_MAGIC_CONSTANT_UNSPECIFIED       MagicConstant = 0
-	MagicConstant_MAGIC_CONSTANT_VULTISIG_TREASURY MagicConstant = 1
+	MagicConstant_UNSPECIFIED       MagicConstant = 0
+	MagicConstant_VULTISIG_TREASURY MagicConstant = 1
 )
 
 // Enum value maps for MagicConstant.
 var (
 	MagicConstant_name = map[int32]string{
-		0: "MAGIC_CONSTANT_UNSPECIFIED",
-		1: "MAGIC_CONSTANT_VULTISIG_TREASURY",
+		0: "UNSPECIFIED",
+		1: "VULTISIG_TREASURY",
 	}
 	MagicConstant_value = map[string]int32{
-		"MAGIC_CONSTANT_UNSPECIFIED":       0,
-		"MAGIC_CONSTANT_VULTISIG_TREASURY": 1,
+		"UNSPECIFIED":       0,
+		"VULTISIG_TREASURY": 1,
 	}
 )
 
@@ -248,9 +248,9 @@ type Constraint struct {
 	//	*Constraint_MagicConstantValue
 	Value isConstraint_Value `protobuf_oneof:"value"`
 	// Additional metadata for the constraint
-	DenominatedIn string `protobuf:"bytes,9,opt,name=denominated_in,json=denominatedIn,proto3" json:"denominated_in,omitempty"`
-	Period        string `protobuf:"bytes,10,opt,name=period,proto3" json:"period,omitempty"`
-	Required      bool   `protobuf:"varint,11,opt,name=required,proto3" json:"required,omitempty"`
+	DenominatedIn string `protobuf:"bytes,8,opt,name=denominated_in,json=denominatedIn,proto3" json:"denominated_in,omitempty"`
+	Period        string `protobuf:"bytes,9,opt,name=period,proto3" json:"period,omitempty"`
+	Required      bool   `protobuf:"varint,10,opt,name=required,proto3" json:"required,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -359,7 +359,7 @@ func (x *Constraint) GetMagicConstantValue() MagicConstant {
 			return x.MagicConstantValue
 		}
 	}
-	return MagicConstant_MAGIC_CONSTANT_UNSPECIFIED
+	return MagicConstant_UNSPECIFIED
 }
 
 func (x *Constraint) GetDenominatedIn() string {
@@ -412,7 +412,7 @@ type Constraint_MaxPerPeriodValue struct {
 }
 
 type Constraint_MagicConstantValue struct {
-	MagicConstantValue MagicConstant `protobuf:"varint,8,opt,name=magic_constant_value,json=magicConstantValue,proto3,enum=types.MagicConstant,oneof"`
+	MagicConstantValue MagicConstant `protobuf:"varint,11,opt,name=magic_constant_value,json=magicConstantValue,proto3,enum=types.MagicConstant,oneof"`
 }
 
 func (*Constraint_FixedValue) isConstraint_Value() {}
@@ -451,11 +451,11 @@ const file_constraint_proto_rawDesc = "" +
 	"rangeValue\x12C\n" +
 	"\x10whitelist_values\x18\x06 \x01(\v2\x16.types.WhitelistValuesH\x00R\x0fwhitelistValues\x121\n" +
 	"\x14max_per_period_value\x18\a \x01(\x05H\x00R\x11maxPerPeriodValue\x12H\n" +
-	"\x14magic_constant_value\x18\b \x01(\x0e2\x14.types.MagicConstantH\x00R\x12magicConstantValue\x12%\n" +
-	"\x0edenominated_in\x18\t \x01(\tR\rdenominatedIn\x12\x16\n" +
-	"\x06period\x18\n" +
-	" \x01(\tR\x06period\x12\x1a\n" +
-	"\brequired\x18\v \x01(\bR\brequiredB\a\n" +
+	"\x14magic_constant_value\x18\v \x01(\x0e2\x14.types.MagicConstantH\x00R\x12magicConstantValue\x12%\n" +
+	"\x0edenominated_in\x18\b \x01(\tR\rdenominatedIn\x12\x16\n" +
+	"\x06period\x18\t \x01(\tR\x06period\x12\x1a\n" +
+	"\brequired\x18\n" +
+	" \x01(\bR\brequiredB\a\n" +
 	"\x05value*\x80\x02\n" +
 	"\x0eConstraintType\x12\x1f\n" +
 	"\x1bCONSTRAINT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
@@ -465,10 +465,10 @@ const file_constraint_proto_rawDesc = "" +
 	"\x15CONSTRAINT_TYPE_RANGE\x10\x04\x12\x1d\n" +
 	"\x19CONSTRAINT_TYPE_WHITELIST\x10\x05\x12\"\n" +
 	"\x1eCONSTRAINT_TYPE_MAX_PER_PERIOD\x10\x06\x12\"\n" +
-	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\a*U\n" +
-	"\rMagicConstant\x12\x1e\n" +
-	"\x1aMAGIC_CONSTANT_UNSPECIFIED\x10\x00\x12$\n" +
-	" MAGIC_CONSTANT_VULTISIG_TREASURY\x10\x01B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\a*7\n" +
+	"\rMagicConstant\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11VULTISIG_TREASURY\x10\x01B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once

@@ -16,7 +16,7 @@ func TestMagicConstantRegistry(t *testing.T) {
 	}
 
 	// Test GetResolver with supported magic constant
-	resolver, err := registry.GetResolver(types.MagicConstant_MAGIC_CONSTANT_VULTISIG_TREASURY)
+	resolver, err := registry.GetResolver(types.MagicConstant_VULTISIG_TREASURY)
 	if err != nil {
 		t.Errorf("GetResolver() error = %v, want nil", err)
 	}
@@ -26,7 +26,7 @@ func TestMagicConstantRegistry(t *testing.T) {
 
 	// Test GetResolver with unsupported magic constant
 	// Using a different magic constant that treasury resolver doesn't support
-	_, err = registry.GetResolver(types.MagicConstant_MAGIC_CONSTANT_UNSPECIFIED)
+	_, err = registry.GetResolver(types.MagicConstant_UNSPECIFIED)
 	if err == nil {
 		t.Error("GetResolver() should return error for unsupported magic constant")
 	}
@@ -46,7 +46,7 @@ func TestMagicConstantRegistryRegister(t *testing.T) {
 	}
 
 	// Test that the mock resolver can be retrieved
-	resolver, err := registry.GetResolver(types.MagicConstant_MAGIC_CONSTANT_UNSPECIFIED)
+	resolver, err := registry.GetResolver(types.MagicConstant_UNSPECIFIED)
 	if err != nil {
 		t.Errorf("GetResolver() error = %v, want nil", err)
 	}
@@ -59,7 +59,7 @@ func TestMagicConstantRegistryRegister(t *testing.T) {
 type mockResolver struct{}
 
 func (m *mockResolver) Supports(constant types.MagicConstant) bool {
-	return constant == types.MagicConstant_MAGIC_CONSTANT_UNSPECIFIED
+	return constant == types.MagicConstant_UNSPECIFIED
 }
 
 func (m *mockResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, error) {

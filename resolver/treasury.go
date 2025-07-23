@@ -42,7 +42,7 @@ func defaultTreasuryConfig() map[string]map[string]string {
 }
 
 func (r *TreasuryResolver) Supports(constant types.MagicConstant) bool {
-	return constant == types.MagicConstant_MAGIC_CONSTANT_VULTISIG_TREASURY
+	return constant == types.MagicConstant_VULTISIG_TREASURY
 }
 
 func (r *TreasuryResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, error) {
