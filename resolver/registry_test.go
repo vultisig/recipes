@@ -62,6 +62,6 @@ func (m *mockResolver) Supports(constant types.MagicConstant) bool {
 	return constant == types.MagicConstant_UNSPECIFIED
 }
 
-func (m *mockResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, error) {
-	return "mock-address", nil
+func (m *mockResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, string, error) {
+	return "mock-address", "", nil
 }

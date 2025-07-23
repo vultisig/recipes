@@ -45,23 +45,23 @@ func (r *TreasuryResolver) Supports(constant types.MagicConstant) bool {
 	return constant == types.MagicConstant_VULTISIG_TREASURY
 }
 
-func (r *TreasuryResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, error) {
+func (r *TreasuryResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, string, error) {
 	if !r.Supports(constant) {
-		return "", fmt.Errorf("TreasuryResolver does not support type: %v", constant)
+		return "", "", fmt.Errorf("TreasuryResolver does not support type: %v", constant)
 	}
 	chainAddresses, exists := r.treasuryConfig[chainID]
 	if !exists {
-		return "", fmt.Errorf("no treasury address configured for chain %s", chainID)
+		return "", "", fmt.Errorf("no treasury address configured for chain %s", chainID)
 	}
 
 	address, exists := chainAddresses[assetID]
 	if !exists {
 		// Try fallback to default
 		if defaultAddress, defaultExists := chainAddresses["default"]; defaultExists {
-			return defaultAddress, nil
+			return defaultAddress, "", nil
 		}
-		return "", fmt.Errorf("no treasury address configured for asset %s on chain %s", assetID, chainID)
+		return "", "", fmt.Errorf("no treasury address configured for asset %s on chain %s", assetID, chainID)
 	}
-
-	return address, nil
+	// TODO implement memo when supported chains require it
+	return address, "", nil
 }

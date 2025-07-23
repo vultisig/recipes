@@ -76,7 +76,7 @@ func TestTreasuryResolverResolve(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := resolver.Resolve(types.MagicConstant_VULTISIG_TREASURY, tt.chainID, tt.assetID)
+			got, _, err := resolver.Resolve(types.MagicConstant_VULTISIG_TREASURY, tt.chainID, tt.assetID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TreasuryResolver.Resolve() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -92,7 +92,7 @@ func TestTreasuryResolverResolveNonTreasuryConstant(t *testing.T) {
 	resolver := NewDefaultTreasuryResolver()
 
 	// Test with non-treasury magic constant
-	_, err := resolver.Resolve(types.MagicConstant_UNSPECIFIED, "ethereum", "eth")
+	_, _, err := resolver.Resolve(types.MagicConstant_UNSPECIFIED, "ethereum", "eth")
 	if err == nil {
 		t.Error("TreasuryResolver.Resolve() should return error for non-treasury magic constant")
 	}

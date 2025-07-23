@@ -64,7 +64,8 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			}
 
 			// Call the resolver
-			expectedValue, err := resolver.Resolve(magicConstant, chainID, asset)
+			// TODO implement memo when supported chains require it
+			expectedValue, _, err := resolver.Resolve(magicConstant, chainID, asset)
 			if err != nil {
 				return false, fmt.Errorf("failed to resolve magic constant %v: %w", magicConstant, err)
 			}
