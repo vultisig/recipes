@@ -5,7 +5,6 @@ package types;
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "rule.proto";
-import "scheduling.proto";
 
 option go_package = "github.com/vultisig/recipes/types";
 
