@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "schedule_version": 1,
   "plugin_id": "vultisig-payroll-0000",
   "plugin_name": "Payroll Test Multi Transfer",
   "plugin_version": 1,
@@ -62,11 +61,6 @@
       "required": true
     }
   ],
-  "scheduling": {
-    "supports_scheduling": false,
-    "supported_frequencies": [],
-    "max_scheduled_executions": 0
-  },
   "requirements": {
     "min_vultisig_version": 1,
     "supported_chains": [

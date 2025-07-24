@@ -69,9 +69,6 @@ message Policy {
   // UpdatedAt is when the policy was last updated
   google.protobuf.Timestamp updated_at = 8;
 
-  // Version of the scheduling specification
-  int32 schedule_version = 10;
-
   // FeePolicies defines the billing configuration for this policy
   repeated FeePolicy fee_policies = 11;
 
