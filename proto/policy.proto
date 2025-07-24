@@ -81,6 +81,9 @@ message Policy {
 
   // Plugin configuration
   google.protobuf.Struct configuration = 12;
+
+  // MinExecWindow defines minimum allowed gap in seconds between policy txs executed
+  uint32 min_exec_window = 13;
 }
 
 // Schedule defines when and how often a policy should be executed
