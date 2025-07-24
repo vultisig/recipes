@@ -70,9 +70,6 @@ message Policy {
   // UpdatedAt is when the policy was last updated
   google.protobuf.Timestamp updated_at = 8;
 
-  // Schedule defines when this policy should be executed (optional)
-  Schedule schedule = 9;
-
   // Version of the scheduling specification
   int32 schedule_version = 10;
 
@@ -81,21 +78,4 @@ message Policy {
 
   // Plugin configuration
   google.protobuf.Struct configuration = 12;
-}
-
-// Schedule defines when and how often a policy should be executed
-message Schedule {
-  // Frequency of execution
-  ScheduleFrequency frequency = 2;
-
-  // When to start the schedule
-  google.protobuf.Timestamp start_time = 3;
-
-  // When to end the schedule (optional, if not set, runs indefinitely)
-  google.protobuf.Timestamp end_time = 4;
-
-  // Maximum number of executions (optional)
-  int32 max_executions = 5;
-
-  int32 interval = 6; //  this is supplement  to ScheduleFrequency, so we can do like every two days etc.
 }
