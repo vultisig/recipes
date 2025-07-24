@@ -82,8 +82,13 @@ message Policy {
   // Plugin configuration
   google.protobuf.Struct configuration = 12;
 
-  // MinExecWindow defines minimum allowed gap in seconds between policy txs executed
+  // MinExecWindow defines minimum allowed gap in seconds between policy txs batch executed
   uint32 min_exec_window = 13;
+
+  // MaxTxsPerWindow defines maximum txs count in batch, actually rules count in policy, for example:
+  // set 1 for erc20.transfer
+  // set 2 for erc20.approve + erc20.transferFrom
+  uint32 max_txs_per_window = 14;
 }
 
 // Schedule defines when and how often a policy should be executed
