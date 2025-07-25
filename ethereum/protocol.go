@@ -10,8 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
+	r "github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 )
+
+var magicResolverRegistry = r.NewMagicConstantRegistry()
 
 // evaluateParameterConstraints evaluates policy constraints against extracted transaction parameters.
 // This function assumes that types.ParameterConstraint is correctly defined and available from the types package (e.g., via types/policy.pb.go).
@@ -41,6 +44,43 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 		}
 
 		switch cVal := constraint.Value.(type) { // Value is the oneof field
+		case *types.Constraint_MagicConstantValue:
+			magicConstant := constraint.GetMagicConstantValue()
+
+			resolver, err := magicResolverRegistry.GetResolver(magicConstant)
+			if err != nil {
+				return false, fmt.Errorf("error when fetching resolver err: %v", err)
+			}
+
+			// Get chain and asset from extractedParams
+			chainID, ok1 := params["chainId"].(string)
+			asset, ok2 := params["asset"].(string)
+			if !ok1 {
+				return false, fmt.Errorf("missing chainId parameter required for magic constant %v resolution", magicConstant)
+			}
+			// Some ABIs have no easy way to extract asset parameter, in this case fallback to default value based on chain
+			if !ok2 {
+				asset = "default"
+			}
+
+			// Call the resolver
+			// TODO implement memo when supported chains require it
+			expectedValue, _, err := resolver.Resolve(magicConstant, chainID, asset)
+			if err != nil {
+				return false, fmt.Errorf("failed to resolve magic constant %v: %w", magicConstant, err)
+			}
+
+			// Compare with actual parameter value
+			actualValue, isStr := paramValueToString(paramValue)
+			if !isStr {
+				return false, fmt.Errorf("parameter %q could not be converted to string", paramName)
+			}
+
+			if !strings.EqualFold(actualValue, expectedValue) {
+				fmt.Printf("Magic constant constraint not met - Parameter: %s, Actual: %s, Expected (resolved): %s, Magic Constant: %v, Chain: %s, Asset: %s\n",
+					paramName, actualValue, expectedValue, magicConstant, chainID, asset)
+				return false, nil // Constraint not met
+			}
 		case *types.Constraint_FixedValue:
 			valStr, isStr := paramValueToString(paramValue)
 			if !isStr {
@@ -230,6 +270,8 @@ func (p *ETH) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	extractedParams := map[string]interface{}{
 		"recipient": strings.ToLower(decodedTx.To()), // Normalize to lowercase for policy matching
 		"amount":    decodedTx.Value(),
+		"chainId":   policyMatcher.ResourcePath.ChainId,
+		"asset":     "eth",
 		// "from":      strings.ToLower(decodedTx.From()), // Can also include sender if policies need it
 	}
 
@@ -365,6 +407,9 @@ func (p *ABIProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, poli
 
 	// Normalize parameter names (e.g. _to -> to) and prepare for constraint evaluation
 	extractedParams := make(map[string]interface{}) // For policy constraints
+	extractedParams["chainId"] = policyMatcher.ResourcePath.ChainId
+	extractedParams["asset"] = policyMatcher.ResourcePath.ProtocolId
+
 	for _, input := range abiMethod.Inputs {
 		paramName := input.Name
 		// If param name from ABI starts with _, trim it for matching against policy constraints (e.g. _to -> to)

@@ -57,8 +57,9 @@ func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.Deco
 		e.logger.Printf("Using protocol: %s (ID: %s)\n", protocol.Name(), protocol.ID())
 
 		policyMatcher := &types.PolicyFunctionMatcher{
-			FunctionID:  resourcePath.FunctionId,
-			Constraints: rule.GetParameterConstraints(), // Use generated getter
+			FunctionID:   resourcePath.FunctionId,
+			Constraints:  rule.GetParameterConstraints(), // Use generated getter
+			ResourcePath: resourcePath,
 		}
 
 		matches, _, err := protocol.MatchFunctionCall(tx, policyMatcher)
