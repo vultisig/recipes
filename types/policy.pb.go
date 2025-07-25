@@ -248,11 +248,11 @@ type Policy struct {
 	// Plugin configuration
 	Configuration *structpb.Struct `protobuf:"bytes,12,opt,name=configuration,proto3" json:"configuration,omitempty"`
 	// MinExecWindow defines minimum allowed gap in seconds between policy txs batch executed
-	MinExecWindow uint32 `protobuf:"varint,13,opt,name=min_exec_window,json=minExecWindow,proto3" json:"min_exec_window,omitempty"`
+	RateLimitWindow *uint32 `protobuf:"varint,13,opt,name=rate_limit_window,json=rateLimitWindow,proto3,oneof" json:"rate_limit_window,omitempty"`
 	// MaxTxsPerWindow defines maximum txs count in batch, actually rules count in policy, for example:
 	// set 1 for erc20.transfer
 	// set 2 for erc20.approve + erc20.transferFrom
-	MaxTxsPerWindow uint32 `protobuf:"varint,14,opt,name=max_txs_per_window,json=maxTxsPerWindow,proto3" json:"max_txs_per_window,omitempty"`
+	MaxTxsPerWindow *uint32 `protobuf:"varint,14,opt,name=max_txs_per_window,json=maxTxsPerWindow,proto3,oneof" json:"max_txs_per_window,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -371,16 +371,16 @@ func (x *Policy) GetConfiguration() *structpb.Struct {
 	return nil
 }
 
-func (x *Policy) GetMinExecWindow() uint32 {
-	if x != nil {
-		return x.MinExecWindow
+func (x *Policy) GetRateLimitWindow() uint32 {
+	if x != nil && x.RateLimitWindow != nil {
+		return *x.RateLimitWindow
 	}
 	return 0
 }
 
 func (x *Policy) GetMaxTxsPerWindow() uint32 {
-	if x != nil {
-		return x.MaxTxsPerWindow
+	if x != nil && x.MaxTxsPerWindow != nil {
+		return *x.MaxTxsPerWindow
 	}
 	return 0
 }
@@ -479,7 +479,7 @@ const file_policy_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x129\n" +
 	"\n" +
 	"start_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xba\x04\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xf5\x04\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -495,9 +495,11 @@ const file_policy_proto_rawDesc = "" +
 	"\x10schedule_version\x18\n" +
 	" \x01(\x05R\x0fscheduleVersion\x123\n" +
 	"\ffee_policies\x18\v \x03(\v2\x10.types.FeePolicyR\vfeePolicies\x12=\n" +
-	"\rconfiguration\x18\f \x01(\v2\x17.google.protobuf.StructR\rconfiguration\x12&\n" +
-	"\x0fmin_exec_window\x18\r \x01(\rR\rminExecWindow\x12+\n" +
-	"\x12max_txs_per_window\x18\x0e \x01(\rR\x0fmaxTxsPerWindow\"\xf7\x01\n" +
+	"\rconfiguration\x18\f \x01(\v2\x17.google.protobuf.StructR\rconfiguration\x12/\n" +
+	"\x11rate_limit_window\x18\r \x01(\rH\x00R\x0frateLimitWindow\x88\x01\x01\x120\n" +
+	"\x12max_txs_per_window\x18\x0e \x01(\rH\x01R\x0fmaxTxsPerWindow\x88\x01\x01B\x14\n" +
+	"\x12_rate_limit_windowB\x15\n" +
+	"\x13_max_txs_per_window\"\xf7\x01\n" +
 	"\bSchedule\x126\n" +
 	"\tfrequency\x18\x02 \x01(\x0e2\x18.types.ScheduleFrequencyR\tfrequency\x129\n" +
 	"\n" +
@@ -570,6 +572,7 @@ func file_policy_proto_init() {
 	}
 	file_rule_proto_init()
 	file_scheduling_proto_init()
+	file_policy_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
