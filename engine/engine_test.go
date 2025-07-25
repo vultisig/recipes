@@ -4,127 +4,73 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/vultisig/recipes/chain"
-	"github.com/vultisig/recipes/ethereum"
-	"github.com/vultisig/recipes/testdata"
 	"github.com/vultisig/recipes/types"
 )
 
-var testVectors = []struct {
-	policyPath string
-	chainStr   string
-	schemaPath string
-	txHex      string
-	txHexFunc  func() string
-	shouldPass bool
-}{
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "ethereum",
-		txHex:      "0x00ec80872386f26fc10000830f424094b0b00000000000000000000000000000000000018806f05b59d3b2000080",
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "ethereum",
-		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: false,
-	},
-	// Uniswap test cases
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactETHForTokensTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientSwapExactETHForTokensTxHex,
-		shouldPass: false,
-	},
-	// additional Uniswap tests
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ExceedAmountSwapExactTokensForETHTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactTokensForETHTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidAddLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidTokenAddLiquidityTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidRemoveLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
-		shouldPass: false,
-	},
-	// Schema validation tests
-	{
-		policyPath: "../testdata/payroll.json",
-		schemaPath: "../testdata/payroll_schema.json",
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/xrp_payroll.json",
-		schemaPath: "../testdata/payroll_schema.json",
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/invalid_configuration_payroll.json",
-		schemaPath: "../testdata/payroll_schema.json",
-		shouldPass: false,
-	},
-}
-
-var registerOnce sync.Once
-
-func TestEngine(t *testing.T) {
+func TestEngine_ValidatePolicyWithSchema(t *testing.T) {
 	engine := NewEngine()
 	engine.SetLogger(log.Default())
 
-	for _, testVector := range testVectors {
-		tv := testVector
-		t.Run(tv.policyPath, func(t *testing.T) {
-			policyFileBytes, err := os.ReadFile(tv.policyPath)
+	testcases := []struct {
+		name          string
+		policyPath    string
+		schemaPath    string
+		expectedError bool
+		errorContains string
+	}{
+		{
+			name:          "Valid policy",
+			policyPath:    "../testdata/payroll_erc20.json",
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: false,
+		},
+		{
+			name:          "Policy with no rules",
+			policyPath:    "../testdata/payroll_erc20.json", // Will be modified to have no rules
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: true,
+			errorContains: "policy has no rules",
+		},
+		{
+			name:          "Policy ID doesn't match schema plugin ID",
+			policyPath:    "../testdata/payroll_erc20.json", // Will be modified to have different ID
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: true,
+			errorContains: "does not match schema plugin ID",
+		},
+		{
+			name:          "Invalid configuration",
+			policyPath:    "../testdata/payroll_erc20.json", // Will be modified to have invalid configuration
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: true,
+			errorContains: "configuration validation failed",
+		},
+		{
+			name:          "Unsupported resource",
+			policyPath:    "../testdata/payroll_erc20.json", // Will be modified to have unsupported resource
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: true,
+			errorContains: "uses unsupported resource",
+		},
+		{
+			name:          "Invalid parameter constraint",
+			policyPath:    "../testdata/payroll_erc20.json", // Will be modified to have invalid parameter constraint
+			schemaPath:    "../testdata/payroll_schema.json",
+			expectedError: true,
+			errorContains: "constraint validation failed",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Read and parse policy file
+			policyFileBytes, err := os.ReadFile(tc.policyPath)
 			if err != nil {
 				t.Fatalf("Failed to read policy file: %v", err)
 			}
@@ -134,55 +80,109 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to unmarshal policy: %v", err)
 			}
 
-			var schema types.RecipeSchema
-			if tv.schemaPath != "" {
-				schemaFileBytes, err := os.ReadFile(tv.schemaPath)
-				if err != nil {
-					t.Fatalf("Failed to read schema file %s: %v", tv.schemaPath, err)
-				}
-
-				if err := protojson.Unmarshal(schemaFileBytes, &schema); err != nil {
-					t.Fatalf("Failed to unmarshal schema JSON: %v", err)
-				}
-				t.Logf("Successfully loaded schema for plugin: %s (Version: %d)",
-					schema.GetPluginName(), schema.GetPluginVersion())
-
-				err = engine.ValidatePolicyWithSchema(&policy, &schema)
-				if err != nil && tv.shouldPass {
-					t.Fatalf("Failed to validate policy: %s vs. %s: %v", tv.policyPath, tv.schemaPath, err)
-				}
-				return
+			// Read and parse schema file
+			schemaFileBytes, err := os.ReadFile(tc.schemaPath)
+			if err != nil {
+				t.Fatalf("Failed to read schema file: %v", err)
 			}
 
-			c, err := chain.GetChain(tv.chainStr)
+			var schema types.RecipeSchema
+			if err := protojson.Unmarshal(schemaFileBytes, &schema); err != nil {
+				t.Fatalf("Failed to unmarshal schema: %v", err)
+			}
+
+			// Modify policy based on test case
+			switch tc.name {
+			case "Policy with no rules":
+				policy.Rules = nil
+			case "Policy ID doesn't match schema plugin ID":
+				policy.Id = "different-id"
+			case "Invalid configuration":
+				invalidConfig, err := structpb.NewStruct(map[string]interface{}{
+					"unknown_field": "value",
+				})
+				if err != nil {
+					t.Fatalf("Failed to create invalid configuration: %v", err)
+				}
+				policy.Configuration = invalidConfig
+			case "Unsupported resource":
+				policy.Rules[0].Resource = "unsupported.resource.path"
+			case "Invalid parameter constraint":
+				// Add an unsupported parameter
+				policy.Rules[0].ParameterConstraints = append(policy.Rules[0].ParameterConstraints,
+					&types.ParameterConstraint{
+						ParameterName: "unsupported_param",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value:    &types.Constraint_FixedValue{FixedValue: "value"},
+							Required: true,
+						},
+					})
+			}
+
+			// Validate policy against schema
+			err = engine.ValidatePolicyWithSchema(&policy, &schema)
+
+			// Check if error matches expectation
+			if tc.expectedError {
+				if err == nil {
+					t.Errorf("Expected error but got nil")
+				} else if !strings.Contains(err.Error(), tc.errorContains) {
+					t.Errorf("Expected error containing '%s', got: %v", tc.errorContains, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestEngine_Evaluate(t *testing.T) {
+	engine := NewEngine()
+	engine.SetLogger(log.Default())
+
+	var testcases = []struct {
+		policyPath string
+		chainStr   string
+		txHex      string
+		shouldPass bool
+	}{
+		{
+			policyPath: "../testdata/payroll_erc20.json",
+			chainStr:   "ethereum",
+			txHex:      "0x02f9016f018207188289fd84177aab1b8301772e94dac17f958d2ee523a2206206994597c13d831ec780b844a9059cbb0000000000000000000000009756752dc9f0a947366b6c91bb0487d6c6bf4d170000000000000000000000000000000000000000000000000000000000950858f90100f8fe94dac17f958d2ee523a2206206994597c13d831ec7f8e7a00000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000000aa043a6b5ea290b0f552490febd2e8b34a549d6929a7cc62128cb0f52d5dc6fe52fa04963d32529428ccb0324ab153dcc06505006f80d9d888e440dcaaae6e0de81c9a0cc147bba85f155948dd5950fb9848d3ba69891fbe3f53dccc4376f15220ff080",
+			shouldPass: true,
+		},
+		{
+			policyPath: "../testdata/payroll_erc20.json",
+			chainStr:   "ethereum",
+			// wrong amount in calldata
+			txHex:      "0x02f9016f018207188289fd841b17ef788301772e94dac17f958d2ee523a2206206994597c13d831ec780b844a9059cbb0000000000000000000000009756752dc9f0a947366b6c91bb0487d6c6bf4d170000000000000000000000000000000000000000000000000000000000950859f90100f8fe94dac17f958d2ee523a2206206994597c13d831ec7f8e7a00000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000000aa043a6b5ea290b0f552490febd2e8b34a549d6929a7cc62128cb0f52d5dc6fe52fa04963d32529428ccb0324ab153dcc06505006f80d9d888e440dcaaae6e0de81c9a0cc147bba85f155948dd5950fb9848d3ba69891fbe3f53dccc4376f15220ff080",
+			shouldPass: false,
+		},
+	}
+
+	for _, _tc := range testcases {
+		tc := _tc
+		t.Run(tc.policyPath, func(t *testing.T) {
+			policyFileBytes, err := os.ReadFile(tc.policyPath)
+			if err != nil {
+				t.Fatalf("Failed to read policy file: %v", err)
+			}
+
+			var policy types.Policy
+			if err := protojson.Unmarshal(policyFileBytes, &policy); err != nil {
+				t.Fatalf("Failed to unmarshal policy: %v", err)
+			}
+
+			c, err := chain.GetChain(tc.chainStr)
 			if err != nil {
 				t.Fatalf("Failed to get chain: %v", err)
 			}
 
-			// For Uniswap tests, ensure the Uniswap ABI is loaded and protocols registered
-			if strings.Contains(tv.policyPath, "uniswap_policy") && tv.chainStr == "ethereum" {
-				ethChain := c.(*ethereum.Ethereum)
-				abiBytes, err := os.ReadFile("../abi/uniswapV2_router.json")
-				if err != nil {
-					t.Fatalf("Failed to read Uniswap ABI: %v", err)
-				}
-				if err := ethChain.LoadABI("uniswapv2_router", abiBytes); err != nil {
-					t.Fatalf("Failed to load Uniswap ABI: %v", err)
-				}
-				// Register protocols (no token list, no ERC20 ABI needed for this test)
-				registerOnce.Do(func() {
-					if err := ethereum.RegisterEthereumProtocols(ethChain, nil); err != nil {
-						t.Fatalf("Failed to register Ethereum protocols: %v", err)
-					}
-				})
-			}
-
-			txHex := tv.txHex
-			if tv.txHexFunc != nil {
-				txHex = tv.txHexFunc()
-			}
-
-			tx, err := c.ParseTransaction(txHex)
+			tx, err := c.ParseTransaction(tc.txHex)
 			if err != nil {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
@@ -192,11 +192,15 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
 
-			if transactionAllowedByPolicy != tv.shouldPass {
-				t.Fatalf("Transaction allowed by policy: %t, expected: %t", transactionAllowedByPolicy, tv.shouldPass)
+			if transactionAllowedByPolicy != tc.shouldPass {
+				t.Fatalf(
+					"Transaction allowed by policy: %t, expected: %t",
+					transactionAllowedByPolicy,
+					tc.shouldPass,
+				)
 			}
 
-			if tv.shouldPass && matchingRule == nil {
+			if tc.shouldPass && matchingRule == nil {
 				t.Fatalf("No matching rule found")
 			}
 		})

@@ -1,10 +1,41 @@
 {
   "version": 1,
-  "schedule_version": 1,
   "plugin_id": "vultisig-payroll-0000",
-  "plugin_name": "Payroll Test Multi Transfer",
+  "plugin_name": "Payroll",
   "plugin_version": 1,
   "supported_resources": [
+    {
+      "resource_path": {
+        "chain_id": "ethereum",
+        "protocol_id": "erc20",
+        "function_id": "transfer",
+        "full": "ethereum.erc20.transfer"
+      },
+      "parameter_capabilities": [
+        {
+          "parameter_name": "recipient",
+          "supported_types": [
+            "CONSTRAINT_TYPE_FIXED"
+          ],
+          "required": true
+        },
+        {
+          "parameter_name": "amount",
+          "supported_types": [
+            "CONSTRAINT_TYPE_FIXED"
+          ],
+          "required": true
+        },
+        {
+          "parameter_name": "token",
+          "supported_types": [
+            "CONSTRAINT_TYPE_FIXED"
+          ],
+          "required": true
+        }
+      ],
+      "required": true
+    },
     {
       "resource_path": {
         "chain_id": "ethereum",
@@ -16,45 +47,14 @@
         {
           "parameter_name": "recipient",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         },
         {
           "parameter_name": "amount",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
-          ],
-          "required": true
-        }
-      ],
-      "required": true
-    },
-    {
-      "resource_path": {
-        "chain_id": "bitcoin",
-        "protocol_id": "btc",
-        "function_id": "transfer",
-        "full": "bitcoin.btc.transfer"
-      },
-      "parameter_capabilities": [
-        {
-          "parameter_name": "recipient",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
-          ],
-          "required": true
-        },
-        {
-          "parameter_name": "amount",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         }
@@ -62,11 +62,6 @@
       "required": true
     }
   ],
-  "scheduling": {
-    "supports_scheduling": false,
-    "supported_frequencies": [],
-    "max_scheduled_executions": 0
-  },
   "requirements": {
     "min_vultisig_version": 1,
     "supported_chains": [
@@ -76,12 +71,17 @@
   "configuration": {
     "type": "object",
     "properties": {
+      "start-date": {
+        "type": "string",
+        "format": "date-time"
+      },
       "frequency": {
         "type": "string",
         "enum": [
+          "daily",
           "weekly",
-          "monthly",
-          "yearly"
+          "bi-weekly",
+          "monthly"
         ]
       }
     },

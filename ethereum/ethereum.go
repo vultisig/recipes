@@ -6,17 +6,13 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/vultisig/mobile-tss-lib/tss"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/vultisig/mobile-tss-lib/tss"
+	"github.com/vultisig/recipes/erc20"
 
 	vultisigTypes "github.com/vultisig/recipes/types"
 )
-
-// GenericERC20ABI is a standard ABI for ERC20 transfer function.
-// [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]
-const GenericERC20ABIJson = `[{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}]`
 
 const ethEvmChainID = 1
 
@@ -61,10 +57,9 @@ func (p *ParsedEthereumTransaction) GasLimit() uint64 { return p.tx.Gas() }
 
 // Ethereum implements the Chain interface for the Ethereum blockchain
 type Ethereum struct {
-	abiRegistry     map[string]*ABI // Changed from *ABI to *types.ABI
-	tokenList       *TokenList
-	genericERC20ABI *ABI // Changed from *ABI to *types.ABI
-	chainID         *big.Int
+	abiRegistry map[string]*ABI // Changed from *ABI to *types.ABI
+	tokenList   *TokenList
+	chainID     *big.Int
 }
 
 // ID returns the unique identifier for the Ethereum chain
@@ -164,33 +159,18 @@ func (e *Ethereum) GetToken(symbol string) (*Token, bool) {
 // GetProtocol returns a protocol handler for the given ID (e.g., "eth" or a token symbol).
 func (e *Ethereum) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 	lowerID := strings.ToLower(id)
-	if lowerID == "eth" {
+	switch lowerID {
+	case "eth":
 		return NewETH(), nil
-	}
-
-	// Check if it's a token symbol from the loaded token list
-	if token, ok := e.GetToken(lowerID); ok {
-		// Use the generic ERC20 ABI for this token
-		// The NewABIProtocol will use this ABI to understand 'transfer', 'decimals', etc.
-		if e.genericERC20ABI == nil {
-			// Attempt to load generic ERC20 ABI if not already loaded (e.g. by NewEthereum)
-			var err error
-			e.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse internal generic ERC20 ABI: %w", err)
-			}
+	case "erc20":
+		return erc20.NewProtocol(NewETH().ChainID()), nil
+	default:
+		// Check if an ABI was specifically loaded for this ID
+		if abi, ok := e.GetABI(lowerID); ok {
+			// This is for contracts registered directly by name/address via LoadABI
+			return NewABIProtocol(id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
 		}
-		// The protocol ID for ABIProtocol should be the token symbol for clarity.
-		// The name and description can also come from the token.
-		return NewABIProtocol(token.Symbol, token.Name, fmt.Sprintf("ERC20 Token: %s on %s", token.Name, token.Address), e.genericERC20ABI), nil
 	}
-
-	// Check if an ABI was specifically loaded for this ID
-	if abi, ok := e.GetABI(lowerID); ok {
-		// This is for contracts registered directly by name/address via LoadABI
-		return NewABIProtocol(id, id, fmt.Sprintf("Custom ABI Protocol: %s", id), abi), nil
-	}
-
 	return nil, fmt.Errorf("protocol %q not found or not supported on Ethereum. Ensure token list and ABIs are loaded correctly", id)
 }
 
@@ -219,19 +199,9 @@ func (e *Ethereum) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) 
 // NewEthereum creates a new Ethereum chain instance
 // It now also attempts to preload the generic ERC20 ABI.
 func NewEthereum() vultisigTypes.Chain {
-	ethChain := &Ethereum{
+	return &Ethereum{
 		abiRegistry: make(map[string]*ABI), // Changed to *types.ABI
 	}
-	// Pre-load the generic ERC20 ABI
-	var err error
-	// This ParseABI must return *types.ABI
-	ethChain.genericERC20ABI, err = ParseABI([]byte(GenericERC20ABIJson))
-	if err != nil {
-		// This is a critical internal ABI; panic or log an error.
-		// For a CLI tool, panicking might be okay if it's considered essential.
-		panic(fmt.Sprintf("FATAL: Failed to parse internal generic ERC20 ABI: %v", err))
-	}
-	return ethChain
 }
 
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)
