@@ -32,4 +32,6 @@ type Chain interface {
 	ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error)
 
 	ValidateInvariants(context map[string]interface{}, decodedTx DecodedTransaction) error
+
+	RequiresInvariants() bool
 }

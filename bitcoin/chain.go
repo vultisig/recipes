@@ -186,6 +186,10 @@ func (b *Bitcoin) deriveVaultAddress(vault *v1.Vault) (string, error) {
 	return vaultAddr, nil
 }
 
+func (b *Bitcoin) RequiresInvariants() bool {
+	return true // Bitcoin requires vault context
+}
+
 // NewBitcoin creates a new Bitcoin chain instance
 func NewChain() types.Chain {
 	return &Bitcoin{}
