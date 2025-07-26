@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strings"
 
-	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -236,7 +235,7 @@ func NewEthereum() vultisigTypes.Chain {
 }
 
 // ValidateInvariants implements types.Chain.
-func (e *Ethereum) ValidateInvariants(vault *v1.Vault, tx vultisigTypes.DecodedTransaction) error {
+func (e *Ethereum) ValidateInvariants(context map[string]interface{}, tx vultisigTypes.DecodedTransaction) error {
 	return nil
 }
 

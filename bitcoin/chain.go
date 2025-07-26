@@ -98,14 +98,19 @@ func (b *Bitcoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (
 }
 
 // ValidateInvariants ensures that a btc transfer follows required invariants
-func (b *Bitcoin) ValidateInvariants(vault *v1.Vault, tx types.DecodedTransaction) error {
+func (b *Bitcoin) ValidateInvariants(context map[string]interface{}, tx types.DecodedTransaction) error {
 	btcTx, ok := tx.(*ParsedBitcoinTransaction)
 	if !ok {
 		return fmt.Errorf("expected Bitcoin transaction, got %T", tx)
 	}
-
-	if vault == nil {
+	vaultInterface, exists := context["vault"]
+	if !exists {
 		return fmt.Errorf("vault is required for Bitcoin invariant validation")
+	}
+
+	vault, ok := vaultInterface.(*v1.Vault)
+	if !ok {
+		return fmt.Errorf("expected *v1.Vault, got %T", vaultInterface)
 	}
 
 	// 1. Validate transaction structure (extensible for future tx types)

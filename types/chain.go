@@ -1,7 +1,6 @@
 package types
 
 import (
-	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/mobile-tss-lib/tss"
 )
 
@@ -32,5 +31,5 @@ type Chain interface {
 	// for R,S ordered apply for BTC for example
 	ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error)
 
-	ValidateInvariants(vault *v1.Vault, decodedTx DecodedTransaction) error
+	ValidateInvariants(context map[string]interface{}, decodedTx DecodedTransaction) error
 }
