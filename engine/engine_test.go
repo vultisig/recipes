@@ -205,13 +205,7 @@ func TestEngine(t *testing.T) {
 				t.Logf("Created test context with vault for invariant validation")
 			}
 
-			var transactionAllowedByPolicy bool
-			var matchingRule *types.Rule
-			if len(context) > 0 {
-				transactionAllowedByPolicy, matchingRule, err = engine.Evaluate(&policy, c, tx, context)
-			} else {
-				transactionAllowedByPolicy, matchingRule, err = engine.Evaluate(&policy, c, tx)
-			}
+			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx, context)
 			if err != nil {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
