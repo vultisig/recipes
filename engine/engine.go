@@ -30,6 +30,7 @@ func (e *Engine) SetLogger(log *log.Logger) {
 func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction, context ...map[string]interface{}) (bool, *types.Rule, error) {
 	// Run Invariant check if chain requires
 	if chain.RequiresInvariants() {
+		e.logger.Printf("Running invariants check for chain %s", chain.Name())
 		if len(context) == 0 || context[0] == nil || len(context[0]) == 0 {
 			return false, nil, fmt.Errorf("chain %s requires invariant validation but no context provided", chain.ID())
 		}
@@ -38,6 +39,7 @@ func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.Deco
 			e.logger.Printf("Invariant validation failed: %v", err)
 			return false, nil, fmt.Errorf("invariant validation failed: %w", err)
 		}
+		e.logger.Printf("Invariant validation passed")
 	}
 
 	for _, rule := range policy.GetRules() {

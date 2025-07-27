@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"log"
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
@@ -148,8 +149,8 @@ func (b *Bitcoin) validateChangeOutput(vault *v1.Vault, btcTx *ParsedBitcoinTran
 		return fmt.Errorf("transaction has no outputs")
 	}
 
-	// For 1-output transactions, no change validation needed (entire UTXO spent)
 	if len(outputs) == 1 {
+		log.Printf("Transaction has only 1 output (entire UTXO spent)")
 		return nil
 	}
 
