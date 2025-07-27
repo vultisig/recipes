@@ -47,6 +47,19 @@ var testVectors = []struct {
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
 		shouldPass: false,
 	},
+	// Arbitrum test cases
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "arbitrum",
+		txHex:      "0x00ec80872386f26fc10000830f424094b0b00000000000000000000000000000000000018806f05b59d3b2000080",
+		shouldPass: true,
+	},
+	{
+		policyPath: "../testdata/payroll.json",
+		chainStr:   "arbitrum",
+		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
+		shouldPass: false,
+	},
 	// Uniswap test cases
 	{
 		policyPath: "../testdata/uniswap_policy.json",
@@ -171,7 +184,7 @@ func TestEngine(t *testing.T) {
 				}
 				// Register protocols (no token list, no ERC20 ABI needed for this test)
 				registerOnce.Do(func() {
-					if err := ethereum.RegisterEthereumProtocols(ethChain, nil); err != nil {
+					if err := ethChain.RegisterEthereumProtocols(nil); err != nil {
 						t.Fatalf("Failed to register Ethereum protocols: %v", err)
 					}
 				})
