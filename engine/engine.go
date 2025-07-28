@@ -1,15 +1,15 @@
 package engine
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
+	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
-	"github.com/kaptinlin/jsonschema"
 )
 
 type Engine struct {
@@ -131,6 +131,9 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
+	if configJson == nil || len(configJson) == 0 {
+		configJson = []byte("{}")
+	}
 
 	compiler := jsonschema.NewCompiler()
 	jsonSchema, err := compiler.Compile(configJson)
@@ -141,6 +144,9 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 	policyJson, err := json.Marshal(policy.GetConfiguration())
 	if err != nil {
 		return fmt.Errorf("failed to marshal policy: %w", err)
+	}
+	if policyJson == nil || len(policyJson) == 0 {
+		policyJson = []byte("{}")
 	}
 
 	result := jsonSchema.Validate(policyJson)
@@ -157,7 +163,6 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 
 	return nil
 }
-
 
 func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
 	// Build map of parameter capabilities from schema
