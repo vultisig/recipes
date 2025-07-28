@@ -1,15 +1,15 @@
 package engine
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
+	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
-	"github.com/kaptinlin/jsonschema"
 )
 
 type Engine struct {
@@ -27,7 +27,21 @@ func (e *Engine) SetLogger(log *log.Logger) {
 	e.logger = log
 }
 
-func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction) (bool, *types.Rule, error) {
+func (e *Engine) Evaluate(policy *types.Policy, chain types.Chain, tx types.DecodedTransaction, context ...map[string]interface{}) (bool, *types.Rule, error) {
+	// Run Invariant check if chain requires
+	if chain.RequiresInvariants() {
+		e.logger.Printf("Running invariants check for chain %s", chain.Name())
+		if len(context) == 0 || context[0] == nil || len(context[0]) == 0 {
+			return false, nil, fmt.Errorf("chain %s requires invariant validation but no context provided", chain.ID())
+		}
+
+		if err := chain.ValidateInvariants(context[0], tx); err != nil {
+			e.logger.Printf("Invariant validation failed: %v", err)
+			return false, nil, fmt.Errorf("invariant validation failed: %w", err)
+		}
+		e.logger.Printf("Invariant validation passed")
+	}
+
 	for _, rule := range policy.GetRules() {
 		if rule == nil {
 			continue
@@ -157,7 +171,6 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 
 	return nil
 }
-
 
 func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
 	// Build map of parameter capabilities from schema

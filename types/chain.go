@@ -1,6 +1,8 @@
 package types
 
-import "github.com/vultisig/mobile-tss-lib/tss"
+import (
+	"github.com/vultisig/mobile-tss-lib/tss"
+)
 
 // Chain represents a blockchain network
 type Chain interface {
@@ -28,4 +30,8 @@ type Chain interface {
 	// `sigs` is slice, not a map, because we need to preserve the order of signatures
 	// for R,S ordered apply for BTC for example
 	ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error)
+
+	ValidateInvariants(context map[string]interface{}, decodedTx DecodedTransaction) error
+
+	RequiresInvariants() bool
 }

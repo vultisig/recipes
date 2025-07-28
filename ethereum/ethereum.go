@@ -234,6 +234,15 @@ func NewEthereum() vultisigTypes.Chain {
 	return ethChain
 }
 
+// ValidateInvariants implements types.Chain.
+func (e *Ethereum) ValidateInvariants(context map[string]interface{}, tx vultisigTypes.DecodedTransaction) error {
+	return nil
+}
+
+func (e *Ethereum) RequiresInvariants() bool {
+	return false
+}
+
 // ... (rest of the file, if any, like helper functions for ABI/TokenList parsing if they were here)
 // Ensure ParseABI and ParseTokenList functions are defined in this package or accessible.
 // For this example, I'm assuming they are defined elsewhere in the 'ethereum' package.

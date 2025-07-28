@@ -9,6 +9,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	keygenType "github.com/vultisig/commondata/go/vultisig/keygen/v1"
+	v1 "github.com/vultisig/commondata/go/vultisig/vault/v1"
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/testdata"
@@ -16,12 +18,13 @@ import (
 )
 
 var testVectors = []struct {
-	policyPath string
-	chainStr   string
-	schemaPath string
-	txHex      string
-	txHexFunc  func() string
-	shouldPass bool
+	policyPath    string
+	chainStr      string
+	schemaPath    string
+	txHex         string
+	txHexFunc     func() string
+	requiresVault bool
+	shouldPass    bool
 }{
 	{
 		policyPath: "../testdata/payroll.json",
@@ -30,10 +33,18 @@ var testVectors = []struct {
 		shouldPass: true,
 	},
 	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: true,
+		policyPath:    "../testdata/payroll.json",
+		chainStr:      "bitcoin",
+		txHex:         "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		requiresVault: true,
+		shouldPass:    true,
+	},
+	{
+		policyPath:    "../testdata/payroll.json",
+		chainStr:      "bitcoin",
+		txHex:         "010000000100000000000000000000000000000000000000000000000000000000000000000000000000fdffffff02404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac404b4c0000000000160014307283d8e6191122f7270683614945827ce3e7d600000000",
+		requiresVault: true,
+		shouldPass:    true,
 	},
 	{
 		policyPath: "../testdata/payroll.json",
@@ -42,10 +53,11 @@ var testVectors = []struct {
 		shouldPass: false,
 	},
 	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: false,
+		policyPath:    "../testdata/payroll.json",
+		chainStr:      "bitcoin",
+		txHex:         "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
+		requiresVault: true,
+		shouldPass:    false,
 	},
 	// Uniswap test cases
 	{
@@ -187,7 +199,13 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("Failed to parse transaction: %v", err)
 			}
 
-			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx)
+			context := map[string]interface{}{}
+			if tv.requiresVault {
+				context["vault"] = createTestVault()
+				t.Logf("Created test context with vault for invariant validation")
+			}
+
+			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx, context)
 			if err != nil {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
 			}
@@ -200,5 +218,18 @@ func TestEngine(t *testing.T) {
 				t.Fatalf("No matching rule found")
 			}
 		})
+	}
+}
+
+// createTestVault creates a test vault for Bitcoin invariant validation
+// BTC address: bc1qxpeg8k8xrygj9ae8q6pkzj29sf7w8e7krm4v5f
+func createTestVault() *v1.Vault {
+	return &v1.Vault{
+		Name:           "Test Vault",
+		PublicKeyEcdsa: "027e897b35aa9f9fff223b6c826ff42da37e8169fae7be57cbd38be86938a746c6",
+		HexChainCode:   "57f3f25c4b034ad80016ef37da5b245bfd6187dc5547696c336ff5a66ed7ee0f",
+		LocalPartyId:   "test-party-1",
+		Signers:        []string{"test-party-1", "test-party-2"},
+		LibType:        keygenType.LibType_LIB_TYPE_DKLS,
 	}
 }
