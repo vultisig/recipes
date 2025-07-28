@@ -1,15 +1,15 @@
 package engine
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
+	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
-	"github.com/kaptinlin/jsonschema"
 )
 
 type Engine struct {
@@ -157,7 +157,6 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 
 	return nil
 }
-
 
 func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
 	// Build map of parameter capabilities from schema
