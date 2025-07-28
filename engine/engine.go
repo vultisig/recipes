@@ -7,9 +7,10 @@ import (
 	"log"
 	"strings"
 
+	"github.com/kaptinlin/jsonschema"
+	"google.golang.org/protobuf/types/known/structpb"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
-	"github.com/kaptinlin/jsonschema"
 )
 
 type Engine struct {
@@ -137,7 +138,12 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 		return fmt.Errorf("failed to compile schema: %w", err)
 	}
 
-	policyJson, err := json.Marshal(policy.GetConfiguration())
+	configurationData := policy.GetConfiguration()
+	if configurationData == nil {
+		configurationData = &structpb.Struct{}
+	}
+
+	policyJson, err := json.Marshal(configurationData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal policy: %w", err)
 	}
