@@ -104,6 +104,11 @@ var testVectors = []struct {
 		shouldPass: true,
 	},
 	{
+		policyPath: "../testdata/payroll_empty_config.json",
+		schemaPath: "../testdata/empty_configuration_schema.json",
+		shouldPass: true,
+	},
+	{
 		policyPath: "../testdata/xrp_payroll.json",
 		schemaPath: "../testdata/payroll_schema.json",
 		shouldPass: false,
