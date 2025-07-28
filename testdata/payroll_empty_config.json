@@ -53,5 +53,6 @@
       ],
       "effect": "EFFECT_ALLOW"
     }
-  ]
+  ],
+  "configuration": {}
 }
