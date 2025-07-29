@@ -10,11 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	r "github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 )
-
-var magicResolverRegistry = r.NewMagicConstantRegistry()
 
 // evaluateParameterConstraints evaluates policy constraints against extracted transaction parameters.
 // This function assumes that types.ParameterConstraint is correctly defined and available from the types package (e.g., via types/policy.pb.go).
@@ -44,43 +41,6 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 		}
 
 		switch cVal := constraint.Value.(type) { // Value is the oneof field
-		case *types.Constraint_MagicConstantValue:
-			magicConstant := constraint.GetMagicConstantValue()
-
-			resolver, err := magicResolverRegistry.GetResolver(magicConstant)
-			if err != nil {
-				return false, fmt.Errorf("error when fetching resolver err: %v", err)
-			}
-
-			// Get chain and asset from extractedParams
-			chainID, ok1 := params["chainId"].(string)
-			asset, ok2 := params["asset"].(string)
-			if !ok1 {
-				return false, fmt.Errorf("missing chainId parameter required for magic constant %v resolution", magicConstant)
-			}
-			// Some ABIs have no easy way to extract asset parameter, in this case fallback to default value based on chain
-			if !ok2 {
-				asset = "default"
-			}
-
-			// Call the resolver
-			// TODO implement memo when supported chains require it
-			expectedValue, _, err := resolver.Resolve(magicConstant, chainID, asset)
-			if err != nil {
-				return false, fmt.Errorf("failed to resolve magic constant %v: %w", magicConstant, err)
-			}
-
-			// Compare with actual parameter value
-			actualValue, isStr := paramValueToString(paramValue)
-			if !isStr {
-				return false, fmt.Errorf("parameter %q could not be converted to string", paramName)
-			}
-
-			if !strings.EqualFold(actualValue, expectedValue) {
-				fmt.Printf("Magic constant constraint not met - Parameter: %s, Actual: %s, Expected (resolved): %s, Magic Constant: %v, Chain: %s, Asset: %s\n",
-					paramName, actualValue, expectedValue, magicConstant, chainID, asset)
-				return false, nil // Constraint not met
-			}
 		case *types.Constraint_FixedValue:
 			valStr, isStr := paramValueToString(paramValue)
 			if !isStr {
@@ -88,21 +48,6 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			}
 			if !strings.EqualFold(valStr, cVal.FixedValue) {
 				return false, nil // Constraint not met
-			}
-		case *types.Constraint_WhitelistValues:
-			valStr, isStr := paramValueToString(paramValue)
-			if !isStr {
-				return false, fmt.Errorf("parameter %q (type %T) could not be converted to string for Whitelist comparison", paramName, paramValue)
-			}
-			found := false
-			for _, allowedVal := range cVal.WhitelistValues.GetValues() {
-				if strings.EqualFold(valStr, allowedVal) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return false, nil // Not in whitelist
 			}
 		// TODO: Implement other constraint types from types.ConstraintType and oneof cases:
 		// MaxValue, MinValue, RangeValue, MaxPerPeriodValue
@@ -132,25 +77,6 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 				return false, fmt.Errorf("invalid MinValue string %q in policy for parameter %q", cVal.MinValue, paramName)
 			}
 			if actualBig.Cmp(minBig) < 0 {
-				return false, nil
-			}
-		case *types.Constraint_RangeValue:
-			actualBig, ok := paramValue.(*big.Int)
-			if !ok {
-				return false, fmt.Errorf("parameter %q expected *big.Int for RangeValue, got %T", paramName, paramValue)
-			}
-			minBig, minOk := new(big.Int).SetString(cVal.RangeValue.Min, 10)
-			if !minOk {
-				return false, fmt.Errorf("invalid RangeValue.Min string %q in policy for parameter %q", cVal.RangeValue.Min, paramName)
-			}
-			maxBig, maxOk := new(big.Int).SetString(cVal.RangeValue.Max, 10)
-			if !maxOk {
-				return false, fmt.Errorf("invalid RangeValue.Max string %q in policy for parameter %q", cVal.RangeValue.Max, paramName)
-			}
-			if minBig.Cmp(maxBig) > 0 {
-				return false, fmt.Errorf("invalid range for parameter %q: min (%s) is greater than max (%s)", paramName, cVal.RangeValue.Min, cVal.RangeValue.Max)
-			}
-			if actualBig.Cmp(minBig) < 0 || actualBig.Cmp(maxBig) > 0 {
 				return false, nil
 			}
 		default:
