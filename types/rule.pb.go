@@ -21,6 +21,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type TargetType int32
+
+const (
+	TargetType_TARGET_TYPE_UNSPECIFIED    TargetType = 0
+	TargetType_TARGET_TYPE_ADDRESS        TargetType = 1
+	TargetType_TARGET_TYPE_MAGIC_CONSTANT TargetType = 2
+)
+
+// Enum value maps for TargetType.
+var (
+	TargetType_name = map[int32]string{
+		0: "TARGET_TYPE_UNSPECIFIED",
+		1: "TARGET_TYPE_ADDRESS",
+		2: "TARGET_TYPE_MAGIC_CONSTANT",
+	}
+	TargetType_value = map[string]int32{
+		"TARGET_TYPE_UNSPECIFIED":    0,
+		"TARGET_TYPE_ADDRESS":        1,
+		"TARGET_TYPE_MAGIC_CONSTANT": 2,
+	}
+)
+
+func (x TargetType) Enum() *TargetType {
+	p := new(TargetType)
+	*p = x
+	return p
+}
+
+func (x TargetType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TargetType) Descriptor() protoreflect.EnumDescriptor {
+	return file_rule_proto_enumTypes[0].Descriptor()
+}
+
+func (TargetType) Type() protoreflect.EnumType {
+	return &file_rule_proto_enumTypes[0]
+}
+
+func (x TargetType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TargetType.Descriptor instead.
+func (TargetType) EnumDescriptor() ([]byte, []int) {
+	return file_rule_proto_rawDescGZIP(), []int{0}
+}
+
 // Effect determines whether a rule allows or denies access
 type Effect int32
 
@@ -55,11 +104,11 @@ func (x Effect) String() string {
 }
 
 func (Effect) Descriptor() protoreflect.EnumDescriptor {
-	return file_rule_proto_enumTypes[0].Descriptor()
+	return file_rule_proto_enumTypes[1].Descriptor()
 }
 
 func (Effect) Type() protoreflect.EnumType {
-	return &file_rule_proto_enumTypes[0]
+	return &file_rule_proto_enumTypes[1]
 }
 
 func (x Effect) Number() protoreflect.EnumNumber {
@@ -68,7 +117,7 @@ func (x Effect) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Effect.Descriptor instead.
 func (Effect) EnumDescriptor() ([]byte, []int) {
-	return file_rule_proto_rawDescGZIP(), []int{0}
+	return file_rule_proto_rawDescGZIP(), []int{1}
 }
 
 // Rule represents a single permission rule in the policy
@@ -88,8 +137,10 @@ type Rule struct {
 	Id string `protobuf:"bytes,6,opt,name=id,proto3" json:"id,omitempty"`
 	// Parameter constraints
 	ParameterConstraints []*ParameterConstraint `protobuf:"bytes,7,rep,name=parameter_constraints,json=parameterConstraints,proto3" json:"parameter_constraints,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Transaction target address
+	Target        *Target `protobuf:"bytes,13,opt,name=target,proto3" json:"target,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Rule) Reset() {
@@ -171,6 +222,65 @@ func (x *Rule) GetParameterConstraints() []*ParameterConstraint {
 	return nil
 }
 
+func (x *Rule) GetTarget() *Target {
+	if x != nil {
+		return x.Target
+	}
+	return nil
+}
+
+type Target struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetType    TargetType             `protobuf:"varint,1,opt,name=target_type,json=targetType,proto3,enum=types.TargetType" json:"target_type,omitempty"`
+	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Target) Reset() {
+	*x = Target{}
+	mi := &file_rule_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Target) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Target) ProtoMessage() {}
+
+func (x *Target) ProtoReflect() protoreflect.Message {
+	mi := &file_rule_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Target.ProtoReflect.Descriptor instead.
+func (*Target) Descriptor() ([]byte, []int) {
+	return file_rule_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Target) GetTargetType() TargetType {
+	if x != nil {
+		return x.TargetType
+	}
+	return TargetType_TARGET_TYPE_UNSPECIFIED
+}
+
+func (x *Target) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
 // Authorization represents how a transaction should be authorized
 type Authorization struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -184,7 +294,7 @@ type Authorization struct {
 
 func (x *Authorization) Reset() {
 	*x = Authorization{}
-	mi := &file_rule_proto_msgTypes[1]
+	mi := &file_rule_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -196,7 +306,7 @@ func (x *Authorization) String() string {
 func (*Authorization) ProtoMessage() {}
 
 func (x *Authorization) ProtoReflect() protoreflect.Message {
-	mi := &file_rule_proto_msgTypes[1]
+	mi := &file_rule_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -209,7 +319,7 @@ func (x *Authorization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Authorization.ProtoReflect.Descriptor instead.
 func (*Authorization) Descriptor() ([]byte, []int) {
-	return file_rule_proto_rawDescGZIP(), []int{1}
+	return file_rule_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Authorization) GetType() string {
@@ -231,7 +341,7 @@ var File_rule_proto protoreflect.FileDescriptor
 const file_rule_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"rule.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1aparameter_constraint.proto\"\x9b\x03\n" +
+	"rule.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1aparameter_constraint.proto\"\xc2\x03\n" +
 	"\x04Rule\x12\x1a\n" +
 	"\bresource\x18\x01 \x01(\tR\bresource\x12%\n" +
 	"\x06effect\x18\x02 \x01(\x0e2\r.types.EffectR\x06effect\x12 \n" +
@@ -239,13 +349,23 @@ const file_rule_proto_rawDesc = "" +
 	"\vconstraints\x18\x04 \x03(\v2\x1c.types.Rule.ConstraintsEntryR\vconstraints\x12:\n" +
 	"\rauthorization\x18\x05 \x01(\v2\x14.types.AuthorizationR\rauthorization\x12\x0e\n" +
 	"\x02id\x18\x06 \x01(\tR\x02id\x12O\n" +
-	"\x15parameter_constraints\x18\a \x03(\v2\x1a.types.ParameterConstraintR\x14parameterConstraints\x1aQ\n" +
+	"\x15parameter_constraints\x18\a \x03(\v2\x1a.types.ParameterConstraintR\x14parameterConstraints\x12%\n" +
+	"\x06target\x18\r \x01(\v2\r.types.TargetR\x06target\x1aQ\n" +
 	"\x10ConstraintsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
-	"\x05value\x18\x02 \x01(\v2\x11.types.ConstraintR\x05value:\x028\x01\"=\n" +
+	"\x05value\x18\x02 \x01(\v2\x11.types.ConstraintR\x05value:\x028\x01\"T\n" +
+	"\x06Target\x122\n" +
+	"\vtarget_type\x18\x01 \x01(\x0e2\x11.types.TargetTypeR\n" +
+	"targetType\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\"=\n" +
 	"\rAuthorization\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage*C\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage*b\n" +
+	"\n" +
+	"TargetType\x12\x1b\n" +
+	"\x17TARGET_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13TARGET_TYPE_ADDRESS\x10\x01\x12\x1e\n" +
+	"\x1aTARGET_TYPE_MAGIC_CONSTANT\x10\x02*C\n" +
 	"\x06Effect\x12\x16\n" +
 	"\x12EFFECT_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fEFFECT_ALLOW\x10\x01\x12\x0f\n" +
@@ -263,27 +383,31 @@ func file_rule_proto_rawDescGZIP() []byte {
 	return file_rule_proto_rawDescData
 }
 
-var file_rule_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_rule_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_rule_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_rule_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_rule_proto_goTypes = []any{
-	(Effect)(0),                 // 0: types.Effect
-	(*Rule)(nil),                // 1: types.Rule
-	(*Authorization)(nil),       // 2: types.Authorization
-	nil,                         // 3: types.Rule.ConstraintsEntry
-	(*ParameterConstraint)(nil), // 4: types.ParameterConstraint
-	(*Constraint)(nil),          // 5: types.Constraint
+	(TargetType)(0),             // 0: types.TargetType
+	(Effect)(0),                 // 1: types.Effect
+	(*Rule)(nil),                // 2: types.Rule
+	(*Target)(nil),              // 3: types.Target
+	(*Authorization)(nil),       // 4: types.Authorization
+	nil,                         // 5: types.Rule.ConstraintsEntry
+	(*ParameterConstraint)(nil), // 6: types.ParameterConstraint
+	(*Constraint)(nil),          // 7: types.Constraint
 }
 var file_rule_proto_depIdxs = []int32{
-	0, // 0: types.Rule.effect:type_name -> types.Effect
-	3, // 1: types.Rule.constraints:type_name -> types.Rule.ConstraintsEntry
-	2, // 2: types.Rule.authorization:type_name -> types.Authorization
-	4, // 3: types.Rule.parameter_constraints:type_name -> types.ParameterConstraint
-	5, // 4: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	1, // 0: types.Rule.effect:type_name -> types.Effect
+	5, // 1: types.Rule.constraints:type_name -> types.Rule.ConstraintsEntry
+	4, // 2: types.Rule.authorization:type_name -> types.Authorization
+	6, // 3: types.Rule.parameter_constraints:type_name -> types.ParameterConstraint
+	3, // 4: types.Rule.target:type_name -> types.Target
+	0, // 5: types.Target.target_type:type_name -> types.TargetType
+	7, // 6: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_rule_proto_init() }
@@ -298,8 +422,8 @@ func file_rule_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rule_proto_rawDesc), len(file_rule_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   3,
+			NumEnums:      2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -132,55 +132,6 @@ func (BillingFrequency) EnumDescriptor() ([]byte, []int) {
 	return file_policy_proto_rawDescGZIP(), []int{1}
 }
 
-type TargetType int32
-
-const (
-	TargetType_TARGET_TYPE_UNSPECIFIED    TargetType = 0
-	TargetType_TARGET_TYPE_ADDRESS        TargetType = 1
-	TargetType_TARGET_TYPE_MAGIC_CONSTANT TargetType = 2
-)
-
-// Enum value maps for TargetType.
-var (
-	TargetType_name = map[int32]string{
-		0: "TARGET_TYPE_UNSPECIFIED",
-		1: "TARGET_TYPE_ADDRESS",
-		2: "TARGET_TYPE_MAGIC_CONSTANT",
-	}
-	TargetType_value = map[string]int32{
-		"TARGET_TYPE_UNSPECIFIED":    0,
-		"TARGET_TYPE_ADDRESS":        1,
-		"TARGET_TYPE_MAGIC_CONSTANT": 2,
-	}
-)
-
-func (x TargetType) Enum() *TargetType {
-	p := new(TargetType)
-	*p = x
-	return p
-}
-
-func (x TargetType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (TargetType) Descriptor() protoreflect.EnumDescriptor {
-	return file_policy_proto_enumTypes[2].Descriptor()
-}
-
-func (TargetType) Type() protoreflect.EnumType {
-	return &file_policy_proto_enumTypes[2]
-}
-
-func (x TargetType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use TargetType.Descriptor instead.
-func (TargetType) EnumDescriptor() ([]byte, []int) {
-	return file_policy_proto_rawDescGZIP(), []int{2}
-}
-
 // FeePolicy represents a single billing configuration
 type FeePolicy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -298,10 +249,8 @@ type Policy struct {
 	// set 1 for erc20.transfer
 	// set 2 for erc20.approve + erc20.transferFrom
 	MaxTxsPerWindow *uint32 `protobuf:"varint,12,opt,name=max_txs_per_window,json=maxTxsPerWindow,proto3,oneof" json:"max_txs_per_window,omitempty"`
-	// Transaction target address
-	Target        *Target `protobuf:"bytes,13,opt,name=target,proto3" json:"target,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Policy) Reset() {
@@ -418,65 +367,6 @@ func (x *Policy) GetMaxTxsPerWindow() uint32 {
 	return 0
 }
 
-func (x *Policy) GetTarget() *Target {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-type Target struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TargetType    TargetType             `protobuf:"varint,1,opt,name=target_type,json=targetType,proto3,enum=types.TargetType" json:"target_type,omitempty"`
-	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Target) Reset() {
-	*x = Target{}
-	mi := &file_policy_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Target) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Target) ProtoMessage() {}
-
-func (x *Target) ProtoReflect() protoreflect.Message {
-	mi := &file_policy_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Target.ProtoReflect.Descriptor instead.
-func (*Target) Descriptor() ([]byte, []int) {
-	return file_policy_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *Target) GetTargetType() TargetType {
-	if x != nil {
-		return x.TargetType
-	}
-	return TargetType_TARGET_TYPE_UNSPECIFIED
-}
-
-func (x *Target) GetTarget() string {
-	if x != nil {
-		return x.Target
-	}
-	return ""
-}
-
 var File_policy_proto protoreflect.FileDescriptor
 
 const file_policy_proto_rawDesc = "" +
@@ -490,7 +380,7 @@ const file_policy_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x129\n" +
 	"\n" +
 	"start_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"\xc4\x04\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\x9d\x04\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -506,14 +396,9 @@ const file_policy_proto_rawDesc = "" +
 	"\rconfiguration\x18\n" +
 	" \x01(\v2\x17.google.protobuf.StructR\rconfiguration\x12/\n" +
 	"\x11rate_limit_window\x18\v \x01(\rH\x00R\x0frateLimitWindow\x88\x01\x01\x120\n" +
-	"\x12max_txs_per_window\x18\f \x01(\rH\x01R\x0fmaxTxsPerWindow\x88\x01\x01\x12%\n" +
-	"\x06target\x18\r \x01(\v2\r.types.TargetR\x06targetB\x14\n" +
+	"\x12max_txs_per_window\x18\f \x01(\rH\x01R\x0fmaxTxsPerWindow\x88\x01\x01B\x14\n" +
 	"\x12_rate_limit_windowB\x15\n" +
-	"\x13_max_txs_per_window\"T\n" +
-	"\x06Target\x122\n" +
-	"\vtarget_type\x18\x01 \x01(\x0e2\x11.types.TargetTypeR\n" +
-	"targetType\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target*M\n" +
+	"\x13_max_txs_per_window*M\n" +
 	"\aFeeType\x12\x18\n" +
 	"\x14FEE_TYPE_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tRECURRING\x10\x01\x12\b\n" +
@@ -525,12 +410,7 @@ const file_policy_proto_rawDesc = "" +
 	"\n" +
 	"\x06WEEKLY\x10\x02\x12\f\n" +
 	"\bBIWEEKLY\x10\x03\x12\v\n" +
-	"\aMONTHLY\x10\x04*b\n" +
-	"\n" +
-	"TargetType\x12\x1b\n" +
-	"\x17TARGET_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
-	"\x13TARGET_TYPE_ADDRESS\x10\x01\x12\x1e\n" +
-	"\x1aTARGET_TYPE_MAGIC_CONSTANT\x10\x02B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\aMONTHLY\x10\x04B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_policy_proto_rawDescOnce sync.Once
@@ -544,35 +424,31 @@ func file_policy_proto_rawDescGZIP() []byte {
 	return file_policy_proto_rawDescData
 }
 
-var file_policy_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_policy_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_policy_proto_goTypes = []any{
 	(FeeType)(0),                  // 0: types.FeeType
 	(BillingFrequency)(0),         // 1: types.BillingFrequency
-	(TargetType)(0),               // 2: types.TargetType
-	(*FeePolicy)(nil),             // 3: types.FeePolicy
-	(*Policy)(nil),                // 4: types.Policy
-	(*Target)(nil),                // 5: types.Target
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
-	(*Rule)(nil),                  // 7: types.Rule
-	(*structpb.Struct)(nil),       // 8: google.protobuf.Struct
+	(*FeePolicy)(nil),             // 2: types.FeePolicy
+	(*Policy)(nil),                // 3: types.Policy
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*Rule)(nil),                  // 5: types.Rule
+	(*structpb.Struct)(nil),       // 6: google.protobuf.Struct
 }
 var file_policy_proto_depIdxs = []int32{
-	0,  // 0: types.FeePolicy.type:type_name -> types.FeeType
-	1,  // 1: types.FeePolicy.frequency:type_name -> types.BillingFrequency
-	6,  // 2: types.FeePolicy.start_date:type_name -> google.protobuf.Timestamp
-	7,  // 3: types.Policy.rules:type_name -> types.Rule
-	6,  // 4: types.Policy.created_at:type_name -> google.protobuf.Timestamp
-	6,  // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: types.Policy.fee_policies:type_name -> types.FeePolicy
-	8,  // 7: types.Policy.configuration:type_name -> google.protobuf.Struct
-	5,  // 8: types.Policy.target:type_name -> types.Target
-	2,  // 9: types.Target.target_type:type_name -> types.TargetType
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	0, // 0: types.FeePolicy.type:type_name -> types.FeeType
+	1, // 1: types.FeePolicy.frequency:type_name -> types.BillingFrequency
+	4, // 2: types.FeePolicy.start_date:type_name -> google.protobuf.Timestamp
+	5, // 3: types.Policy.rules:type_name -> types.Rule
+	4, // 4: types.Policy.created_at:type_name -> google.protobuf.Timestamp
+	4, // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
+	2, // 6: types.Policy.fee_policies:type_name -> types.FeePolicy
+	6, // 7: types.Policy.configuration:type_name -> google.protobuf.Struct
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_policy_proto_init() }
@@ -587,8 +463,8 @@ func file_policy_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_policy_proto_rawDesc), len(file_policy_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   3,
+			NumEnums:      2,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
