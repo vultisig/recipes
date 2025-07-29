@@ -11,8 +11,8 @@
           {
             "parameter_name": "to",
             "constraint": {
-              "type": "CONSTRAINT_TYPE_WHITELIST",
-              "whitelist_values": { "values": ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] },
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
               "required": true
             }
           }
@@ -35,8 +35,8 @@
           {
             "parameter_name": "to",
             "constraint": {
-              "type": "CONSTRAINT_TYPE_WHITELIST",
-              "whitelist_values": { "values": ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] },
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
               "required": true
             }
           }
@@ -67,8 +67,8 @@
           {
             "parameter_name": "to",
             "constraint": {
-              "type": "CONSTRAINT_TYPE_WHITELIST",
-              "whitelist_values": { "values": ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] },
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
               "required": true
             }
           }
@@ -83,8 +83,8 @@
           {
             "parameter_name": "to",
             "constraint": {
-              "type": "CONSTRAINT_TYPE_WHITELIST",
-              "whitelist_values": { "values": ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] },
+              "type": "CONSTRAINT_TYPE_FIXED",
+              "fixed_value": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
               "required": true
             }
           }
