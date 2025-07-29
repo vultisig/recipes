@@ -29,10 +29,7 @@ const (
 	ConstraintType_CONSTRAINT_TYPE_FIXED          ConstraintType = 1
 	ConstraintType_CONSTRAINT_TYPE_MAX            ConstraintType = 2
 	ConstraintType_CONSTRAINT_TYPE_MIN            ConstraintType = 3
-	ConstraintType_CONSTRAINT_TYPE_RANGE          ConstraintType = 4
-	ConstraintType_CONSTRAINT_TYPE_WHITELIST      ConstraintType = 5
-	ConstraintType_CONSTRAINT_TYPE_MAX_PER_PERIOD ConstraintType = 6
-	ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT ConstraintType = 7
+	ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT ConstraintType = 4
 )
 
 // Enum value maps for ConstraintType.
@@ -42,20 +39,14 @@ var (
 		1: "CONSTRAINT_TYPE_FIXED",
 		2: "CONSTRAINT_TYPE_MAX",
 		3: "CONSTRAINT_TYPE_MIN",
-		4: "CONSTRAINT_TYPE_RANGE",
-		5: "CONSTRAINT_TYPE_WHITELIST",
-		6: "CONSTRAINT_TYPE_MAX_PER_PERIOD",
-		7: "CONSTRAINT_TYPE_MAGIC_CONSTANT",
+		4: "CONSTRAINT_TYPE_MAGIC_CONSTANT",
 	}
 	ConstraintType_value = map[string]int32{
 		"CONSTRAINT_TYPE_UNSPECIFIED":    0,
 		"CONSTRAINT_TYPE_FIXED":          1,
 		"CONSTRAINT_TYPE_MAX":            2,
 		"CONSTRAINT_TYPE_MIN":            3,
-		"CONSTRAINT_TYPE_RANGE":          4,
-		"CONSTRAINT_TYPE_WHITELIST":      5,
-		"CONSTRAINT_TYPE_MAX_PER_PERIOD": 6,
-		"CONSTRAINT_TYPE_MAGIC_CONSTANT": 7,
+		"CONSTRAINT_TYPE_MAGIC_CONSTANT": 4,
 	}
 )
 
@@ -242,15 +233,12 @@ type Constraint struct {
 	//	*Constraint_FixedValue
 	//	*Constraint_MaxValue
 	//	*Constraint_MinValue
-	//	*Constraint_RangeValue
-	//	*Constraint_WhitelistValues
-	//	*Constraint_MaxPerPeriodValue
 	//	*Constraint_MagicConstantValue
 	Value isConstraint_Value `protobuf_oneof:"value"`
 	// Additional metadata for the constraint
-	DenominatedIn string `protobuf:"bytes,8,opt,name=denominated_in,json=denominatedIn,proto3" json:"denominated_in,omitempty"`
-	Period        string `protobuf:"bytes,9,opt,name=period,proto3" json:"period,omitempty"`
-	Required      bool   `protobuf:"varint,10,opt,name=required,proto3" json:"required,omitempty"`
+	DenominatedIn string `protobuf:"bytes,6,opt,name=denominated_in,json=denominatedIn,proto3" json:"denominated_in,omitempty"`
+	Period        string `protobuf:"bytes,7,opt,name=period,proto3" json:"period,omitempty"`
+	Required      bool   `protobuf:"varint,8,opt,name=required,proto3" json:"required,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -326,33 +314,6 @@ func (x *Constraint) GetMinValue() string {
 	return ""
 }
 
-func (x *Constraint) GetRangeValue() *RangeValue {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_RangeValue); ok {
-			return x.RangeValue
-		}
-	}
-	return nil
-}
-
-func (x *Constraint) GetWhitelistValues() *WhitelistValues {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_WhitelistValues); ok {
-			return x.WhitelistValues
-		}
-	}
-	return nil
-}
-
-func (x *Constraint) GetMaxPerPeriodValue() int32 {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_MaxPerPeriodValue); ok {
-			return x.MaxPerPeriodValue
-		}
-	}
-	return 0
-}
-
 func (x *Constraint) GetMagicConstantValue() MagicConstant {
 	if x != nil {
 		if x, ok := x.Value.(*Constraint_MagicConstantValue); ok {
@@ -399,20 +360,8 @@ type Constraint_MinValue struct {
 	MinValue string `protobuf:"bytes,4,opt,name=min_value,json=minValue,proto3,oneof"`
 }
 
-type Constraint_RangeValue struct {
-	RangeValue *RangeValue `protobuf:"bytes,5,opt,name=range_value,json=rangeValue,proto3,oneof"`
-}
-
-type Constraint_WhitelistValues struct {
-	WhitelistValues *WhitelistValues `protobuf:"bytes,6,opt,name=whitelist_values,json=whitelistValues,proto3,oneof"`
-}
-
-type Constraint_MaxPerPeriodValue struct {
-	MaxPerPeriodValue int32 `protobuf:"varint,7,opt,name=max_per_period_value,json=maxPerPeriodValue,proto3,oneof"`
-}
-
 type Constraint_MagicConstantValue struct {
-	MagicConstantValue MagicConstant `protobuf:"varint,11,opt,name=magic_constant_value,json=magicConstantValue,proto3,enum=types.MagicConstant,oneof"`
+	MagicConstantValue MagicConstant `protobuf:"varint,5,opt,name=magic_constant_value,json=magicConstantValue,proto3,enum=types.MagicConstant,oneof"`
 }
 
 func (*Constraint_FixedValue) isConstraint_Value() {}
@@ -420,12 +369,6 @@ func (*Constraint_FixedValue) isConstraint_Value() {}
 func (*Constraint_MaxValue) isConstraint_Value() {}
 
 func (*Constraint_MinValue) isConstraint_Value() {}
-
-func (*Constraint_RangeValue) isConstraint_Value() {}
-
-func (*Constraint_WhitelistValues) isConstraint_Value() {}
-
-func (*Constraint_MaxPerPeriodValue) isConstraint_Value() {}
 
 func (*Constraint_MagicConstantValue) isConstraint_Value() {}
 
@@ -439,33 +382,25 @@ const file_constraint_proto_rawDesc = "" +
 	"\x03min\x18\x01 \x01(\tR\x03min\x12\x10\n" +
 	"\x03max\x18\x02 \x01(\tR\x03max\")\n" +
 	"\x0fWhitelistValues\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\tR\x06values\"\xf4\x03\n" +
+	"\x06values\x18\x01 \x03(\tR\x06values\"\xc6\x02\n" +
 	"\n" +
 	"Constraint\x12)\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x15.types.ConstraintTypeR\x04type\x12!\n" +
 	"\vfixed_value\x18\x02 \x01(\tH\x00R\n" +
 	"fixedValue\x12\x1d\n" +
 	"\tmax_value\x18\x03 \x01(\tH\x00R\bmaxValue\x12\x1d\n" +
-	"\tmin_value\x18\x04 \x01(\tH\x00R\bminValue\x124\n" +
-	"\vrange_value\x18\x05 \x01(\v2\x11.types.RangeValueH\x00R\n" +
-	"rangeValue\x12C\n" +
-	"\x10whitelist_values\x18\x06 \x01(\v2\x16.types.WhitelistValuesH\x00R\x0fwhitelistValues\x121\n" +
-	"\x14max_per_period_value\x18\a \x01(\x05H\x00R\x11maxPerPeriodValue\x12H\n" +
-	"\x14magic_constant_value\x18\v \x01(\x0e2\x14.types.MagicConstantH\x00R\x12magicConstantValue\x12%\n" +
-	"\x0edenominated_in\x18\b \x01(\tR\rdenominatedIn\x12\x16\n" +
-	"\x06period\x18\t \x01(\tR\x06period\x12\x1a\n" +
-	"\brequired\x18\n" +
-	" \x01(\bR\brequiredB\a\n" +
-	"\x05value*\x80\x02\n" +
+	"\tmin_value\x18\x04 \x01(\tH\x00R\bminValue\x12H\n" +
+	"\x14magic_constant_value\x18\x05 \x01(\x0e2\x14.types.MagicConstantH\x00R\x12magicConstantValue\x12%\n" +
+	"\x0edenominated_in\x18\x06 \x01(\tR\rdenominatedIn\x12\x16\n" +
+	"\x06period\x18\a \x01(\tR\x06period\x12\x1a\n" +
+	"\brequired\x18\b \x01(\bR\brequiredB\a\n" +
+	"\x05value*\xa2\x01\n" +
 	"\x0eConstraintType\x12\x1f\n" +
 	"\x1bCONSTRAINT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CONSTRAINT_TYPE_FIXED\x10\x01\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_MAX\x10\x02\x12\x17\n" +
-	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\x19\n" +
-	"\x15CONSTRAINT_TYPE_RANGE\x10\x04\x12\x1d\n" +
-	"\x19CONSTRAINT_TYPE_WHITELIST\x10\x05\x12\"\n" +
-	"\x1eCONSTRAINT_TYPE_MAX_PER_PERIOD\x10\x06\x12\"\n" +
-	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\a*7\n" +
+	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\"\n" +
+	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\x04*7\n" +
 	"\rMagicConstant\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11VULTISIG_TREASURY\x10\x01B#Z!github.com/vultisig/recipes/typesb\x06proto3"
@@ -493,14 +428,12 @@ var file_constraint_proto_goTypes = []any{
 }
 var file_constraint_proto_depIdxs = []int32{
 	0, // 0: types.Constraint.type:type_name -> types.ConstraintType
-	2, // 1: types.Constraint.range_value:type_name -> types.RangeValue
-	3, // 2: types.Constraint.whitelist_values:type_name -> types.WhitelistValues
-	1, // 3: types.Constraint.magic_constant_value:type_name -> types.MagicConstant
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	1, // 1: types.Constraint.magic_constant_value:type_name -> types.MagicConstant
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_constraint_proto_init() }
@@ -512,9 +445,6 @@ func file_constraint_proto_init() {
 		(*Constraint_FixedValue)(nil),
 		(*Constraint_MaxValue)(nil),
 		(*Constraint_MinValue)(nil),
-		(*Constraint_RangeValue)(nil),
-		(*Constraint_WhitelistValues)(nil),
-		(*Constraint_MaxPerPeriodValue)(nil),
 		(*Constraint_MagicConstantValue)(nil),
 	}
 	type x struct{}

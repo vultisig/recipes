@@ -15,8 +15,7 @@
         {
           "parameter_name": "recipient",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         },
@@ -24,8 +23,7 @@
           "parameter_name": "amount",
           "supported_types": [
             "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
+            "CONSTRAINT_TYPE_MAX"
           ],
           "required": true
         }
@@ -43,8 +41,7 @@
         {
           "parameter_name": "recipient",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         },
@@ -52,8 +49,7 @@
           "parameter_name": "amount",
           "supported_types": [
             "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
+            "CONSTRAINT_TYPE_MAX"
           ],
           "required": true
         }
