@@ -16,14 +16,10 @@ import (
 	"github.com/vultisig/recipes/util"
 )
 
-type evm struct {
-	chainID *big.Int
-}
+type evm struct{}
 
-func newEvm(chainID *big.Int) *evm {
-	return &evm{
-		chainID: chainID,
-	}
+func newEvm() *evm {
+	return &evm{}
 }
 
 func (e *evm) evaluate(rule *types.Rule, tx []byte) error {
