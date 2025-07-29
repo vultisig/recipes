@@ -2,23 +2,7 @@ package resolver
 
 import (
 	"testing"
-
-	"github.com/vultisig/recipes/types"
 )
-
-func TestTreasuryResolverSupports(t *testing.T) {
-	resolver := NewDefaultTreasuryResolver()
-
-	// Test that it supports the treasury magic constant
-	if !resolver.Supports(types.MagicConstant_VULTISIG_TREASURY) {
-		t.Error("TreasuryResolver should support VULTISIG_TREASURY")
-	}
-
-	// Test that it doesn't support other magic constants
-	if resolver.Supports(types.MagicConstant_UNSPECIFIED) {
-		t.Error("TreasuryResolver should not support UNSPECIFIED")
-	}
-}
 
 func TestTreasuryResolverResolve(t *testing.T) {
 	resolver := NewDefaultTreasuryResolver()
@@ -76,7 +60,7 @@ func TestTreasuryResolverResolve(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _, err := resolver.Resolve(types.MagicConstant_VULTISIG_TREASURY, tt.chainID, tt.assetID)
+			got, _, err := resolver.Resolve(tt.chainID, tt.assetID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TreasuryResolver.Resolve() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -92,7 +76,7 @@ func TestTreasuryResolverResolveNonTreasuryConstant(t *testing.T) {
 	resolver := NewDefaultTreasuryResolver()
 
 	// Test with non-treasury magic constant
-	_, _, err := resolver.Resolve(types.MagicConstant_UNSPECIFIED, "ethereum", "eth")
+	_, _, err := resolver.Resolve("ethereum", "eth")
 	if err == nil {
 		t.Error("TreasuryResolver.Resolve() should return error for non-treasury magic constant")
 	}

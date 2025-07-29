@@ -1,9 +1,8 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
-
-	"github.com/vultisig/recipes/types"
 )
 
 type TreasuryResolver struct {
@@ -41,13 +40,13 @@ func defaultTreasuryConfig() map[string]map[string]string {
 	}
 }
 
-func (r *TreasuryResolver) Supports(constant types.MagicConstant) bool {
-	return constant == types.MagicConstant_VULTISIG_TREASURY
+func (r *TreasuryResolver) Supports() bool {
+	return true
 }
 
-func (r *TreasuryResolver) Resolve(constant types.MagicConstant, chainID, assetID string) (string, string, error) {
-	if !r.Supports(constant) {
-		return "", "", fmt.Errorf("TreasuryResolver does not support type: %v", constant)
+func (r *TreasuryResolver) Resolve(chainID, assetID string) (string, string, error) {
+	if !r.Supports() {
+		return "", "", errors.New("TreasuryResolver does not supported")
 	}
 	chainAddresses, exists := r.treasuryConfig[chainID]
 	if !exists {
