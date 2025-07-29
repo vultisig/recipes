@@ -12,6 +12,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 )
@@ -22,7 +24,7 @@ func newEvm() *evm {
 	return &evm{}
 }
 
-func (e *evm) evaluate(rule *types.Rule, tx []byte) error {
+func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 	r, err := util.ParseResource(rule.GetResource())
 	if err != nil {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
@@ -47,7 +49,15 @@ func (e *evm) evaluate(rule *types.Rule, tx []byte) error {
 		return fmt.Errorf("failed to find abi method: %s", r.FunctionId)
 	}
 
-	args, err := method.Inputs.Unpack(tx[4:])
+	txData, err := ethereum.DecodeUnsignedPayload(txBytes)
+	if err != nil {
+		return fmt.Errorf("failed to decode tx payload: %w", err)
+	}
+	tx := etypes.NewTx(txData)
+
+	// TODO validate tx.to
+
+	args, err := method.Inputs.Unpack(tx.Data()[4:])
 	if err != nil {
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
