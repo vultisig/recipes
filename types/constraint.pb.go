@@ -25,14 +25,10 @@ const (
 type ConstraintType int32
 
 const (
-	ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED    ConstraintType = 0
-	ConstraintType_CONSTRAINT_TYPE_FIXED          ConstraintType = 1
-	ConstraintType_CONSTRAINT_TYPE_MAX            ConstraintType = 2
-	ConstraintType_CONSTRAINT_TYPE_MIN            ConstraintType = 3
-	ConstraintType_CONSTRAINT_TYPE_RANGE          ConstraintType = 4
-	ConstraintType_CONSTRAINT_TYPE_WHITELIST      ConstraintType = 5
-	ConstraintType_CONSTRAINT_TYPE_MAX_PER_PERIOD ConstraintType = 6
-	ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT ConstraintType = 7
+	ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED ConstraintType = 0
+	ConstraintType_CONSTRAINT_TYPE_FIXED       ConstraintType = 1
+	ConstraintType_CONSTRAINT_TYPE_MAX         ConstraintType = 2
+	ConstraintType_CONSTRAINT_TYPE_MIN         ConstraintType = 3
 )
 
 // Enum value maps for ConstraintType.
@@ -42,20 +38,12 @@ var (
 		1: "CONSTRAINT_TYPE_FIXED",
 		2: "CONSTRAINT_TYPE_MAX",
 		3: "CONSTRAINT_TYPE_MIN",
-		4: "CONSTRAINT_TYPE_RANGE",
-		5: "CONSTRAINT_TYPE_WHITELIST",
-		6: "CONSTRAINT_TYPE_MAX_PER_PERIOD",
-		7: "CONSTRAINT_TYPE_MAGIC_CONSTANT",
 	}
 	ConstraintType_value = map[string]int32{
-		"CONSTRAINT_TYPE_UNSPECIFIED":    0,
-		"CONSTRAINT_TYPE_FIXED":          1,
-		"CONSTRAINT_TYPE_MAX":            2,
-		"CONSTRAINT_TYPE_MIN":            3,
-		"CONSTRAINT_TYPE_RANGE":          4,
-		"CONSTRAINT_TYPE_WHITELIST":      5,
-		"CONSTRAINT_TYPE_MAX_PER_PERIOD": 6,
-		"CONSTRAINT_TYPE_MAGIC_CONSTANT": 7,
+		"CONSTRAINT_TYPE_UNSPECIFIED": 0,
+		"CONSTRAINT_TYPE_FIXED":       1,
+		"CONSTRAINT_TYPE_MAX":         2,
+		"CONSTRAINT_TYPE_MIN":         3,
 	}
 )
 
@@ -86,150 +74,6 @@ func (ConstraintType) EnumDescriptor() ([]byte, []int) {
 	return file_constraint_proto_rawDescGZIP(), []int{0}
 }
 
-type MagicConstant int32
-
-const (
-	MagicConstant_UNSPECIFIED       MagicConstant = 0
-	MagicConstant_VULTISIG_TREASURY MagicConstant = 1
-)
-
-// Enum value maps for MagicConstant.
-var (
-	MagicConstant_name = map[int32]string{
-		0: "UNSPECIFIED",
-		1: "VULTISIG_TREASURY",
-	}
-	MagicConstant_value = map[string]int32{
-		"UNSPECIFIED":       0,
-		"VULTISIG_TREASURY": 1,
-	}
-)
-
-func (x MagicConstant) Enum() *MagicConstant {
-	p := new(MagicConstant)
-	*p = x
-	return p
-}
-
-func (x MagicConstant) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (MagicConstant) Descriptor() protoreflect.EnumDescriptor {
-	return file_constraint_proto_enumTypes[1].Descriptor()
-}
-
-func (MagicConstant) Type() protoreflect.EnumType {
-	return &file_constraint_proto_enumTypes[1]
-}
-
-func (x MagicConstant) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use MagicConstant.Descriptor instead.
-func (MagicConstant) EnumDescriptor() ([]byte, []int) {
-	return file_constraint_proto_rawDescGZIP(), []int{1}
-}
-
-// RangeValue represents a range constraint with min and max values
-type RangeValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Min           string                 `protobuf:"bytes,1,opt,name=min,proto3" json:"min,omitempty"`
-	Max           string                 `protobuf:"bytes,2,opt,name=max,proto3" json:"max,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RangeValue) Reset() {
-	*x = RangeValue{}
-	mi := &file_constraint_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RangeValue) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RangeValue) ProtoMessage() {}
-
-func (x *RangeValue) ProtoReflect() protoreflect.Message {
-	mi := &file_constraint_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RangeValue.ProtoReflect.Descriptor instead.
-func (*RangeValue) Descriptor() ([]byte, []int) {
-	return file_constraint_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *RangeValue) GetMin() string {
-	if x != nil {
-		return x.Min
-	}
-	return ""
-}
-
-func (x *RangeValue) GetMax() string {
-	if x != nil {
-		return x.Max
-	}
-	return ""
-}
-
-// WhitelistValues represents a list of allowed values
-type WhitelistValues struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Values        []string               `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WhitelistValues) Reset() {
-	*x = WhitelistValues{}
-	mi := &file_constraint_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WhitelistValues) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WhitelistValues) ProtoMessage() {}
-
-func (x *WhitelistValues) ProtoReflect() protoreflect.Message {
-	mi := &file_constraint_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WhitelistValues.ProtoReflect.Descriptor instead.
-func (*WhitelistValues) Descriptor() ([]byte, []int) {
-	return file_constraint_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *WhitelistValues) GetValues() []string {
-	if x != nil {
-		return x.Values
-	}
-	return nil
-}
-
 // Constraint defines restrictions on a parameter
 type Constraint struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -242,10 +86,6 @@ type Constraint struct {
 	//	*Constraint_FixedValue
 	//	*Constraint_MaxValue
 	//	*Constraint_MinValue
-	//	*Constraint_RangeValue
-	//	*Constraint_WhitelistValues
-	//	*Constraint_MaxPerPeriodValue
-	//	*Constraint_MagicConstantValue
 	Value isConstraint_Value `protobuf_oneof:"value"`
 	// Additional metadata for the constraint
 	DenominatedIn string `protobuf:"bytes,8,opt,name=denominated_in,json=denominatedIn,proto3" json:"denominated_in,omitempty"`
@@ -257,7 +97,7 @@ type Constraint struct {
 
 func (x *Constraint) Reset() {
 	*x = Constraint{}
-	mi := &file_constraint_proto_msgTypes[2]
+	mi := &file_constraint_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +109,7 @@ func (x *Constraint) String() string {
 func (*Constraint) ProtoMessage() {}
 
 func (x *Constraint) ProtoReflect() protoreflect.Message {
-	mi := &file_constraint_proto_msgTypes[2]
+	mi := &file_constraint_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -282,7 +122,7 @@ func (x *Constraint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Constraint.ProtoReflect.Descriptor instead.
 func (*Constraint) Descriptor() ([]byte, []int) {
-	return file_constraint_proto_rawDescGZIP(), []int{2}
+	return file_constraint_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Constraint) GetType() ConstraintType {
@@ -326,42 +166,6 @@ func (x *Constraint) GetMinValue() string {
 	return ""
 }
 
-func (x *Constraint) GetRangeValue() *RangeValue {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_RangeValue); ok {
-			return x.RangeValue
-		}
-	}
-	return nil
-}
-
-func (x *Constraint) GetWhitelistValues() *WhitelistValues {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_WhitelistValues); ok {
-			return x.WhitelistValues
-		}
-	}
-	return nil
-}
-
-func (x *Constraint) GetMaxPerPeriodValue() int32 {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_MaxPerPeriodValue); ok {
-			return x.MaxPerPeriodValue
-		}
-	}
-	return 0
-}
-
-func (x *Constraint) GetMagicConstantValue() MagicConstant {
-	if x != nil {
-		if x, ok := x.Value.(*Constraint_MagicConstantValue); ok {
-			return x.MagicConstantValue
-		}
-	}
-	return MagicConstant_UNSPECIFIED
-}
-
 func (x *Constraint) GetDenominatedIn() string {
 	if x != nil {
 		return x.DenominatedIn
@@ -399,76 +203,34 @@ type Constraint_MinValue struct {
 	MinValue string `protobuf:"bytes,4,opt,name=min_value,json=minValue,proto3,oneof"`
 }
 
-type Constraint_RangeValue struct {
-	RangeValue *RangeValue `protobuf:"bytes,5,opt,name=range_value,json=rangeValue,proto3,oneof"`
-}
-
-type Constraint_WhitelistValues struct {
-	WhitelistValues *WhitelistValues `protobuf:"bytes,6,opt,name=whitelist_values,json=whitelistValues,proto3,oneof"`
-}
-
-type Constraint_MaxPerPeriodValue struct {
-	MaxPerPeriodValue int32 `protobuf:"varint,7,opt,name=max_per_period_value,json=maxPerPeriodValue,proto3,oneof"`
-}
-
-type Constraint_MagicConstantValue struct {
-	MagicConstantValue MagicConstant `protobuf:"varint,11,opt,name=magic_constant_value,json=magicConstantValue,proto3,enum=types.MagicConstant,oneof"`
-}
-
 func (*Constraint_FixedValue) isConstraint_Value() {}
 
 func (*Constraint_MaxValue) isConstraint_Value() {}
 
 func (*Constraint_MinValue) isConstraint_Value() {}
 
-func (*Constraint_RangeValue) isConstraint_Value() {}
-
-func (*Constraint_WhitelistValues) isConstraint_Value() {}
-
-func (*Constraint_MaxPerPeriodValue) isConstraint_Value() {}
-
-func (*Constraint_MagicConstantValue) isConstraint_Value() {}
-
 var File_constraint_proto protoreflect.FileDescriptor
 
 const file_constraint_proto_rawDesc = "" +
 	"\n" +
-	"\x10constraint.proto\x12\x05types\"0\n" +
-	"\n" +
-	"RangeValue\x12\x10\n" +
-	"\x03min\x18\x01 \x01(\tR\x03min\x12\x10\n" +
-	"\x03max\x18\x02 \x01(\tR\x03max\")\n" +
-	"\x0fWhitelistValues\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\tR\x06values\"\xf4\x03\n" +
+	"\x10constraint.proto\x12\x05types\"\xfc\x01\n" +
 	"\n" +
 	"Constraint\x12)\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x15.types.ConstraintTypeR\x04type\x12!\n" +
 	"\vfixed_value\x18\x02 \x01(\tH\x00R\n" +
 	"fixedValue\x12\x1d\n" +
 	"\tmax_value\x18\x03 \x01(\tH\x00R\bmaxValue\x12\x1d\n" +
-	"\tmin_value\x18\x04 \x01(\tH\x00R\bminValue\x124\n" +
-	"\vrange_value\x18\x05 \x01(\v2\x11.types.RangeValueH\x00R\n" +
-	"rangeValue\x12C\n" +
-	"\x10whitelist_values\x18\x06 \x01(\v2\x16.types.WhitelistValuesH\x00R\x0fwhitelistValues\x121\n" +
-	"\x14max_per_period_value\x18\a \x01(\x05H\x00R\x11maxPerPeriodValue\x12H\n" +
-	"\x14magic_constant_value\x18\v \x01(\x0e2\x14.types.MagicConstantH\x00R\x12magicConstantValue\x12%\n" +
+	"\tmin_value\x18\x04 \x01(\tH\x00R\bminValue\x12%\n" +
 	"\x0edenominated_in\x18\b \x01(\tR\rdenominatedIn\x12\x16\n" +
 	"\x06period\x18\t \x01(\tR\x06period\x12\x1a\n" +
 	"\brequired\x18\n" +
 	" \x01(\bR\brequiredB\a\n" +
-	"\x05value*\x80\x02\n" +
+	"\x05value*~\n" +
 	"\x0eConstraintType\x12\x1f\n" +
 	"\x1bCONSTRAINT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CONSTRAINT_TYPE_FIXED\x10\x01\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_MAX\x10\x02\x12\x17\n" +
-	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\x19\n" +
-	"\x15CONSTRAINT_TYPE_RANGE\x10\x04\x12\x1d\n" +
-	"\x19CONSTRAINT_TYPE_WHITELIST\x10\x05\x12\"\n" +
-	"\x1eCONSTRAINT_TYPE_MAX_PER_PERIOD\x10\x06\x12\"\n" +
-	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\a*7\n" +
-	"\rMagicConstant\x12\x0f\n" +
-	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
-	"\x11VULTISIG_TREASURY\x10\x01B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x13CONSTRAINT_TYPE_MIN\x10\x03B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once
@@ -482,25 +244,19 @@ func file_constraint_proto_rawDescGZIP() []byte {
 	return file_constraint_proto_rawDescData
 }
 
-var file_constraint_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_constraint_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_constraint_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_constraint_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_constraint_proto_goTypes = []any{
-	(ConstraintType)(0),     // 0: types.ConstraintType
-	(MagicConstant)(0),      // 1: types.MagicConstant
-	(*RangeValue)(nil),      // 2: types.RangeValue
-	(*WhitelistValues)(nil), // 3: types.WhitelistValues
-	(*Constraint)(nil),      // 4: types.Constraint
+	(ConstraintType)(0), // 0: types.ConstraintType
+	(*Constraint)(nil),  // 1: types.Constraint
 }
 var file_constraint_proto_depIdxs = []int32{
 	0, // 0: types.Constraint.type:type_name -> types.ConstraintType
-	2, // 1: types.Constraint.range_value:type_name -> types.RangeValue
-	3, // 2: types.Constraint.whitelist_values:type_name -> types.WhitelistValues
-	1, // 3: types.Constraint.magic_constant_value:type_name -> types.MagicConstant
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_constraint_proto_init() }
@@ -508,22 +264,18 @@ func file_constraint_proto_init() {
 	if File_constraint_proto != nil {
 		return
 	}
-	file_constraint_proto_msgTypes[2].OneofWrappers = []any{
+	file_constraint_proto_msgTypes[0].OneofWrappers = []any{
 		(*Constraint_FixedValue)(nil),
 		(*Constraint_MaxValue)(nil),
 		(*Constraint_MinValue)(nil),
-		(*Constraint_RangeValue)(nil),
-		(*Constraint_WhitelistValues)(nil),
-		(*Constraint_MaxPerPeriodValue)(nil),
-		(*Constraint_MagicConstantValue)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_constraint_proto_rawDesc), len(file_constraint_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   3,
+			NumEnums:      1,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
