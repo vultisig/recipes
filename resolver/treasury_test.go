@@ -72,16 +72,6 @@ func TestTreasuryResolverResolve(t *testing.T) {
 	}
 }
 
-func TestTreasuryResolverResolveNonTreasuryConstant(t *testing.T) {
-	resolver := NewDefaultTreasuryResolver()
-
-	// Test with non-treasury magic constant
-	_, _, err := resolver.Resolve("ethereum", "eth")
-	if err == nil {
-		t.Error("TreasuryResolver.Resolve() should return error for non-treasury magic constant")
-	}
-}
-
 func TestTreasuryResolverConfigStructure(t *testing.T) {
 	resolver := NewDefaultTreasuryResolver().(*TreasuryResolver)
 

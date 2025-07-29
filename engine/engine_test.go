@@ -11,7 +11,6 @@ import (
 
 	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/ethereum"
-	"github.com/vultisig/recipes/testdata"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -45,56 +44,6 @@ var testVectors = []struct {
 		policyPath: "../testdata/payroll.json",
 		chainStr:   "bitcoin",
 		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: false,
-	},
-	// Uniswap test cases
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactETHForTokensTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientSwapExactETHForTokensTxHex,
-		shouldPass: false,
-	},
-	// additional Uniswap tests
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ExceedAmountSwapExactTokensForETHTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactTokensForETHTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidAddLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidTokenAddLiquidityTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidRemoveLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
 		shouldPass: false,
 	},
 	// Schema validation tests

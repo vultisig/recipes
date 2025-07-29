@@ -16,8 +16,7 @@
         {
           "parameter_name": "recipient",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         },
@@ -25,8 +24,7 @@
           "parameter_name": "amount",
           "supported_types": [
             "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
+            "CONSTRAINT_TYPE_MAX"
           ],
           "required": true
         }
@@ -44,8 +42,7 @@
         {
           "parameter_name": "recipient",
           "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_WHITELIST"
+            "CONSTRAINT_TYPE_FIXED"
           ],
           "required": true
         },
@@ -53,8 +50,7 @@
           "parameter_name": "amount",
           "supported_types": [
             "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX",
-            "CONSTRAINT_TYPE_RANGE"
+            "CONSTRAINT_TYPE_MAX"
           ],
           "required": true
         }
@@ -62,11 +58,6 @@
       "required": true
     }
   ],
-  "scheduling": {
-    "supports_scheduling": false,
-    "supported_frequencies": [],
-    "max_scheduled_executions": 0
-  },
   "requirements": {
     "min_vultisig_version": 1,
     "supported_chains": [
