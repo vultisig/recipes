@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -40,14 +39,7 @@ func defaultTreasuryConfig() map[string]map[string]string {
 	}
 }
 
-func (r *TreasuryResolver) Supports() bool {
-	return true
-}
-
 func (r *TreasuryResolver) Resolve(chainID, assetID string) (string, string, error) {
-	if !r.Supports() {
-		return "", "", errors.New("TreasuryResolver does not supported")
-	}
 	chainAddresses, exists := r.treasuryConfig[chainID]
 	if !exists {
 		return "", "", fmt.Errorf("no treasury address configured for chain %s", chainID)
