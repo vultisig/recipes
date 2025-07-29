@@ -89,21 +89,6 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 			if !strings.EqualFold(valStr, cVal.FixedValue) {
 				return false, nil // Constraint not met
 			}
-		case *types.Constraint_WhitelistValues:
-			valStr, isStr := paramValueToString(paramValue)
-			if !isStr {
-				return false, fmt.Errorf("parameter %q (type %T) could not be converted to string for Whitelist comparison", paramName, paramValue)
-			}
-			found := false
-			for _, allowedVal := range cVal.WhitelistValues.GetValues() {
-				if strings.EqualFold(valStr, allowedVal) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return false, nil // Not in whitelist
-			}
 		// TODO: Implement other constraint types from types.ConstraintType and oneof cases:
 		// MaxValue, MinValue, RangeValue, MaxPerPeriodValue
 		// These will require parsing string values from constraints (e.g., cVal.MaxValue) into appropriate types (e.g., *big.Int)
@@ -132,25 +117,6 @@ func evaluateParameterConstraints(params map[string]interface{}, policyParamCons
 				return false, fmt.Errorf("invalid MinValue string %q in policy for parameter %q", cVal.MinValue, paramName)
 			}
 			if actualBig.Cmp(minBig) < 0 {
-				return false, nil
-			}
-		case *types.Constraint_RangeValue:
-			actualBig, ok := paramValue.(*big.Int)
-			if !ok {
-				return false, fmt.Errorf("parameter %q expected *big.Int for RangeValue, got %T", paramName, paramValue)
-			}
-			minBig, minOk := new(big.Int).SetString(cVal.RangeValue.Min, 10)
-			if !minOk {
-				return false, fmt.Errorf("invalid RangeValue.Min string %q in policy for parameter %q", cVal.RangeValue.Min, paramName)
-			}
-			maxBig, maxOk := new(big.Int).SetString(cVal.RangeValue.Max, 10)
-			if !maxOk {
-				return false, fmt.Errorf("invalid RangeValue.Max string %q in policy for parameter %q", cVal.RangeValue.Max, paramName)
-			}
-			if minBig.Cmp(maxBig) > 0 {
-				return false, fmt.Errorf("invalid range for parameter %q: min (%s) is greater than max (%s)", paramName, cVal.RangeValue.Min, cVal.RangeValue.Max)
-			}
-			if actualBig.Cmp(minBig) < 0 || actualBig.Cmp(maxBig) > 0 {
 				return false, nil
 			}
 		default:
