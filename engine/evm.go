@@ -1,10 +1,14 @@
 package engine
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -63,12 +67,43 @@ func (e *evm) evaluate(rule *types.Rule, tx []byte) error {
 				func(_expected string) (common.Address, error) {
 					return common.HexToAddress(_expected), nil
 				},
-				func(_expected common.Address, _actual common.Address) bool {
+				func(_expected, _actual common.Address) bool {
 					return _expected.Cmp(_actual) == 0
 				},
 				// 'min' and 'max' should always fail for 'address' type
 				doFalse[common.Address],
 				doFalse[common.Address],
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert: %w", er)
+			}
+
+		case []common.Address:
+			er := assertArg[[]common.Address](
+				rule.GetParameterConstraints(),
+				input.Name,
+				actual,
+				func(_expected string) ([]common.Address, error) {
+					var addrs []common.Address
+					for _, s := range strings.Split(_expected, ",") {
+						addrs = append(addrs, common.HexToAddress(s))
+					}
+					return addrs, nil
+				},
+				func(_expected, _actual []common.Address) bool {
+					if len(_expected) != len(_actual) {
+						return false
+					}
+					for _i := range _expected {
+						if _expected[_i].Cmp(_actual[_i]) != 0 {
+							return false
+						}
+					}
+					return true
+				},
+				// 'min' and 'max' should always fail for 'address' type
+				doFalse[[]common.Address],
+				doFalse[[]common.Address],
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -86,15 +121,82 @@ func (e *evm) evaluate(rule *types.Rule, tx []byte) error {
 					}
 					return v, nil
 				},
-				func(_expected *big.Int, _actual *big.Int) bool {
+				func(_expected, _actual *big.Int) bool {
 					return _expected.Cmp(_actual) == 0
 				},
-				func(_expected *big.Int, _actual *big.Int) bool {
+				func(_expected, _actual *big.Int) bool {
 					return _expected.Cmp(_actual) == 1
 				},
-				func(_expected *big.Int, _actual *big.Int) bool {
+				func(_expected, _actual *big.Int) bool {
 					return _expected.Cmp(_actual) == -1
 				},
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert: %w", er)
+			}
+
+		case uint8:
+			er := assertArg[uint8](
+				rule.GetParameterConstraints(),
+				input.Name,
+				actual,
+				func(_expected string) (uint8, error) {
+					v, er := strconv.ParseUint(_expected, 10, 8)
+					if er != nil {
+						return 0, fmt.Errorf("failed to parse string to uint8: %s", _expected)
+					}
+					return uint8(v), nil
+				},
+				func(_expected, _actual uint8) bool {
+					return _expected == _actual
+				},
+				func(_expected, _actual uint8) bool {
+					return _expected <= _actual
+				},
+				func(_expected, _actual uint8) bool {
+					return _expected >= _actual
+				},
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert: %w", er)
+			}
+
+		case bool:
+			er := assertArg[bool](
+				rule.GetParameterConstraints(),
+				input.Name,
+				actual,
+				strconv.ParseBool,
+				func(_expected, _actual bool) bool {
+					return _expected == _actual
+				},
+				doFalse[bool],
+				doFalse[bool],
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert: %w", er)
+			}
+
+		case [32]byte:
+			er := assertArg[[32]byte](
+				rule.GetParameterConstraints(),
+				input.Name,
+				actual,
+				func(_expected string) ([32]byte, error) {
+					b, er := base64.StdEncoding.DecodeString(_expected)
+					if er != nil {
+						return [32]byte{}, fmt.Errorf("failed to decode b64 string: %w", er)
+					}
+					if len(b) != 32 {
+						return [32]byte{}, fmt.Errorf("len must be 32, got: %d", len(b))
+					}
+					return [32]byte(b), nil
+				},
+				func(_expected, _actual [32]byte) bool {
+					return bytes.Equal(_expected[:], _actual[:])
+				},
+				doFalse[[32]byte],
+				doFalse[[32]byte],
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -116,9 +218,9 @@ func assertArg[expectedT, actualT any](
 	name string,
 	actual actualT,
 	makeExpectedFromString func(string) (expectedT, error),
-	cmpFixed func(expectedT, actualT) bool,
-	cmpMin func(expectedT, actualT) bool,
-	cmpMax func(expectedT, actualT) bool,
+	assertFixed func(expectedT, actualT) bool,
+	assertMin func(expectedT, actualT) bool,
+	assertMax func(expectedT, actualT) bool,
 ) error {
 	for _, constraint := range constraints {
 		if constraint.GetParameterName() == name {
@@ -133,7 +235,7 @@ func assertArg[expectedT, actualT any](
 						constraint.GetConstraint().GetValue(),
 					)
 				}
-				if cmpFixed(expected, actual) {
+				if assertFixed(expected, actual) {
 					return nil
 				}
 				return fmt.Errorf(
@@ -150,7 +252,7 @@ func assertArg[expectedT, actualT any](
 						constraint.GetConstraint().GetMinValue(),
 					)
 				}
-				if cmpMin(expected, actual) {
+				if assertMin(expected, actual) {
 					return nil
 				}
 				return fmt.Errorf(
@@ -167,7 +269,7 @@ func assertArg[expectedT, actualT any](
 						constraint.GetConstraint().GetMaxValue(),
 					)
 				}
-				if cmpMax(expected, actual) {
+				if assertMax(expected, actual) {
 					return nil
 				}
 				return fmt.Errorf(
@@ -176,6 +278,9 @@ func assertArg[expectedT, actualT any](
 					actual,
 				)
 
+			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
+				// TODO implement
+				return nil
 			default:
 				return fmt.Errorf("unknown constraint type: %s", constraint.GetConstraint().GetType())
 			}
