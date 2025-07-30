@@ -28,12 +28,17 @@ func newEvm() *evm {
 const magicAssetIdDefault = "default"
 
 func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
+	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
+		return fmt.Errorf("only allow rules suppoted, got: %s", rule.GetEffect().String())
+	}
+
 	r, err := util.ParseResource(rule.GetResource())
 	if err != nil {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	filepath := path.Join("abi", r.ProtocolId+".json")
+	filepath := path.Join("..", "abi", r.ProtocolId+".json")
+
 	file, err := os.Open(filepath)
 	if err != nil {
 		return fmt.Errorf("failed to open abi json: path=%s, err=%w", filepath, err)
@@ -310,7 +315,7 @@ func assertArg[expectedT, actualT any](
 					return nil
 				}
 				return fmt.Errorf(
-					"failed to compare fixed values: expected=%s, actual=%s",
+					"failed to compare fixed values: expected=%v, actual=%v",
 					expected,
 					actual,
 				)
@@ -327,7 +332,7 @@ func assertArg[expectedT, actualT any](
 					return nil
 				}
 				return fmt.Errorf(
-					"failed to compare min values: expected=%s, actual=%s",
+					"failed to compare min values: expected=%v, actual=%v",
 					expected,
 					actual,
 				)
@@ -344,7 +349,7 @@ func assertArg[expectedT, actualT any](
 					return nil
 				}
 				return fmt.Errorf(
-					"failed to compare max values: expected=%s, actual=%s",
+					"failed to compare max values: expected=%v, actual=%v",
 					expected,
 					actual,
 				)
@@ -383,7 +388,7 @@ func assertArg[expectedT, actualT any](
 					return nil
 				}
 				return fmt.Errorf(
-					"failed to compare magic values: expected(resolved magic addr)=%s, actual(in tx)=%s",
+					"failed to compare magic values: expected(resolved magic addr)=%v, actual(in tx)=%v",
 					expected,
 					actual,
 				)
