@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 )
@@ -23,6 +24,8 @@ type evm struct{}
 func newEvm() *evm {
 	return &evm{}
 }
+
+const magicAssetIdDefault = "default"
 
 func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 	r, err := util.ParseResource(rule.GetResource())
@@ -55,9 +58,51 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 	tx := etypes.NewTx(txData)
 
-	// TODO validate tx.to
+	targetKind := rule.GetTarget().GetTargetType()
+	switch targetKind {
+	case types.TargetType_TARGET_TYPE_ADDRESS:
+		if tx.To() == nil || !addrEqual(*tx.To(), common.HexToAddress(rule.GetTarget().GetAddress())) {
+			toHex := "nil"
+			if tx.To() != nil {
+				toHex = tx.To().Hex()
+			}
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_target_address=%s",
+				toHex,
+				rule.GetTarget().GetAddress(),
+			)
+		}
+	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
+		resolve, er := resolver.NewMagicConstantRegistry().GetResolver(rule.GetTarget().GetMagicConstant())
+		if er != nil {
+			return fmt.Errorf(
+				"failed to get resolver: magic_const=%s",
+				rule.GetTarget().GetMagicConstant().String(),
+			)
+		}
 
-	args, err := method.Inputs.Unpack(tx.Data()[4:])
+		resolvedAddr, _, er := resolve.Resolve(rule.GetTarget().GetMagicConstant(), r.ChainId, "default")
+		if er != nil {
+			return fmt.Errorf(
+				"failed to resolve magic const: %s",
+				rule.GetTarget().GetMagicConstant().String(),
+			)
+		}
+		if tx.To() == nil || !addrEqual(*tx.To(), common.HexToAddress(resolvedAddr)) {
+			toHex := "nil"
+			if tx.To() != nil {
+				toHex = tx.To().Hex()
+			}
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
+				toHex,
+				resolvedAddr,
+			)
+		}
+	}
+
+	const dataOffset = 4
+	args, err := method.Inputs.Unpack(tx.Data()[dataOffset:])
 	if err != nil {
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
@@ -67,18 +112,18 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 		switch actual := arg.(type) {
 		case common.Address:
 			er := assertArg[common.Address](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
 				func(_expected string) (common.Address, error) {
 					return common.HexToAddress(_expected), nil
 				},
-				func(_expected, _actual common.Address) bool {
-					return _expected.Cmp(_actual) == 0
-				},
+				addrEqual,
 				// 'min' and 'max' should always fail for 'address' type
 				doFalse[common.Address],
 				doFalse[common.Address],
+				addrEqual,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -86,6 +131,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case []common.Address:
 			er := assertArg[[]common.Address](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -101,13 +147,14 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 						return false
 					}
 					for _i := range _expected {
-						if _expected[_i].Cmp(_actual[_i]) != 0 {
+						if !addrEqual(_expected[_i], _actual[_i]) {
 							return false
 						}
 					}
 					return true
 				},
-				// 'min' and 'max' should always fail for 'address' type
+				// 'min', 'max', 'magic' should always fail for '[]address' type
+				doFalse[[]common.Address],
 				doFalse[[]common.Address],
 				doFalse[[]common.Address],
 			)
@@ -117,6 +164,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case *big.Int:
 			er := assertArg[*big.Int](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -136,6 +184,8 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 				func(_expected, _actual *big.Int) bool {
 					return _expected.Cmp(_actual) == -1
 				},
+				// 'magic' should always fail for 'big.Int' type
+				doFalse,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -143,6 +193,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case uint8:
 			er := assertArg[uint8](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -153,15 +204,15 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 					}
 					return uint8(v), nil
 				},
-				func(_expected, _actual uint8) bool {
-					return _expected == _actual
-				},
+				equal,
 				func(_expected, _actual uint8) bool {
 					return _expected <= _actual
 				},
 				func(_expected, _actual uint8) bool {
 					return _expected >= _actual
 				},
+				// 'magic' should always fail for 'uint8' type
+				doFalse,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -169,13 +220,14 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case bool:
 			er := assertArg[bool](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
 				strconv.ParseBool,
-				func(_expected, _actual bool) bool {
-					return _expected == _actual
-				},
+				equal,
+				// 'min', 'max', 'magic' should always fail for 'bool' type
+				doFalse[bool],
 				doFalse[bool],
 				doFalse[bool],
 			)
@@ -185,6 +237,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case [32]byte:
 			er := assertArg[[32]byte](
+				r.ChainId,
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -201,6 +254,8 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 				func(_expected, _actual [32]byte) bool {
 					return bytes.Equal(_expected[:], _actual[:])
 				},
+				// 'min', 'max', 'magic' should always fail for '[32]byte' type
+				doFalse[[32]byte],
 				doFalse[[32]byte],
 				doFalse[[32]byte],
 			)
@@ -219,7 +274,16 @@ func doFalse[T any](_, _ T) bool {
 	return false
 }
 
+func addrEqual(a, b common.Address) bool {
+	return bytes.Equal(a[:], b[:])
+}
+
+func equal[T comparable](a, b T) bool {
+	return a == b
+}
+
 func assertArg[expectedT, actualT any](
+	chain string,
 	constraints []*types.ParameterConstraint,
 	name string,
 	actual actualT,
@@ -227,6 +291,7 @@ func assertArg[expectedT, actualT any](
 	assertFixed func(expectedT, actualT) bool,
 	assertMin func(expectedT, actualT) bool,
 	assertMax func(expectedT, actualT) bool,
+	assertMagic func(expectedT, actualT) bool,
 ) error {
 	for _, constraint := range constraints {
 		if constraint.GetParameterName() == name {
@@ -285,8 +350,44 @@ func assertArg[expectedT, actualT any](
 				)
 
 			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-				// TODO implement
-				return nil
+				resolve, err := resolver.NewMagicConstantRegistry().GetResolver(
+					constraint.GetConstraint().GetMagicConstantValue(),
+				)
+				if err != nil {
+					return fmt.Errorf(
+						"failed to get magic const resolver: magic_const=%s",
+						constraint.GetConstraint().GetMagicConstantValue().String(),
+					)
+				}
+
+				resolvedAddr, _, err := resolve.Resolve(
+					constraint.GetConstraint().GetMagicConstantValue(),
+					chain,
+					magicAssetIdDefault,
+				)
+				if err != nil {
+					return fmt.Errorf(
+						"failed to resolve magic const: magic_const=%s",
+						constraint.GetConstraint().GetMagicConstantValue().String(),
+					)
+				}
+
+				expected, err := makeExpectedFromString(resolvedAddr)
+				if err != nil {
+					return fmt.Errorf(
+						"failed to build exact type from magic_const: resolved=%s",
+						resolvedAddr,
+					)
+				}
+				if assertMagic(expected, actual) {
+					return nil
+				}
+				return fmt.Errorf(
+					"failed to compare magic values: expected(resolved magic addr)=%s, actual(in tx)=%s",
+					expected,
+					actual,
+				)
+
 			default:
 				return fmt.Errorf("unknown constraint type: %s", constraint.GetConstraint().GetType())
 			}

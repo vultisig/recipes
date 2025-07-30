@@ -230,9 +230,13 @@ func (x *Rule) GetTarget() *Target {
 }
 
 type Target struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TargetType    TargetType             `protobuf:"varint,1,opt,name=target_type,json=targetType,proto3,enum=types.TargetType" json:"target_type,omitempty"`
-	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TargetType TargetType             `protobuf:"varint,1,opt,name=target_type,json=targetType,proto3,enum=types.TargetType" json:"target_type,omitempty"`
+	// Types that are valid to be assigned to Target:
+	//
+	//	*Target_Address
+	//	*Target_MagicConstant
+	Target        isTarget_Target `protobuf_oneof:"target"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -274,12 +278,46 @@ func (x *Target) GetTargetType() TargetType {
 	return TargetType_TARGET_TYPE_UNSPECIFIED
 }
 
-func (x *Target) GetTarget() string {
+func (x *Target) GetTarget() isTarget_Target {
 	if x != nil {
 		return x.Target
 	}
+	return nil
+}
+
+func (x *Target) GetAddress() string {
+	if x != nil {
+		if x, ok := x.Target.(*Target_Address); ok {
+			return x.Address
+		}
+	}
 	return ""
 }
+
+func (x *Target) GetMagicConstant() MagicConstant {
+	if x != nil {
+		if x, ok := x.Target.(*Target_MagicConstant); ok {
+			return x.MagicConstant
+		}
+	}
+	return MagicConstant_UNSPECIFIED
+}
+
+type isTarget_Target interface {
+	isTarget_Target()
+}
+
+type Target_Address struct {
+	Address string `protobuf:"bytes,2,opt,name=address,proto3,oneof"`
+}
+
+type Target_MagicConstant struct {
+	MagicConstant MagicConstant `protobuf:"varint,3,opt,name=magic_constant,json=magicConstant,proto3,enum=types.MagicConstant,oneof"`
+}
+
+func (*Target_Address) isTarget_Target() {}
+
+func (*Target_MagicConstant) isTarget_Target() {}
 
 // Authorization represents how a transaction should be authorized
 type Authorization struct {
@@ -353,11 +391,13 @@ const file_rule_proto_rawDesc = "" +
 	"\x06target\x18\r \x01(\v2\r.types.TargetR\x06target\x1aQ\n" +
 	"\x10ConstraintsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
-	"\x05value\x18\x02 \x01(\v2\x11.types.ConstraintR\x05value:\x028\x01\"T\n" +
+	"\x05value\x18\x02 \x01(\v2\x11.types.ConstraintR\x05value:\x028\x01\"\xa1\x01\n" +
 	"\x06Target\x122\n" +
 	"\vtarget_type\x18\x01 \x01(\x0e2\x11.types.TargetTypeR\n" +
-	"targetType\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\"=\n" +
+	"targetType\x12\x1a\n" +
+	"\aaddress\x18\x02 \x01(\tH\x00R\aaddress\x12=\n" +
+	"\x0emagic_constant\x18\x03 \x01(\x0e2\x14.types.MagicConstantH\x00R\rmagicConstantB\b\n" +
+	"\x06target\"=\n" +
 	"\rAuthorization\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage*b\n" +
@@ -393,7 +433,8 @@ var file_rule_proto_goTypes = []any{
 	(*Authorization)(nil),       // 4: types.Authorization
 	nil,                         // 5: types.Rule.ConstraintsEntry
 	(*ParameterConstraint)(nil), // 6: types.ParameterConstraint
-	(*Constraint)(nil),          // 7: types.Constraint
+	(MagicConstant)(0),          // 7: types.MagicConstant
+	(*Constraint)(nil),          // 8: types.Constraint
 }
 var file_rule_proto_depIdxs = []int32{
 	1, // 0: types.Rule.effect:type_name -> types.Effect
@@ -402,12 +443,13 @@ var file_rule_proto_depIdxs = []int32{
 	6, // 3: types.Rule.parameter_constraints:type_name -> types.ParameterConstraint
 	3, // 4: types.Rule.target:type_name -> types.Target
 	0, // 5: types.Target.target_type:type_name -> types.TargetType
-	7, // 6: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	7, // 6: types.Target.magic_constant:type_name -> types.MagicConstant
+	8, // 7: types.Rule.ConstraintsEntry.value:type_name -> types.Constraint
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_rule_proto_init() }
@@ -417,6 +459,10 @@ func file_rule_proto_init() {
 	}
 	file_constraint_proto_init()
 	file_parameter_constraint_proto_init()
+	file_rule_proto_msgTypes[1].OneofWrappers = []any{
+		(*Target_Address)(nil),
+		(*Target_MagicConstant)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

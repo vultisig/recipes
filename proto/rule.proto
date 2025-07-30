@@ -42,7 +42,10 @@ enum TargetType {
 
 message Target {
   TargetType target_type = 1;
-  string target = 2;
+  oneof target {
+    string address = 2;
+    MagicConstant magic_constant = 3;
+  }
 }
 
 // Effect determines whether a rule allows or denies access
