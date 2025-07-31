@@ -11,7 +11,7 @@ type Address struct {
 	inner common.Address
 }
 
-func NewAddress(raw string) (*Address, error) {
+func NewAddress(raw string) (Compare[common.Address], error) {
 	return &Address{
 		inner: common.HexToAddress(raw),
 	}, nil

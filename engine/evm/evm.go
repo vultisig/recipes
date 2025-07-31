@@ -2,17 +2,16 @@ package evm
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"math/big"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/vultisig/recipes/engine/evm/compare"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
@@ -66,13 +65,29 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 }
 
 func evaluateArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes.Transaction) error {
-	err := assertArg[*big.Int](
+	if resource.FunctionId != "transfer" {
+		return fmt.Errorf(
+			"only transfer function supported for native: symbol=%s, function_id=%s",
+			resource.ProtocolId,
+			resource.FunctionId,
+		)
+	}
+
+	if len(rule.GetParameterConstraints()) != 1 {
+		return fmt.Errorf("expected 1 parameter constraint, got: %d", len(rule.GetParameterConstraints()))
+	}
+
+	err := assertArg(
 		resource.ChainId,
 		rule.GetParameterConstraints(),
 		"amount",
 		tx.Value(),
-		bigIntFromString,
+		compare.NewBigInt,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to assert amount arg (tx value): %w", err)
+	}
+	return nil
 }
 
 func assertTarget(resource *types.ResourcePath, target *types.Target, to *common.Address) error {
@@ -90,6 +105,8 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 				target.GetAddress(),
 			)
 		}
+		return nil
+
 	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
 		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(target.GetMagicConstant())
 		if err != nil {
@@ -122,12 +139,15 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 				resolvedAddr,
 			)
 		}
+		return nil
+
+	default:
+		return fmt.Errorf("unknow target type: %s", targetKind.String())
 	}
-	return fmt.Errorf("unknow target type: %s", targetKind.String())
 }
 
 func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) error {
-	filepath := path.Join("..", "abi", resource.ProtocolId+".json")
+	filepath := path.Join("..", "..", "abi", resource.ProtocolId+".json")
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -153,151 +173,86 @@ func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) 
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
 
+	if len(rule.GetParameterConstraints()) != len(args) {
+		// if some arg not found by name, assertArg returns the error below during assertion,
+		// so there 2 (len check and get later) it's enough to determine that lists are equal
+		return fmt.Errorf(
+			"constraints must be same list as ABI args: constraints_len=%d, abi_args_len=%d",
+			len(rule.GetParameterConstraints()),
+			len(args),
+		)
+	}
+
 	for i, arg := range args {
 		input := method.Inputs[i]
 		switch actual := arg.(type) {
 		case common.Address:
-			er := assertArg[common.Address](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				addrFromString,
-				addrEqual,
-				// 'min' and 'max' should always fail for 'address' type
-				doFalse[common.Address],
-				doFalse[common.Address],
-				addrEqual,
+				compare.NewAddress,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
 			}
 
 		case []common.Address:
-			er := assertArg[[]common.Address](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				func(_expected string) ([]common.Address, error) {
-					var addrs []common.Address
-					for _, s := range strings.Split(_expected, ",") {
-						addrs = append(addrs, common.HexToAddress(s))
-					}
-					return addrs, nil
-				},
-				func(_expected, _actual []common.Address) bool {
-					if len(_expected) != len(_actual) {
-						return false
-					}
-					for _i := range _expected {
-						if !addrEqual(_expected[_i], _actual[_i]) {
-							return false
-						}
-					}
-					return true
-				},
-				// 'min', 'max', 'magic' should always fail for '[]address' type
-				doFalse[[]common.Address],
-				doFalse[[]common.Address],
-				doFalse[[]common.Address],
+				compare.NewAddressSlice,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
 			}
 
 		case *big.Int:
-			er := assertArg[*big.Int](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				bigIntFromString,
-				func(_expected, _actual *big.Int) bool {
-					return _expected.Cmp(_actual) == 0
-				},
-				func(_expected, _actual *big.Int) bool {
-					cmp := _expected.Cmp(_actual)
-					return cmp == -1 || cmp == 0
-				},
-				func(_expected, _actual *big.Int) bool {
-					cmp := _expected.Cmp(_actual)
-					return cmp == 1 || cmp == 0
-				},
-				// 'magic' should always fail for 'big.Int' type
-				doFalse,
+				compare.NewBigInt,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
 			}
 
 		case uint8:
-			er := assertArg[uint8](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				func(_expected string) (uint8, error) {
-					v, er := strconv.ParseUint(_expected, 10, 8)
-					if er != nil {
-						return 0, fmt.Errorf("failed to parse string to uint8: %s", _expected)
-					}
-					return uint8(v), nil
-				},
-				equal,
-				func(_expected, _actual uint8) bool {
-					return _expected <= _actual
-				},
-				func(_expected, _actual uint8) bool {
-					return _expected >= _actual
-				},
-				// 'magic' should always fail for 'uint8' type
-				doFalse,
+				compare.NewUint8,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
 			}
 
 		case bool:
-			er := assertArg[bool](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				strconv.ParseBool,
-				equal,
-				// 'min', 'max', 'magic' should always fail for 'bool' type
-				doFalse[bool],
-				doFalse[bool],
-				doFalse[bool],
+				compare.NewBool,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
 			}
 
 		case [32]byte:
-			er := assertArg[[32]byte](
+			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				func(_expected string) ([32]byte, error) {
-					b, er := base64.StdEncoding.DecodeString(_expected)
-					if er != nil {
-						return [32]byte{}, fmt.Errorf("failed to decode b64 string: %w", er)
-					}
-					if len(b) != 32 {
-						return [32]byte{}, fmt.Errorf("len must be 32, got: %d", len(b))
-					}
-					return [32]byte(b), nil
-				},
-				func(_expected, _actual [32]byte) bool {
-					return bytes.Equal(_expected[:], _actual[:])
-				},
-				// 'min', 'max', 'magic' should always fail for '[32]byte' type
-				doFalse[[32]byte],
-				doFalse[[32]byte],
-				doFalse[[32]byte],
+				compare.NewBytes32,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -310,40 +265,16 @@ func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) 
 	return nil
 }
 
-func doFalse[T any](_, _ T) bool {
-	return false
-}
-
 func addrEqual(a, b common.Address) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
-func addrFromString(hex string) (common.Address, error) {
-	return common.HexToAddress(hex), nil
-}
-
-func bigIntFromString(val string) (*big.Int, error) {
-	v, parseOk := new(big.Int).SetString(val, 10)
-	if !parseOk {
-		return nil, fmt.Errorf("failed to create big int: %s", val)
-	}
-	return v, nil
-}
-
-func equal[T comparable](a, b T) bool {
-	return a == b
-}
-
-func assertArg[expectedT, actualT any](
+func assertArg[T any](
 	chain string,
 	expectedList []*types.ParameterConstraint,
 	expectedName string,
-	actual actualT,
-	makeExpectedFromString func(string) (expectedT, error),
-	assertFixed func(expectedT, actualT) bool,
-	assertMin func(expectedT, actualT) bool,
-	assertMax func(expectedT, actualT) bool,
-	assertMagic func(expectedT, actualT) bool,
+	actual T,
+	makeComparer func(string) (compare.Compare[T], error),
 ) error {
 	const magicAssetIdDefault = "default"
 
@@ -353,53 +284,53 @@ func assertArg[expectedT, actualT any](
 
 			switch kind {
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-				expected, err := makeExpectedFromString(constraint.GetConstraint().GetFixedValue())
+				comparer, err := makeComparer(constraint.GetConstraint().GetFixedValue())
 				if err != nil {
 					return fmt.Errorf(
 						"failed to build exact fixed type from constraint: %s",
-						constraint.GetConstraint().GetValue(),
+						constraint.GetConstraint().GetFixedValue(),
 					)
 				}
-				if assertFixed(expected, actual) {
+				if comparer.Fixed(actual) {
 					return nil
 				}
 				return fmt.Errorf(
 					"failed to compare fixed values: expected=%v, actual=%v",
-					expected,
+					constraint.GetConstraint().GetFixedValue(),
 					actual,
 				)
 
 			case types.ConstraintType_CONSTRAINT_TYPE_MIN:
-				expected, err := makeExpectedFromString(constraint.GetConstraint().GetMinValue())
+				comparer, err := makeComparer(constraint.GetConstraint().GetMinValue())
 				if err != nil {
 					return fmt.Errorf(
 						"failed to build exact min type from constraint: %s",
 						constraint.GetConstraint().GetMinValue(),
 					)
 				}
-				if assertMin(expected, actual) {
+				if comparer.Min(actual) {
 					return nil
 				}
 				return fmt.Errorf(
 					"failed to compare min values: expected=%v, actual=%v",
-					expected,
+					constraint.GetConstraint().GetMinValue(),
 					actual,
 				)
 
 			case types.ConstraintType_CONSTRAINT_TYPE_MAX:
-				expected, err := makeExpectedFromString(constraint.GetConstraint().GetMaxValue())
+				comparer, err := makeComparer(constraint.GetConstraint().GetMaxValue())
 				if err != nil {
 					return fmt.Errorf(
 						"failed to build exact max type from constraint: %s",
 						constraint.GetConstraint().GetMaxValue(),
 					)
 				}
-				if assertMax(expected, actual) {
+				if comparer.Max(actual) {
 					return nil
 				}
 				return fmt.Errorf(
 					"failed to compare max values: expected=%v, actual=%v",
-					expected,
+					constraint.GetConstraint().GetMaxValue(),
 					actual,
 				)
 
@@ -426,19 +357,19 @@ func assertArg[expectedT, actualT any](
 					)
 				}
 
-				expected, err := makeExpectedFromString(resolvedAddr)
+				comparer, err := makeComparer(resolvedAddr)
 				if err != nil {
 					return fmt.Errorf(
 						"failed to build exact type from magic_const: resolved=%s",
 						resolvedAddr,
 					)
 				}
-				if assertMagic(expected, actual) {
+				if comparer.Magic(actual) {
 					return nil
 				}
 				return fmt.Errorf(
 					"failed to compare magic values: expected(resolved magic addr)=%v, actual(in tx)=%v",
-					expected,
+					resolvedAddr,
 					actual,
 				)
 

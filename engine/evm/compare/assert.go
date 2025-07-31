@@ -15,7 +15,7 @@ type Falsy[T any] struct{}
 func (f *Falsy[T]) Fixed(_ T) bool {
 	return false
 }
-func (f *Falsy[T]) Mix(_ T) bool {
+func (f *Falsy[T]) Min(_ T) bool {
 	return false
 }
 func (f *Falsy[T]) Max(_ T) bool {
