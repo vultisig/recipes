@@ -293,7 +293,7 @@ func assertArg[T any](
 	expectedList []*types.ParameterConstraint,
 	expectedName string,
 	actual T,
-	makeComparer func(string) (compare.Compare[T], error),
+	makeComparer compare.Constructor[T],
 ) error {
 	const magicAssetIdDefault = "default"
 
