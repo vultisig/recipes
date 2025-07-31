@@ -1,4 +1,4 @@
-package engine
+package evm
 
 import (
 	"bytes"
@@ -19,15 +19,17 @@ import (
 	"github.com/vultisig/recipes/util"
 )
 
-type evm struct{}
-
-func newEvm() *evm {
-	return &evm{}
+type Evm struct {
+	nativeSymbol string
 }
 
-const magicAssetIdDefault = "default"
+func NewEvm(nativeSymbol string) *Evm {
+	return &Evm{
+		nativeSymbol: strings.ToLower(nativeSymbol),
+	}
+}
 
-func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
+func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules suppoted, got: %s", rule.GetEffect().String())
 	}
@@ -37,7 +39,95 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	filepath := path.Join("..", "abi", r.ProtocolId+".json")
+	txData, err := ethereum.DecodeUnsignedPayload(txBytes)
+	if err != nil {
+		return fmt.Errorf("failed to decode tx payload: %w", err)
+	}
+	tx := etypes.NewTx(txData)
+
+	err = assertTarget(r, rule.GetTarget(), tx.To())
+	if err != nil {
+		return fmt.Errorf("failed to assert target: %w", err)
+	}
+
+	if r.ProtocolId == e.nativeSymbol {
+		er := evaluateArgsNative(r, rule, tx)
+		if er != nil {
+			return fmt.Errorf("failed to Evaluate native: symbol=%s, error=%w", e.nativeSymbol, er)
+		}
+		return nil
+	}
+
+	er := assertArgsAbi(r, rule, tx.Data())
+	if er != nil {
+		return fmt.Errorf("failed to Evaluate ABI: %w", er)
+	}
+	return nil
+}
+
+func evaluateArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes.Transaction) error {
+	err := assertArg[*big.Int](
+		resource.ChainId,
+		rule.GetParameterConstraints(),
+		"amount",
+		tx.Value(),
+		bigIntFromString,
+	)
+}
+
+func assertTarget(resource *types.ResourcePath, target *types.Target, to *common.Address) error {
+	targetKind := target.GetTargetType()
+	switch targetKind {
+	case types.TargetType_TARGET_TYPE_ADDRESS:
+		if to == nil || !addrEqual(*to, common.HexToAddress(target.GetAddress())) {
+			toHex := "nil"
+			if to != nil {
+				toHex = to.Hex()
+			}
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_target_address=%s",
+				toHex,
+				target.GetAddress(),
+			)
+		}
+	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
+		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(target.GetMagicConstant())
+		if err != nil {
+			return fmt.Errorf(
+				"failed to get resolver: magic_const=%s",
+				target.GetMagicConstant().String(),
+			)
+		}
+
+		resolvedAddr, _, err := resolve.Resolve(
+			target.GetMagicConstant(),
+			resource.ChainId,
+			"default",
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to resolve magic const: value=%s, error=%w",
+				target.GetMagicConstant().String(),
+				err,
+			)
+		}
+		if to == nil || !addrEqual(*to, common.HexToAddress(resolvedAddr)) {
+			toHex := "nil"
+			if to != nil {
+				toHex = to.Hex()
+			}
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
+				toHex,
+				resolvedAddr,
+			)
+		}
+	}
+	return fmt.Errorf("unknow target type: %s", targetKind.String())
+}
+
+func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) error {
+	filepath := path.Join("..", "abi", resource.ProtocolId+".json")
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -52,62 +142,13 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse abi json: %w", err)
 	}
 
-	method, ok := a.Methods[r.FunctionId]
+	method, ok := a.Methods[resource.FunctionId]
 	if !ok {
-		return fmt.Errorf("failed to find abi method: %s", r.FunctionId)
-	}
-
-	txData, err := ethereum.DecodeUnsignedPayload(txBytes)
-	if err != nil {
-		return fmt.Errorf("failed to decode tx payload: %w", err)
-	}
-	tx := etypes.NewTx(txData)
-
-	targetKind := rule.GetTarget().GetTargetType()
-	switch targetKind {
-	case types.TargetType_TARGET_TYPE_ADDRESS:
-		if tx.To() == nil || !addrEqual(*tx.To(), common.HexToAddress(rule.GetTarget().GetAddress())) {
-			toHex := "nil"
-			if tx.To() != nil {
-				toHex = tx.To().Hex()
-			}
-			return fmt.Errorf(
-				"tx target is wrong: tx_to=%s, rule_target_address=%s",
-				toHex,
-				rule.GetTarget().GetAddress(),
-			)
-		}
-	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
-		resolve, er := resolver.NewMagicConstantRegistry().GetResolver(rule.GetTarget().GetMagicConstant())
-		if er != nil {
-			return fmt.Errorf(
-				"failed to get resolver: magic_const=%s",
-				rule.GetTarget().GetMagicConstant().String(),
-			)
-		}
-
-		resolvedAddr, _, er := resolve.Resolve(rule.GetTarget().GetMagicConstant(), r.ChainId, "default")
-		if er != nil {
-			return fmt.Errorf(
-				"failed to resolve magic const: %s",
-				rule.GetTarget().GetMagicConstant().String(),
-			)
-		}
-		if tx.To() == nil || !addrEqual(*tx.To(), common.HexToAddress(resolvedAddr)) {
-			toHex := "nil"
-			if tx.To() != nil {
-				toHex = tx.To().Hex()
-			}
-			return fmt.Errorf(
-				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
-				toHex,
-				resolvedAddr,
-			)
-		}
+		return fmt.Errorf("failed to find abi method: %s", resource.FunctionId)
 	}
 
 	const dataOffset = 4
-	args, err := method.Inputs.Unpack(tx.Data()[dataOffset:])
+	args, err := method.Inputs.Unpack(data[dataOffset:])
 	if err != nil {
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
@@ -117,13 +158,11 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 		switch actual := arg.(type) {
 		case common.Address:
 			er := assertArg[common.Address](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				func(_expected string) (common.Address, error) {
-					return common.HexToAddress(_expected), nil
-				},
+				addrFromString,
 				addrEqual,
 				// 'min' and 'max' should always fail for 'address' type
 				doFalse[common.Address],
@@ -136,7 +175,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case []common.Address:
 			er := assertArg[[]common.Address](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -169,25 +208,21 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case *big.Int:
 			er := assertArg[*big.Int](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				func(_expected string) (*big.Int, error) {
-					v, parseOk := new(big.Int).SetString(_expected, 10)
-					if !parseOk {
-						return nil, fmt.Errorf("failed to create big int: %s", _expected)
-					}
-					return v, nil
-				},
+				bigIntFromString,
 				func(_expected, _actual *big.Int) bool {
 					return _expected.Cmp(_actual) == 0
 				},
 				func(_expected, _actual *big.Int) bool {
-					return _expected.Cmp(_actual) == 1
+					cmp := _expected.Cmp(_actual)
+					return cmp == -1 || cmp == 0
 				},
 				func(_expected, _actual *big.Int) bool {
-					return _expected.Cmp(_actual) == -1
+					cmp := _expected.Cmp(_actual)
+					return cmp == 1 || cmp == 0
 				},
 				// 'magic' should always fail for 'big.Int' type
 				doFalse,
@@ -198,7 +233,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case uint8:
 			er := assertArg[uint8](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -225,7 +260,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case bool:
 			er := assertArg[bool](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -242,7 +277,7 @@ func (e *evm) evaluate(rule *types.Rule, txBytes []byte) error {
 
 		case [32]byte:
 			er := assertArg[[32]byte](
-				r.ChainId,
+				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
@@ -283,14 +318,26 @@ func addrEqual(a, b common.Address) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
+func addrFromString(hex string) (common.Address, error) {
+	return common.HexToAddress(hex), nil
+}
+
+func bigIntFromString(val string) (*big.Int, error) {
+	v, parseOk := new(big.Int).SetString(val, 10)
+	if !parseOk {
+		return nil, fmt.Errorf("failed to create big int: %s", val)
+	}
+	return v, nil
+}
+
 func equal[T comparable](a, b T) bool {
 	return a == b
 }
 
 func assertArg[expectedT, actualT any](
 	chain string,
-	constraints []*types.ParameterConstraint,
-	name string,
+	expectedList []*types.ParameterConstraint,
+	expectedName string,
 	actual actualT,
 	makeExpectedFromString func(string) (expectedT, error),
 	assertFixed func(expectedT, actualT) bool,
@@ -298,8 +345,10 @@ func assertArg[expectedT, actualT any](
 	assertMax func(expectedT, actualT) bool,
 	assertMagic func(expectedT, actualT) bool,
 ) error {
-	for _, constraint := range constraints {
-		if constraint.GetParameterName() == name {
+	const magicAssetIdDefault = "default"
+
+	for _, constraint := range expectedList {
+		if constraint.GetParameterName() == expectedName {
 			kind := constraint.GetConstraint().GetType()
 
 			switch kind {
@@ -398,5 +447,5 @@ func assertArg[expectedT, actualT any](
 			}
 		}
 	}
-	return fmt.Errorf("arg not found: %s", name)
+	return fmt.Errorf("arg not found: %s", expectedName)
 }
