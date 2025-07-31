@@ -183,7 +183,7 @@ func (c Chain) NativeSymbol() (string, error) {
 	case Zksync:
 		return "ETH", nil
 	case Dydx:
-		return "ETH", nil
+		return "DYDX", nil
 	case Ton:
 		return "TON", nil
 	case Terra:

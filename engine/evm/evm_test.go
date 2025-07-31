@@ -283,8 +283,8 @@ func TestEvaluate_ERC20Transfer(t *testing.T) {
 						ParameterName: "amount",
 						Constraint: &types.Constraint{
 							Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-							Value: &types.Constraint_MaxValue{
-								MaxValue: "2000000000000000000",
+							Value: &types.Constraint_MinValue{
+								MinValue: "2000000000000000000",
 							},
 							Required: true,
 						},

@@ -30,7 +30,7 @@ func NewEvm(nativeSymbol string) *Evm {
 
 func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
-		return fmt.Errorf("only allow rules suppoted, got: %s", rule.GetEffect().String())
+		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
 
 	r, err := util.ParseResource(rule.GetResource())
@@ -149,7 +149,7 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 		return nil
 
 	default:
-		return fmt.Errorf("unknow target type: %s", targetKind.String())
+		return fmt.Errorf("unknown target type: %s", targetKind.String())
 	}
 }
 
