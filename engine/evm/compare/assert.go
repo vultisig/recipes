@@ -9,7 +9,7 @@ type Compare[expectedT any] interface {
 	Magic(actual expectedT) bool
 }
 
-// Falsy : embed to rewrite only required compare methods, e.g. min/max for address must be false
+// Falsy embed to rewrite only required compare methods: for example, min/max for address must be false
 type Falsy[T any] struct{}
 
 func (f *Falsy[T]) Fixed(_ T) bool {

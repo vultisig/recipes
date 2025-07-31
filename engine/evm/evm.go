@@ -50,13 +50,20 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	if r.ProtocolId == e.nativeSymbol {
-		er := evaluateArgsNative(r, rule, tx)
+		er := assertArgsNative(r, rule, tx)
 		if er != nil {
 			return fmt.Errorf("failed to Evaluate native: symbol=%s, error=%w", e.nativeSymbol, er)
 		}
 		return nil
 	}
 
+	if tx.Value() != nil && tx.Value().Sign() != 0 {
+		return fmt.Errorf(
+			"tx value must be zero for non-native: abi=%s, tx_value=%s",
+			r.ProtocolId,
+			tx.Value().String(),
+		)
+	}
 	er := assertArgsAbi(r, rule, tx.Data())
 	if er != nil {
 		return fmt.Errorf("failed to Evaluate ABI: %w", er)
@@ -64,10 +71,10 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return nil
 }
 
-func evaluateArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes.Transaction) error {
+func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes.Transaction) error {
 	if resource.FunctionId != "transfer" {
 		return fmt.Errorf(
-			"only transfer function supported for native: symbol=%s, function_id=%s",
+			"only 'transfer' function supported for native: symbol=%s, function_id=%s",
 			resource.ProtocolId,
 			resource.FunctionId,
 		)
@@ -186,6 +193,18 @@ func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) 
 	for i, arg := range args {
 		input := method.Inputs[i]
 		switch actual := arg.(type) {
+		case string:
+			er := assertArg(
+				resource.GetChainId(),
+				rule.GetParameterConstraints(),
+				input.Name,
+				actual,
+				compare.NewString,
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert: %w", er)
+			}
+
 		case common.Address:
 			er := assertArg(
 				resource.GetChainId(),
