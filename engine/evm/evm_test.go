@@ -308,7 +308,11 @@ func TestEvaluate_ERC20Transfer(t *testing.T) {
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
 			native, _ := rcommon.Ethereum.NativeSymbol()
-			err := NewEvm(native).Evaluate(tc.rule, txBytes)
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			err = evm.Evaluate(tc.rule, txBytes)
 
 			if tc.shouldError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -583,7 +587,11 @@ func TestEvaluate_NativeTransfer(t *testing.T) {
 		t.Run(fmt.Sprintf("%s %s", label, tc.name), func(t *testing.T) {
 			txBytes := buildUnsignedTx(tc.to, []byte{}, tc.value)
 
-			er := NewEvm(native).Evaluate(tc.rule, txBytes)
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			er := evm.Evaluate(tc.rule, txBytes)
 
 			if tc.shouldError && er == nil {
 				t.Errorf("Expected error but got none")
@@ -706,7 +714,11 @@ func TestEvaluate_UniswapAddressArray(t *testing.T) {
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
 			native, _ := rcommon.Ethereum.NativeSymbol()
-			err := NewEvm(native).Evaluate(tc.rule, txBytes)
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			err = evm.Evaluate(tc.rule, txBytes)
 
 			if tc.shouldError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -903,7 +915,11 @@ func TestEvaluate_UniswapUint8AndBytes32(t *testing.T) {
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
 			native, _ := rcommon.Ethereum.NativeSymbol()
-			err := NewEvm(native).Evaluate(tc.rule, txBytes)
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			err = evm.Evaluate(tc.rule, txBytes)
 
 			if tc.shouldError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -1016,7 +1032,11 @@ func TestEvaluate_ErrorCases(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			er := NewEvm(native).Evaluate(tc.rule, tc.txBytes)
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			er := evm.Evaluate(tc.rule, tc.txBytes)
 
 			if tc.shouldError && er == nil {
 				t.Errorf("Expected error but got none")

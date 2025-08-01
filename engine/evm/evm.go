@@ -20,12 +20,20 @@ import (
 
 type Evm struct {
 	nativeSymbol string
+	abi          map[protocolID]abi.ABI
 }
 
-func NewEvm(nativeSymbol string) *Evm {
+func NewEvm(nativeSymbol string) (*Evm, error) {
+	// fixed: no-one needs to configure a path
+	abis, err := loadAbiDir(path.Join("..", "..", "abi"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load abi dir: %w", err)
+	}
+
 	return &Evm{
 		nativeSymbol: strings.ToLower(nativeSymbol),
-	}
+		abi:          abis,
+	}, nil
 }
 
 func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
@@ -64,7 +72,7 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 			tx.Value().String(),
 		)
 	}
-	er := assertArgsAbi(r, rule, tx.Data())
+	er := e.assertArgsAbi(r, rule, tx.Data())
 	if er != nil {
 		return fmt.Errorf("failed to Evaluate ABI: %w", er)
 	}
@@ -153,20 +161,45 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 	}
 }
 
-func assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) error {
-	filepath := path.Join("..", "..", "abi", resource.ProtocolId+".json")
+type protocolID = string
 
-	file, err := os.Open(filepath)
+func loadAbiDir(dir string) (map[protocolID]abi.ABI, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("failed to open abi json: path=%s, err=%w", filepath, err)
+		return nil, fmt.Errorf("failed to read abi dir: path=%s, err=%w", dir, err)
 	}
-	defer func() {
-		_ = file.Close()
-	}()
 
-	a, err := abi.JSON(file)
-	if err != nil {
-		return fmt.Errorf("failed to parse abi json: %w", err)
+	abis := make(map[string]abi.ABI)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		filepath := path.Join(dir, entry.Name())
+		file, er := os.Open(filepath)
+		if er != nil {
+			return nil, fmt.Errorf("failed to open abi json: path=%s, err=%w", filepath, er)
+		}
+
+		a, er := abi.JSON(file)
+		_ = file.Close()
+		if er != nil {
+			return nil, fmt.Errorf("failed to parse abi json: %w", er)
+		}
+
+		abis[strings.TrimSuffix(entry.Name(), ".json")] = a
+	}
+	return abis, nil
+}
+
+func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data []byte) error {
+	a, ok := e.abi[resource.ProtocolId]
+	if !ok {
+		return fmt.Errorf("failed to get abi: protocolId=%s", resource.ProtocolId)
 	}
 
 	method, ok := a.Methods[resource.FunctionId]
