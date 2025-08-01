@@ -109,6 +109,11 @@ var chainDerivePath = map[Chain]string{
 	Tron:         "m/44'/195'/0'/0/0",
 }
 
+func (c Chain) IsEvm() bool {
+	_, err := c.EvmID()
+	return err == nil
+}
+
 func (c Chain) EvmID() (*big.Int, error) {
 	switch c {
 	case Ethereum:
