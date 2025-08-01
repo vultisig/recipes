@@ -136,6 +136,73 @@ func (c Chain) EvmID() (*big.Int, error) {
 	}
 }
 
+func (c Chain) NativeSymbol() (string, error) {
+	switch c {
+	case THORChain:
+		return "RUNE", nil
+	case Solana:
+		return "SOL", nil
+	case Ethereum:
+		return "ETH", nil
+	case Avalanche:
+		return "AVAX", nil
+	case BscChain:
+		return "BNB", nil
+	case Bitcoin:
+		return "BTC", nil
+	case BitcoinCash:
+		return "BCH", nil
+	case Litecoin:
+		return "LTC", nil
+	case Dogecoin:
+		return "DOGE", nil
+	case GaiaChain:
+		return "ATOM", nil
+	case Kujira:
+		return "KUJI", nil
+	case Dash:
+		return "DASH", nil
+	case MayaChain:
+		return "CACAO", nil
+	case Arbitrum:
+		return "ETH", nil
+	case Base:
+		return "ETH", nil
+	case Optimism:
+		return "ETH", nil
+	case Polygon:
+		return "MATIC", nil
+	case Blast:
+		return "ETH", nil
+	case CronosChain:
+		return "CRO", nil
+	case Sui:
+		return "SUI", nil
+	case Polkadot:
+		return "DOT", nil
+	case Zksync:
+		return "ETH", nil
+	case Dydx:
+		return "DYDX", nil
+	case Ton:
+		return "TON", nil
+	case Terra:
+		return "LUNA", nil
+	case TerraClassic:
+		return "LUNC", nil
+	case XRP:
+		return "XRP", nil
+	case Osmosis:
+		return "OSMO", nil
+	case Noble:
+		return "USDC", nil
+	case Tron:
+		return "TRX", nil
+	default:
+		return "", fmt.Errorf("unsupported chain: %v", c)
+	}
+}
+
 func (c Chain) String() string {
 	if str, ok := chainToString[c]; ok {
 		return str
