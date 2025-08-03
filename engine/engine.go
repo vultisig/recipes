@@ -1,16 +1,16 @@
 package engine
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"google.golang.org/protobuf/types/known/structpb"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Engine struct {
@@ -128,9 +128,13 @@ func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.Re
 }
 
 func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.RecipeSchema) error {
+	emptyJson := []byte("{}")
 	configJson, err := json.Marshal(schema.GetConfiguration())
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
+	}
+	if schema.GetConfiguration() == nil {
+		configJson = emptyJson
 	}
 
 	compiler := jsonschema.NewCompiler()
@@ -148,6 +152,9 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 	if err != nil {
 		return fmt.Errorf("failed to marshal policy: %w", err)
 	}
+	if configurationData == nil {
+		policyJson = emptyJson
+	}
 
 	result := jsonSchema.Validate(policyJson)
 	if !result.IsValid() {
@@ -163,7 +170,6 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 
 	return nil
 }
-
 
 func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern *types.ResourcePattern) error {
 	// Build map of parameter capabilities from schema
