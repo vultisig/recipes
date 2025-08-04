@@ -16,7 +16,6 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// Helper function to build an unsigned transaction
 func buildUnsignedTx(to common.Address, data []byte, value *big.Int) []byte {
 	unsigned := struct {
 		ChainID    *big.Int

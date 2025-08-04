@@ -49,7 +49,7 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			continue
 		}
 
-		if resourcePath.ChainId != chain.String() {
+		if resourcePath.ChainId != strings.ToLower(chain.String()) {
 			e.logger.Printf(
 				"Skipping rule %s: target chain %s is not '%s'",
 				rule.GetId(),

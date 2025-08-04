@@ -7,50 +7,19 @@
     {
       "resource_path": {
         "chain_id": "ethereum",
-        "protocol_id": "eth",
+        "protocol_id": "erc20",
         "function_id": "transfer",
-        "full": "ethereum.eth.transfer"
+        "full": "ethereum.erc20.transfer"
       },
       "parameter_capabilities": [
         {
           "parameter_name": "recipient",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED"
-          ],
+          "supported_types": "CONSTRAINT_TYPE_FIXED",
           "required": true
         },
         {
           "parameter_name": "amount",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX"
-          ],
-          "required": true
-        }
-      ],
-      "required": true
-    },
-    {
-      "resource_path": {
-        "chain_id": "bitcoin",
-        "protocol_id": "btc",
-        "function_id": "transfer",
-        "full": "bitcoin.btc.transfer"
-      },
-      "parameter_capabilities": [
-        {
-          "parameter_name": "recipient",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED"
-          ],
-          "required": true
-        },
-        {
-          "parameter_name": "amount",
-          "supported_types": [
-            "CONSTRAINT_TYPE_FIXED",
-            "CONSTRAINT_TYPE_MAX"
-          ],
+          "supported_types": "CONSTRAINT_TYPE_FIXED",
           "required": true
         }
       ],

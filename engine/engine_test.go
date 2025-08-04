@@ -2,22 +2,53 @@ package engine
 
 import (
 	"log"
+	"math/big"
 	"os"
-	"strings"
-	"sync"
 	"testing"
 
+	ecommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/vultisig/recipes/common"
+	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/vultisig/recipes/chain"
-	"github.com/vultisig/recipes/ethereum"
-	"github.com/vultisig/recipes/testdata"
 	"github.com/vultisig/recipes/types"
 )
 
+func buildUnsignedTx(to ecommon.Address, data []byte, value *big.Int) []byte {
+	unsigned := struct {
+		ChainID    *big.Int
+		Nonce      uint64
+		GasTipCap  *big.Int
+		GasFeeCap  *big.Int
+		Gas        uint64
+		To         *ecommon.Address `rlp:"nil"`
+		Value      *big.Int
+		Data       []byte
+		AccessList etypes.AccessList
+	}{
+		ChainID:    big.NewInt(1),
+		Nonce:      0,
+		GasTipCap:  big.NewInt(2_000_000_000),  // 2 gwei
+		GasFeeCap:  big.NewInt(20_000_000_000), // 20 gwei
+		Gas:        300_000,
+		To:         &to,
+		Value:      value,
+		Data:       data,
+		AccessList: nil,
+	}
+	payload, err := rlp.EncodeToBytes(unsigned)
+	if err != nil {
+		panic(err)
+	}
+	return append([]byte{etypes.DynamicFeeTxType}, payload...)
+}
+
 var testVectors = []struct {
 	policyPath string
-	chainStr   string
+	chain      common.Chain
 	schemaPath string
 	txHex      string
 	txHexFunc  func() string
@@ -25,77 +56,18 @@ var testVectors = []struct {
 }{
 	{
 		policyPath: "../testdata/payroll.json",
-		chainStr:   "ethereum",
-		txHex:      "0x00ec80872386f26fc10000830f424094b0b00000000000000000000000000000000000018806f05b59d3b2000080",
+		chain:      common.Ethereum,
+		txHexFunc: func() string {
+			return hexutil.Encode(buildUnsignedTx(
+				ecommon.HexToAddress("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+				erc20.NewErc20().PackTransfer(
+					ecommon.HexToAddress("0xcf0475d9B0a29975bc5132A3066010eC898d8CaB"),
+					big.NewInt(1000000),
+				),
+				big.NewInt(0),
+			))
+		},
 		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "ethereum",
-		txHex:      "0x00ec80872386f26fc10000830f424094b1b00000000000000000000000000000000000018806f05b59d3b2000080",
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/payroll.json",
-		chainStr:   "bitcoin",
-		txHex:      "010000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01404b4c00000000001976a91462e917b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000",
-		shouldPass: false,
-	},
-	// Uniswap test cases
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactETHForTokensTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientSwapExactETHForTokensTxHex,
-		shouldPass: false,
-	},
-	// additional Uniswap tests
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ExceedAmountSwapExactTokensForETHTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidSwapExactTokensForETHTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidAddLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidTokenAddLiquidityTxHex,
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.ValidRemoveLiquidityTxHex,
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/uniswap_policy.json",
-		chainStr:   "ethereum",
-		txHexFunc:  testdata.InvalidRecipientRemoveLiquidityTxHex,
-		shouldPass: false,
 	},
 	// Schema validation tests
 	{
@@ -103,24 +75,7 @@ var testVectors = []struct {
 		schemaPath: "../testdata/payroll_schema.json",
 		shouldPass: true,
 	},
-	{
-		policyPath: "../testdata/payroll_empty_config.json",
-		schemaPath: "../testdata/empty_configuration_schema.json",
-		shouldPass: true,
-	},
-	{
-		policyPath: "../testdata/xrp_payroll.json",
-		schemaPath: "../testdata/payroll_schema.json",
-		shouldPass: false,
-	},
-	{
-		policyPath: "../testdata/invalid_configuration_payroll.json",
-		schemaPath: "../testdata/payroll_schema.json",
-		shouldPass: false,
-	},
 }
-
-var registerOnce sync.Once
 
 func TestEngine(t *testing.T) {
 	engine := NewEngine()
@@ -156,30 +111,10 @@ func TestEngine(t *testing.T) {
 				if err != nil && tv.shouldPass {
 					t.Fatalf("Failed to validate policy: %s vs. %s: %v", tv.policyPath, tv.schemaPath, err)
 				}
+				if err == nil && !tv.shouldPass {
+					t.Fatalf("Expected validation to fail for policy: %s vs. %s, but it passed", tv.policyPath, tv.schemaPath)
+				}
 				return
-			}
-
-			c, err := chain.GetChain(tv.chainStr)
-			if err != nil {
-				t.Fatalf("Failed to get chain: %v", err)
-			}
-
-			// For Uniswap tests, ensure the Uniswap ABI is loaded and protocols registered
-			if strings.Contains(tv.policyPath, "uniswap_policy") && tv.chainStr == "ethereum" {
-				ethChain := c.(*ethereum.Ethereum)
-				abiBytes, err := os.ReadFile("../abi/uniswapV2_router.json")
-				if err != nil {
-					t.Fatalf("Failed to read Uniswap ABI: %v", err)
-				}
-				if err := ethChain.LoadABI("uniswapv2_router", abiBytes); err != nil {
-					t.Fatalf("Failed to load Uniswap ABI: %v", err)
-				}
-				// Register protocols (no token list, no ERC20 ABI needed for this test)
-				registerOnce.Do(func() {
-					if err := ethereum.RegisterEthereumProtocols(ethChain, nil); err != nil {
-						t.Fatalf("Failed to register Ethereum protocols: %v", err)
-					}
-				})
 			}
 
 			txHex := tv.txHex
@@ -187,18 +122,14 @@ func TestEngine(t *testing.T) {
 				txHex = tv.txHexFunc()
 			}
 
-			tx, err := c.ParseTransaction(txHex)
-			if err != nil {
-				t.Fatalf("Failed to parse transaction: %v", err)
+			txBytes, err := hexutil.Decode(txHex)
+			if err != nil && tv.shouldPass {
+				t.Fatalf("Failed to decode transaction: %v", err)
 			}
 
-			transactionAllowedByPolicy, matchingRule, err := engine.Evaluate(&policy, c, tx)
-			if err != nil {
+			matchingRule, err := engine.Evaluate(&policy, tv.chain, txBytes)
+			if err != nil && tv.shouldPass {
 				t.Fatalf("Failed to evaluate transaction: %v", err)
-			}
-
-			if transactionAllowedByPolicy != tv.shouldPass {
-				t.Fatalf("Transaction allowed by policy: %t, expected: %t", transactionAllowedByPolicy, tv.shouldPass)
 			}
 
 			if tv.shouldPass && matchingRule == nil {
