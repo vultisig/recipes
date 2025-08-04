@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/vultisig/recipes/common"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/vultisig/recipes/chain"
 	"github.com/vultisig/recipes/engine"
 	"github.com/vultisig/recipes/types"
 )
@@ -16,7 +17,7 @@ func main() {
 	policyPath := flag.String("policy", "", "Path to the policy.json file")
 	schemaPath := flag.String("schema", "", "Path to the schema.json file")
 	txHex := flag.String("tx", "", "Hex-encoded transaction string")
-	chainID := flag.String("chain", "ethereum", "Chain ID (e.g., 'ethereum', 'bitcoin')")
+	chainID := flag.Int("chain", 0, "Chain ID int from common.Chain")
 	flag.Parse()
 
 	if *policyPath == "" {
@@ -64,27 +65,15 @@ func main() {
 
 	// 4. Decode and Evaluate transaction (if tx flag given)
 	if *txHex != "" {
-		// Initialise chain
-		selectedChain, err := chain.GetChain(*chainID)
+		txBytes, err := hexutil.Decode(*txHex)
 		if err != nil {
-			log.Fatalf("Failed to get chain %s: %v", *chainID, err)
+			log.Fatalf("Failed to decode transaction hex: %v", err)
 		}
-		log.Printf("Using chain: %s (%s)\n", selectedChain.ID(), selectedChain.Name())
-
-		// Attempt to parse the transaction once, as it's the same for all rules on this chain.
-		decodedTx, err := selectedChain.ParseTransaction(*txHex)
-		if err != nil {
-			log.Fatalf("Failed to parse %s transaction '%s': %v. Cannot proceed.", *chainID, *txHex, err)
-		}
-		log.Printf("Successfully parsed transaction: Hash=%s, From=%s, To=%s, Value=%s\n",
-			decodedTx.Hash(), decodedTx.From(), decodedTx.To(), decodedTx.Value().String())
-
-		transactionAllowedByPolicy, matchingRule, err := eng.Evaluate(&policy, selectedChain, decodedTx)
+		matchingRule, err := eng.Evaluate(&policy, common.Chain(*chainID), txBytes)
 		if err != nil {
 			log.Printf("Failed to evaluate transaction: %v", err)
 		}
 
-		log.Printf("Transaction allowed by policy: %t", transactionAllowedByPolicy)
 		log.Printf("Matching rule: %s", matchingRule.GetId())
 	}
 
