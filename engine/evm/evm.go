@@ -163,7 +163,7 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 type protocolID = string
 
 func loadAbiDir() (map[protocolID]abi.ABI, error) {
-	base := path.Join(".")
+	base := "."
 
 	entries, err := abi_embed.Dir.ReadDir(base)
 	if err != nil {
