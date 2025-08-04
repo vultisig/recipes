@@ -1,14 +1,16 @@
 package engine
 
 import (
-	"fmt"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/vultisig/recipes/common"
+	"github.com/vultisig/recipes/engine/evm"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -197,19 +199,12 @@ func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern 
 		}
 
 		// Check if constraint type is supported
-		constraintType := paramConstraint.GetConstraint().GetType()
-		supported := false
-		for _, supportedType := range paramCap.GetSupportedTypes() {
-			if supportedType == constraintType {
-				supported = true
-				break
-			}
+		if paramCap.GetSupportedTypes() == paramConstraint.GetConstraint().GetType() {
+			continue
 		}
 
-		if !supported {
-			return fmt.Errorf("parameter %s does not support constraint type %s",
-				paramName, constraintType.String())
-		}
+		return fmt.Errorf("parameter %s does not support constraint type %s",
+			paramName, paramConstraint.GetConstraint().GetType())
 	}
 
 	return nil
