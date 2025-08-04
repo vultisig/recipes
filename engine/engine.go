@@ -1,16 +1,14 @@
 package engine
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
+	"encoding/json"
 	"io"
 	"log"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"github.com/vultisig/recipes/common"
-	"github.com/vultisig/recipes/engine/evm"
+	"google.golang.org/protobuf/types/known/structpb"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -138,9 +136,13 @@ func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.Re
 }
 
 func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.RecipeSchema) error {
+	emptyJson := []byte("{}")
 	configJson, err := json.Marshal(schema.GetConfiguration())
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
+	}
+	if schema.GetConfiguration() == nil {
+		configJson = emptyJson
 	}
 
 	compiler := jsonschema.NewCompiler()
@@ -157,6 +159,9 @@ func (e *Engine) validateConfiguration(policy *types.Policy, schema *types.Recip
 	policyJson, err := json.Marshal(configurationData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal policy: %w", err)
+	}
+	if configurationData == nil {
+		policyJson = emptyJson
 	}
 
 	result := jsonSchema.Validate(policyJson)
