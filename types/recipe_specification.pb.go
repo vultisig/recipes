@@ -28,8 +28,6 @@ type RecipeSchema struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Schema version for future compatibility
 	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	// Scheduling specification version this plugin supports
-	ScheduleVersion int32 `protobuf:"varint,2,opt,name=schedule_version,json=scheduleVersion,proto3" json:"schedule_version,omitempty"`
 	// Plugin identification
 	PluginId      string `protobuf:"bytes,3,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
 	PluginName    string `protobuf:"bytes,4,opt,name=plugin_name,json=pluginName,proto3" json:"plugin_name,omitempty"`
@@ -77,13 +75,6 @@ func (*RecipeSchema) Descriptor() ([]byte, []int) {
 func (x *RecipeSchema) GetVersion() int32 {
 	if x != nil {
 		return x.Version
-	}
-	return 0
-}
-
-func (x *RecipeSchema) GetScheduleVersion() int32 {
-	if x != nil {
-		return x.ScheduleVersion
 	}
 	return 0
 }
@@ -138,7 +129,9 @@ type ResourcePattern struct {
 	// What constraint types each parameter of this resource supports
 	ParameterCapabilities []*ParameterConstraintCapability `protobuf:"bytes,2,rep,name=parameter_capabilities,json=parameterCapabilities,proto3" json:"parameter_capabilities,omitempty"`
 	// Whether this resource is required by the plugin
-	Required      bool `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
+	Required bool `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
+	// Tx 'to'
+	Target        TargetType `protobuf:"varint,4,opt,name=target,proto3,enum=types.TargetType" json:"target,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,13 +187,20 @@ func (x *ResourcePattern) GetRequired() bool {
 	return false
 }
 
+func (x *ResourcePattern) GetTarget() TargetType {
+	if x != nil {
+		return x.Target
+	}
+	return TargetType_TARGET_TYPE_UNSPECIFIED
+}
+
 // ParameterConstraintCapability defines what constraint types a parameter supports
 type ParameterConstraintCapability struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Parameter name (e.g., "recipient", "amount")
 	ParameterName string `protobuf:"bytes,1,opt,name=parameter_name,json=parameterName,proto3" json:"parameter_name,omitempty"`
 	// Supported constraint types for this parameter
-	SupportedTypes []ConstraintType `protobuf:"varint,2,rep,packed,name=supported_types,json=supportedTypes,proto3,enum=types.ConstraintType" json:"supported_types,omitempty"`
+	SupportedTypes ConstraintType `protobuf:"varint,2,opt,name=supported_types,json=supportedTypes,proto3,enum=types.ConstraintType" json:"supported_types,omitempty"`
 	// Whether this parameter must be constrained
 	Required      bool `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -244,11 +244,11 @@ func (x *ParameterConstraintCapability) GetParameterName() string {
 	return ""
 }
 
-func (x *ParameterConstraintCapability) GetSupportedTypes() []ConstraintType {
+func (x *ParameterConstraintCapability) GetSupportedTypes() ConstraintType {
 	if x != nil {
 		return x.SupportedTypes
 	}
-	return nil
+	return ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED
 }
 
 func (x *ParameterConstraintCapability) GetRequired() bool {
@@ -317,24 +317,25 @@ var File_recipe_specification_proto protoreflect.FileDescriptor
 
 const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
-	"\x1arecipe_specification.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x0eresource.proto\"\xff\x02\n" +
+	"\x1arecipe_specification.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x0eresource.proto\x1a\n" +
+	"rule.proto\"\xd4\x02\n" +
 	"\fRecipeSchema\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x05R\aversion\x12)\n" +
-	"\x10schedule_version\x18\x02 \x01(\x05R\x0fscheduleVersion\x12\x1b\n" +
+	"\aversion\x18\x01 \x01(\x05R\aversion\x12\x1b\n" +
 	"\tplugin_id\x18\x03 \x01(\tR\bpluginId\x12\x1f\n" +
 	"\vplugin_name\x18\x04 \x01(\tR\n" +
 	"pluginName\x12%\n" +
 	"\x0eplugin_version\x18\x05 \x01(\x05R\rpluginVersion\x12G\n" +
 	"\x13supported_resources\x18\x06 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12=\n" +
 	"\frequirements\x18\b \x01(\v2\x19.types.PluginRequirementsR\frequirements\x12=\n" +
-	"\rconfiguration\x18\t \x01(\v2\x17.google.protobuf.StructR\rconfiguration\"\xc4\x01\n" +
+	"\rconfiguration\x18\t \x01(\v2\x17.google.protobuf.StructR\rconfiguration\"\xef\x01\n" +
 	"\x0fResourcePattern\x128\n" +
 	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
 	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
-	"\brequired\x18\x03 \x01(\bR\brequired\"\xa2\x01\n" +
+	"\brequired\x18\x03 \x01(\bR\brequired\x12)\n" +
+	"\x06target\x18\x04 \x01(\x0e2\x11.types.TargetTypeR\x06target\"\xa2\x01\n" +
 	"\x1dParameterConstraintCapability\x12%\n" +
 	"\x0eparameter_name\x18\x01 \x01(\tR\rparameterName\x12>\n" +
-	"\x0fsupported_types\x18\x02 \x03(\x0e2\x15.types.ConstraintTypeR\x0esupportedTypes\x12\x1a\n" +
+	"\x0fsupported_types\x18\x02 \x01(\x0e2\x15.types.ConstraintTypeR\x0esupportedTypes\x12\x1a\n" +
 	"\brequired\x18\x03 \x01(\bR\brequired\"q\n" +
 	"\x12PluginRequirements\x120\n" +
 	"\x14min_vultisig_version\x18\x01 \x01(\x05R\x12minVultisigVersion\x12)\n" +
@@ -360,7 +361,8 @@ var file_recipe_specification_proto_goTypes = []any{
 	(*PluginRequirements)(nil),            // 3: types.PluginRequirements
 	(*structpb.Struct)(nil),               // 4: google.protobuf.Struct
 	(*ResourcePath)(nil),                  // 5: types.ResourcePath
-	(ConstraintType)(0),                   // 6: types.ConstraintType
+	(TargetType)(0),                       // 6: types.TargetType
+	(ConstraintType)(0),                   // 7: types.ConstraintType
 }
 var file_recipe_specification_proto_depIdxs = []int32{
 	1, // 0: types.RecipeSchema.supported_resources:type_name -> types.ResourcePattern
@@ -368,12 +370,13 @@ var file_recipe_specification_proto_depIdxs = []int32{
 	4, // 2: types.RecipeSchema.configuration:type_name -> google.protobuf.Struct
 	5, // 3: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
 	2, // 4: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
-	6, // 5: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	6, // 5: types.ResourcePattern.target:type_name -> types.TargetType
+	7, // 6: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_recipe_specification_proto_init() }
@@ -383,6 +386,7 @@ func file_recipe_specification_proto_init() {
 	}
 	file_constraint_proto_init()
 	file_resource_proto_init()
+	file_rule_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

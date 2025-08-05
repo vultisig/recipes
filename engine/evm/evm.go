@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
-	"os"
 	"path"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	abi_embed "github.com/vultisig/recipes/abi"
 	"github.com/vultisig/recipes/engine/evm/compare"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/resolver"
@@ -24,8 +24,7 @@ type Evm struct {
 }
 
 func NewEvm(nativeSymbol string) (*Evm, error) {
-	// fixed: no-one needs to configure a path
-	abis, err := loadAbiDir(path.Join("..", "..", "abi"))
+	abis, err := loadAbiDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load abi dir: %w", err)
 	}
@@ -163,10 +162,12 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 
 type protocolID = string
 
-func loadAbiDir(dir string) (map[protocolID]abi.ABI, error) {
-	entries, err := os.ReadDir(dir)
+func loadAbiDir() (map[protocolID]abi.ABI, error) {
+	base := "."
+
+	entries, err := abi_embed.Dir.ReadDir(base)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read abi dir: path=%s, err=%w", dir, err)
+		return nil, fmt.Errorf("failed to read abi dir: err=%w", err)
 	}
 
 	abis := make(map[string]abi.ABI)
@@ -179,8 +180,8 @@ func loadAbiDir(dir string) (map[protocolID]abi.ABI, error) {
 			continue
 		}
 
-		filepath := path.Join(dir, entry.Name())
-		file, er := os.Open(filepath)
+		filepath := path.Join(base, entry.Name())
+		file, er := abi_embed.Dir.Open(filepath)
 		if er != nil {
 			return nil, fmt.Errorf("failed to open abi json: path=%s, err=%w", filepath, er)
 		}
