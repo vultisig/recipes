@@ -295,6 +295,147 @@ func TestEvaluate_ERC20Transfer(t *testing.T) {
 			amount:      big.NewInt(1000000000000000000), // 1 token < 2 minimum
 			shouldError: true,
 		},
+		{
+			name: "Any constraint: any recipient and amount",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb2),
+			amount:      big.NewInt(3000000000000000000),
+			shouldError: false,
+		},
+		{
+			name: "Mixed constraints: any recipient with fixed amount",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "1000000000000000000",
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb2),
+			amount:      big.NewInt(1000000000000000000),
+			shouldError: false,
+		},
+		{
+			name: "Mixed constraints: any recipient with incorrect fixed amount",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "1000000000000000000",
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb2),
+			amount:      big.NewInt(2000000000000000000),
+			shouldError: true,
+		},
+		{
+			name: "Mixed constraints: fixed recipient with any amount",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: dumb1,
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb1),      // Must match fixed value
+			amount:      big.NewInt(5000000000000000000), // Any amount should be accepted
+			shouldError: false,
+		},
 	}
 
 	for _, tc := range testCases {
