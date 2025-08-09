@@ -336,6 +336,9 @@ func assertArg[T any](
 			kind := constraint.GetConstraint().GetType()
 
 			switch kind {
+			case types.ConstraintType_CONSTRAINT_TYPE_ANY:
+				return nil
+
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 				comparer, err := makeComparer(constraint.GetConstraint().GetFixedValue())
 				if err != nil {
