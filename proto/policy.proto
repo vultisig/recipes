@@ -83,3 +83,9 @@ message Policy {
   // set 2 for erc20.approve + erc20.transferFrom
   optional uint32 max_txs_per_window = 12;
 }
+
+message PolicySuggest {
+  optional uint32 rate_limit_window = 1;
+  optional uint32 max_txs_per_window = 2;
+  repeated Rule rules = 3;
+}

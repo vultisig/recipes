@@ -367,6 +367,66 @@ func (x *Policy) GetMaxTxsPerWindow() uint32 {
 	return 0
 }
 
+type PolicySuggest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RateLimitWindow *uint32                `protobuf:"varint,1,opt,name=rate_limit_window,json=rateLimitWindow,proto3,oneof" json:"rate_limit_window,omitempty"`
+	MaxTxsPerWindow *uint32                `protobuf:"varint,2,opt,name=max_txs_per_window,json=maxTxsPerWindow,proto3,oneof" json:"max_txs_per_window,omitempty"`
+	Rules           []*Rule                `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PolicySuggest) Reset() {
+	*x = PolicySuggest{}
+	mi := &file_policy_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PolicySuggest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicySuggest) ProtoMessage() {}
+
+func (x *PolicySuggest) ProtoReflect() protoreflect.Message {
+	mi := &file_policy_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicySuggest.ProtoReflect.Descriptor instead.
+func (*PolicySuggest) Descriptor() ([]byte, []int) {
+	return file_policy_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PolicySuggest) GetRateLimitWindow() uint32 {
+	if x != nil && x.RateLimitWindow != nil {
+		return *x.RateLimitWindow
+	}
+	return 0
+}
+
+func (x *PolicySuggest) GetMaxTxsPerWindow() uint32 {
+	if x != nil && x.MaxTxsPerWindow != nil {
+		return *x.MaxTxsPerWindow
+	}
+	return 0
+}
+
+func (x *PolicySuggest) GetRules() []*Rule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
 var File_policy_proto protoreflect.FileDescriptor
 
 const file_policy_proto_rawDesc = "" +
@@ -398,6 +458,12 @@ const file_policy_proto_rawDesc = "" +
 	"\x11rate_limit_window\x18\v \x01(\rH\x00R\x0frateLimitWindow\x88\x01\x01\x120\n" +
 	"\x12max_txs_per_window\x18\f \x01(\rH\x01R\x0fmaxTxsPerWindow\x88\x01\x01B\x14\n" +
 	"\x12_rate_limit_windowB\x15\n" +
+	"\x13_max_txs_per_window\"\xc2\x01\n" +
+	"\rPolicySuggest\x12/\n" +
+	"\x11rate_limit_window\x18\x01 \x01(\rH\x00R\x0frateLimitWindow\x88\x01\x01\x120\n" +
+	"\x12max_txs_per_window\x18\x02 \x01(\rH\x01R\x0fmaxTxsPerWindow\x88\x01\x01\x12!\n" +
+	"\x05rules\x18\x03 \x03(\v2\v.types.RuleR\x05rulesB\x14\n" +
+	"\x12_rate_limit_windowB\x15\n" +
 	"\x13_max_txs_per_window*M\n" +
 	"\aFeeType\x12\x18\n" +
 	"\x14FEE_TYPE_UNSPECIFIED\x10\x00\x12\r\n" +
@@ -425,30 +491,32 @@ func file_policy_proto_rawDescGZIP() []byte {
 }
 
 var file_policy_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_policy_proto_goTypes = []any{
 	(FeeType)(0),                  // 0: types.FeeType
 	(BillingFrequency)(0),         // 1: types.BillingFrequency
 	(*FeePolicy)(nil),             // 2: types.FeePolicy
 	(*Policy)(nil),                // 3: types.Policy
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
-	(*Rule)(nil),                  // 5: types.Rule
-	(*structpb.Struct)(nil),       // 6: google.protobuf.Struct
+	(*PolicySuggest)(nil),         // 4: types.PolicySuggest
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*Rule)(nil),                  // 6: types.Rule
+	(*structpb.Struct)(nil),       // 7: google.protobuf.Struct
 }
 var file_policy_proto_depIdxs = []int32{
 	0, // 0: types.FeePolicy.type:type_name -> types.FeeType
 	1, // 1: types.FeePolicy.frequency:type_name -> types.BillingFrequency
-	4, // 2: types.FeePolicy.start_date:type_name -> google.protobuf.Timestamp
-	5, // 3: types.Policy.rules:type_name -> types.Rule
-	4, // 4: types.Policy.created_at:type_name -> google.protobuf.Timestamp
-	4, // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
+	5, // 2: types.FeePolicy.start_date:type_name -> google.protobuf.Timestamp
+	6, // 3: types.Policy.rules:type_name -> types.Rule
+	5, // 4: types.Policy.created_at:type_name -> google.protobuf.Timestamp
+	5, // 5: types.Policy.updated_at:type_name -> google.protobuf.Timestamp
 	2, // 6: types.Policy.fee_policies:type_name -> types.FeePolicy
-	6, // 7: types.Policy.configuration:type_name -> google.protobuf.Struct
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	7, // 7: types.Policy.configuration:type_name -> google.protobuf.Struct
+	6, // 8: types.PolicySuggest.rules:type_name -> types.Rule
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_policy_proto_init() }
@@ -458,13 +526,14 @@ func file_policy_proto_init() {
 	}
 	file_rule_proto_init()
 	file_policy_proto_msgTypes[1].OneofWrappers = []any{}
+	file_policy_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_policy_proto_rawDesc), len(file_policy_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
