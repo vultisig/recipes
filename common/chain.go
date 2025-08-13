@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 type Chain int
@@ -74,6 +75,15 @@ var chainToString = map[Chain]string{
 	Osmosis:      "Osmosis",
 	Noble:        "Noble",
 	Tron:         "Tron",
+}
+
+func FromString(str string) (Chain, error) {
+	for key, value := range chainToString {
+		if strings.EqualFold(value, str) {
+			return key, nil
+		}
+	}
+	return Undefined, fmt.Errorf("unsupported chain: %s", str)
 }
 
 var chainDerivePath = map[Chain]string{
