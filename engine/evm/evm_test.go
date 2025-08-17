@@ -10,10 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	rcommon "github.com/vultisig/recipes/common"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"github.com/vultisig/recipes/sdk/evm/codegen/uniswapv2_router"
 	"github.com/vultisig/recipes/types"
+	vgcommon "github.com/vultisig/vultisig-go/common"
 )
 
 func buildUnsignedTx(to common.Address, data []byte, value *big.Int) []byte {
@@ -447,7 +447,7 @@ func TestEvaluate_ERC20Transfer(t *testing.T) {
 			data := erc20.NewErc20().PackTransfer(tc.recipient, tc.amount)
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
-			native, _ := rcommon.Ethereum.NativeSymbol()
+			native, _ := vgcommon.Ethereum.NativeSymbol()
 			evm, err := NewEvm(native)
 			if err != nil {
 				t.Fatalf("Failed to create EVM: %v", err)
@@ -471,7 +471,7 @@ func TestEvaluate_NativeTransfer(t *testing.T) {
 		dumb2              = "0x2222222222222222222222222222222222222222"
 	)
 
-	native, err := rcommon.Ethereum.NativeSymbol()
+	native, err := vgcommon.Ethereum.NativeSymbol()
 	if err != nil {
 		t.Fatalf("Failed to get native symbol: %v", err)
 	}
@@ -853,7 +853,7 @@ func TestEvaluate_UniswapAddressArray(t *testing.T) {
 			)
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
-			native, _ := rcommon.Ethereum.NativeSymbol()
+			native, _ := vgcommon.Ethereum.NativeSymbol()
 			evm, err := NewEvm(native)
 			if err != nil {
 				t.Fatalf("Failed to create EVM: %v", err)
@@ -1054,7 +1054,7 @@ func TestEvaluate_UniswapUint8AndBytes32(t *testing.T) {
 			)
 			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
 
-			native, _ := rcommon.Ethereum.NativeSymbol()
+			native, _ := vgcommon.Ethereum.NativeSymbol()
 			evm, err := NewEvm(native)
 			if err != nil {
 				t.Fatalf("Failed to create EVM: %v", err)
@@ -1076,7 +1076,7 @@ func TestEvaluate_ErrorCases(t *testing.T) {
 		dumb1 = "0x1111111111111111111111111111111111111111"
 	)
 
-	native, err := rcommon.Ethereum.NativeSymbol()
+	native, err := vgcommon.Ethereum.NativeSymbol()
 	if err != nil {
 		t.Fatalf("Failed to get native symbol: %v", err)
 	}

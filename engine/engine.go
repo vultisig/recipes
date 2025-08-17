@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"github.com/vultisig/recipes/common"
 	"github.com/vultisig/recipes/engine/evm"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	"github.com/vultisig/vultisig-go/common"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

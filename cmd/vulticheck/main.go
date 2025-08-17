@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/vultisig/recipes/common"
+	"github.com/vultisig/vultisig-go/common"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/vultisig/recipes/engine"
