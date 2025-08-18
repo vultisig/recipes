@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/vultisig/recipes/common"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
+	"github.com/vultisig/vultisig-go/common"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/vultisig/recipes/types"
