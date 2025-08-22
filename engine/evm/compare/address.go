@@ -4,14 +4,15 @@ import (
 	"bytes"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/vultisig/recipes/engine/compare"
 )
 
 type Address struct {
-	Falsy[common.Address]
+	compare.Falsy[common.Address]
 	inner common.Address
 }
 
-func NewAddress(raw string) (Compare[common.Address], error) {
+func NewAddress(raw string) (compare.Compare[common.Address], error) {
 	return &Address{
 		inner: common.HexToAddress(raw),
 	}, nil
