@@ -15,20 +15,10 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-type Btc struct {
-	rpc UtxoFetcher
-}
+type Btc struct{}
 
-func NewBtc(rpc UtxoFetcher) *Btc {
-	return &Btc{
-		rpc: rpc,
-	}
-}
-
-func NewBtcWithRPC(rpcClient UtxoFetcher) *Btc {
-	return &Btc{
-		rpc: rpcClient,
-	}
+func NewBtc() *Btc {
+	return &Btc{}
 }
 
 func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
@@ -66,39 +56,22 @@ type ioConstraints struct {
 }
 
 func (b *Btc) validateInputsOutputs(rule *types.Rule, tx *wire.MsgTx) error {
-	inputConstraints := make(map[int]*ioConstraints)
 	outputConstraints := make(map[int]*ioConstraints)
 
-	inputCount := 0
-	for _, constraint := range rule.GetParameterConstraints() {
-		name := constraint.GetParameterName()
-		if _, isInput, _, err := b.parseConstraintName(name); err != nil {
-			return err
-		} else if isInput {
-			if index, _, _, _ := b.parseConstraintName(name); index+1 > inputCount {
-				inputCount = index + 1
-			}
-		}
-	}
-
+	// Only process output constraints, ignore input constraints
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
 		if index, isInput, isAddress, err := b.parseConstraintName(name); err != nil {
 			return err
-		} else if isInput {
-			b.setConstraint(inputConstraints, index, constraint, isAddress)
-		} else {
-			outputIndex := index - inputCount
-			b.setConstraint(outputConstraints, outputIndex, constraint, isAddress)
+		} else if !isInput {
+			// Only handle outputs
+			b.setConstraint(outputConstraints, index, constraint, isAddress)
 		}
+		// Skip input constraints completely
 	}
 
-	if err := b.validateConstraintCounts(inputConstraints, outputConstraints, tx); err != nil {
-		return err
-	}
-
-	if err := b.validateInputs(inputConstraints, tx); err != nil {
+	if err := b.validateOutputConstraintCounts(outputConstraints, tx); err != nil {
 		return err
 	}
 
@@ -139,19 +112,9 @@ func (b *Btc) setConstraint(constraints map[int]*ioConstraints, index int, const
 	}
 }
 
-func (b *Btc) validateConstraintCounts(inputConstraints, outputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
-	if len(inputConstraints) != len(tx.TxIn) {
-		return fmt.Errorf("input count mismatch: rule has %d inputs, tx has %d inputs", len(inputConstraints), len(tx.TxIn))
-	}
-
+func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
 	if len(outputConstraints) != len(tx.TxOut) {
 		return fmt.Errorf("output count mismatch: rule has %d outputs, tx has %d outputs", len(outputConstraints), len(tx.TxOut))
-	}
-
-	for i := 0; i < len(tx.TxIn); i += 1 {
-		if constraints, exists := inputConstraints[i]; !exists || constraints.address == nil || constraints.value == nil {
-			return fmt.Errorf("missing address or value constraint for input %d", i)
-		}
 	}
 
 	for i := 0; i < len(tx.TxOut); i++ {
@@ -163,71 +126,7 @@ func (b *Btc) validateConstraintCounts(inputConstraints, outputConstraints map[i
 	return nil
 }
 
-type utxoData struct {
-	Address string
-	Value   int64
-}
-
-func (b *Btc) getUTXOData(txIn *wire.TxIn) (utxoData, error) {
-	_, txOut, err := b.rpc.GetTxOut(&txIn.PreviousOutPoint.Hash, txIn.PreviousOutPoint.Index, true)
-	if err != nil {
-		return utxoData{}, fmt.Errorf("failed to get UTXO data: %w", err)
-	}
-	if txOut == nil {
-		return utxoData{}, fmt.Errorf("UTXO not found or already spent")
-	}
-
-	address, err := b.extractAddressFromScript(txOut.PkScript)
-	if err != nil {
-		return utxoData{}, fmt.Errorf("failed to extract address from UTXO script: %w", err)
-	}
-
-	return utxoData{
-		Address: address,
-		Value:   txOut.Value,
-	}, nil
-}
-
-func (b *Btc) extractAddressFromScript(script []byte) (string, error) {
-	if len(script) == 0 {
-		return "", fmt.Errorf("empty script")
-	}
-
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
-	if err != nil {
-		return "", fmt.Errorf("failed to extract address from script: %w", err)
-	}
-
-	if len(addrs) == 0 {
-		return "", fmt.Errorf("no address found in script")
-	}
-
-	return addrs[0].EncodeAddress(), nil
-}
-
-func (b *Btc) validateInputs(inputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
-	for i, txIn := range tx.TxIn {
-		constraints := inputConstraints[i]
-
-		data, err := b.getUTXOData(txIn)
-		if err != nil {
-			return fmt.Errorf("failed to get UTXO data for input %d: %w", i, err)
-		}
-
-		if constraints.address != nil {
-			if er := validateConstraint(constraints.address, data.Address, compare.NewString); er != nil {
-				return fmt.Errorf("input %d address validation failed: %w", i, er)
-			}
-		}
-
-		if constraints.value != nil {
-			if er := validateConstraint(constraints.value, big.NewInt(data.Value), compare.NewBigInt); er != nil {
-				return fmt.Errorf("input %d value validation failed: %w", i, er)
-			}
-		}
-	}
-	return nil
-}
+// UTXO data structures and input validation functions removed
 
 func (b *Btc) validateOutputs(outputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
 	for i, txOut := range tx.TxOut {
