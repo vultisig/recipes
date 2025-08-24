@@ -58,20 +58,18 @@ type outputConstraints struct {
 func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	outputs := make(map[int]*outputConstraints)
 
-	// Only process output constraints
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
 		if index, isAddress, err := b.parseConstraintName(name); err != nil {
 			return fmt.Errorf("failed to parse constraint name: %w", err)
 		} else {
-			// All constraints are output constraints now
 			b.setConstraint(outputs, index, constraint, isAddress)
 		}
 	}
 
 	if err := b.validateOutputConstraintCounts(outputs, tx); err != nil {
-		return err
+		return fmt.Errorf("failed to validate output constraint counts: %w", err)
 	}
 
 	return b.validateOutputConstraints(outputs, tx)

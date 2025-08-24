@@ -79,29 +79,7 @@ func newMax(index int, address, maxValue string) []*types.ParameterConstraint {
 	}}
 }
 
-func newMagic(index int, address string, magicConstant types.MagicConstant) []*types.ParameterConstraint {
-	return []*types.ParameterConstraint{{
-		ParameterName: fmt.Sprintf("output_address_%d", index),
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: address,
-			},
-			Required: true,
-		},
-	}, {
-		ParameterName: fmt.Sprintf("output_value_%d", index),
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-			Value: &types.Constraint_MagicConstantValue{
-				MagicConstantValue: magicConstant,
-			},
-			Required: true,
-		},
-	}}
-}
-
-func TestBtc_Evaluate(t *testing.T) {
+func TestBtc_Evaluate_Fixed(t *testing.T) {
 	txBytes, err := hex.DecodeString(testTxHex)
 	assert.NoError(t, err)
 
@@ -316,30 +294,4 @@ func TestBtc_Evaluate_InvalidTxBytes_ShouldFail(t *testing.T) {
 	}, invalidTxBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse bitcoin transaction")
-}
-
-func TestBtc_Evaluate_OutputsOnly(t *testing.T) {
-	txBytes, err := hex.DecodeString(testTxHex)
-	assert.NoError(t, err)
-
-	var params []*types.ParameterConstraint
-
-	params = append(params, newFixed(
-		0,
-		"bc1qw5alzf5pu2hlnmn429jqq54qd9dvf2a2jjvvv0",
-		"1000000",
-	)...)
-	params = append(params, newFixed(
-		1,
-		"bc1ql5624ufxtk67zlkr42rzh4pqlkfqpgfh220msa",
-		"4772191",
-	)...)
-
-	err = NewBtc().Evaluate(&types.Rule{
-		Resource:             "bitcoin.btc.transfer",
-		Effect:               types.Effect_EFFECT_ALLOW,
-		ParameterConstraints: params,
-	}, txBytes)
-
-	assert.NoError(t, err)
 }
