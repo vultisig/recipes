@@ -15,10 +15,20 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-type Btc struct{}
+type Btc struct {
+	rpc UtxoFetcher
+}
 
-func NewBtc() *Btc {
-	return &Btc{}
+func NewBtc(rpc UtxoFetcher) *Btc {
+	return &Btc{
+		rpc: rpc,
+	}
+}
+
+func NewBtcWithRPC(rpcClient UtxoFetcher) *Btc {
+	return &Btc{
+		rpc: rpcClient,
+	}
 }
 
 func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
@@ -153,20 +163,67 @@ func (b *Btc) validateConstraintCounts(inputConstraints, outputConstraints map[i
 	return nil
 }
 
+type utxoData struct {
+	Address string
+	Value   int64
+}
+
+func (b *Btc) getUTXOData(txIn *wire.TxIn) (utxoData, error) {
+	_, txOut, err := b.rpc.GetTxOut(&txIn.PreviousOutPoint.Hash, txIn.PreviousOutPoint.Index, true)
+	if err != nil {
+		return utxoData{}, fmt.Errorf("failed to get UTXO data: %w", err)
+	}
+	if txOut == nil {
+		return utxoData{}, fmt.Errorf("UTXO not found or already spent")
+	}
+
+	address, err := b.extractAddressFromScript(txOut.PkScript)
+	if err != nil {
+		return utxoData{}, fmt.Errorf("failed to extract address from UTXO script: %w", err)
+	}
+
+	return utxoData{
+		Address: address,
+		Value:   txOut.Value,
+	}, nil
+}
+
+func (b *Btc) extractAddressFromScript(script []byte) (string, error) {
+	if len(script) == 0 {
+		return "", fmt.Errorf("empty script")
+	}
+
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract address from script: %w", err)
+	}
+
+	if len(addrs) == 0 {
+		return "", fmt.Errorf("no address found in script")
+	}
+
+	return addrs[0].EncodeAddress(), nil
+}
+
 func (b *Btc) validateInputs(inputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
-	for i := range tx.TxIn {
+	for i, txIn := range tx.TxIn {
 		constraints := inputConstraints[i]
-		addressConstraint := constraints.address.GetConstraint().GetFixedValue()
-		if addressConstraint == "" {
-			return fmt.Errorf("input %d address constraint is empty", i)
+
+		data, err := b.getUTXOData(txIn)
+		if err != nil {
+			return fmt.Errorf("failed to get UTXO data for input %d: %w", i, err)
 		}
 
-		valueConstraint := constraints.value.GetConstraint().GetFixedValue()
-		if valueConstraint == "" {
-			return fmt.Errorf("input %d value constraint is empty", i)
+		if constraints.address != nil {
+			if er := validateConstraint(constraints.address, data.Address, compare.NewString); er != nil {
+				return fmt.Errorf("input %d address validation failed: %w", i, er)
+			}
 		}
-		if _, ok := big.NewInt(0).SetString(valueConstraint, 10); !ok {
-			return fmt.Errorf("input %d value constraint is not a valid number: %s", i, valueConstraint)
+
+		if constraints.value != nil {
+			if er := validateConstraint(constraints.value, big.NewInt(data.Value), compare.NewBigInt); er != nil {
+				return fmt.Errorf("input %d value validation failed: %w", i, er)
+			}
 		}
 	}
 	return nil
@@ -183,12 +240,12 @@ func (b *Btc) validateOutputs(outputConstraints map[int]*ioConstraints, tx *wire
 
 		outputAmount := big.NewInt(txOut.Value)
 
-		if err := validateConstraint(constraints.address, outputAddress, compare.NewString); err != nil {
-			return fmt.Errorf("output %d address validation failed: %w", i, err)
+		if er := validateConstraint(constraints.address, outputAddress, compare.NewString); er != nil {
+			return fmt.Errorf("output %d address validation failed: %w", i, er)
 		}
 
-		if err := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); err != nil {
-			return fmt.Errorf("output %d value validation failed: %w", i, err)
+		if er := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); er != nil {
+			return fmt.Errorf("output %d value validation failed: %w", i, er)
 		}
 	}
 	return nil
