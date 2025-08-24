@@ -52,12 +52,24 @@ func (b *Btc) parseTx(txBytes []byte) (*wire.MsgTx, error) {
 
 type ioConstraints struct {
 	address *types.ParameterConstraint
-	amount  *types.ParameterConstraint
+	value   *types.ParameterConstraint
 }
 
 func (b *Btc) validateInputsOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	inputConstraints := make(map[int]*ioConstraints)
 	outputConstraints := make(map[int]*ioConstraints)
+
+	inputCount := 0
+	for _, constraint := range rule.GetParameterConstraints() {
+		name := constraint.GetParameterName()
+		if _, isInput, _, err := b.parseConstraintName(name); err != nil {
+			return err
+		} else if isInput {
+			if index, _, _, _ := b.parseConstraintName(name); index+1 > inputCount {
+				inputCount = index + 1
+			}
+		}
+	}
 
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
@@ -67,7 +79,8 @@ func (b *Btc) validateInputsOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 		} else if isInput {
 			b.setConstraint(inputConstraints, index, constraint, isAddress)
 		} else {
-			b.setConstraint(outputConstraints, index, constraint, isAddress)
+			outputIndex := index - inputCount
+			b.setConstraint(outputConstraints, outputIndex, constraint, isAddress)
 		}
 	}
 
@@ -93,11 +106,11 @@ func (b *Btc) parseConstraintName(name string) (index int, isInput bool, isAddre
 	for prefix, props := range prefixes {
 		if strings.HasPrefix(name, prefix) {
 			indexStr := strings.TrimPrefix(name, prefix)
-			index, err := strconv.Atoi(indexStr)
-			if err != nil {
+			ind, er := strconv.Atoi(indexStr)
+			if er != nil {
 				return 0, false, false, fmt.Errorf("invalid constraint name: %s", name)
 			}
-			return index, props.isInput, props.isAddress, nil
+			return ind, props.isInput, props.isAddress, nil
 		}
 	}
 
@@ -112,7 +125,7 @@ func (b *Btc) setConstraint(constraints map[int]*ioConstraints, index int, const
 	if isAddress {
 		constraints[index].address = constraint
 	} else {
-		constraints[index].amount = constraint
+		constraints[index].value = constraint
 	}
 }
 
@@ -125,15 +138,15 @@ func (b *Btc) validateConstraintCounts(inputConstraints, outputConstraints map[i
 		return fmt.Errorf("output count mismatch: rule has %d outputs, tx has %d outputs", len(outputConstraints), len(tx.TxOut))
 	}
 
-	for i := 0; i < len(tx.TxIn); i++ {
-		if constraints, exists := inputConstraints[i]; !exists || constraints.address == nil || constraints.amount == nil {
-			return fmt.Errorf("missing address or amount constraint for input %d", i)
+	for i := 0; i < len(tx.TxIn); i += 1 {
+		if constraints, exists := inputConstraints[i]; !exists || constraints.address == nil || constraints.value == nil {
+			return fmt.Errorf("missing address or value constraint for input %d", i)
 		}
 	}
 
 	for i := 0; i < len(tx.TxOut); i++ {
-		if constraints, exists := outputConstraints[i]; !exists || constraints.address == nil || constraints.amount == nil {
-			return fmt.Errorf("missing address or amount constraint for output %d", i)
+		if constraints, exists := outputConstraints[i]; !exists || constraints.address == nil || constraints.value == nil {
+			return fmt.Errorf("missing address or value constraint for output %d", i)
 		}
 	}
 
@@ -141,18 +154,19 @@ func (b *Btc) validateConstraintCounts(inputConstraints, outputConstraints map[i
 }
 
 func (b *Btc) validateInputs(inputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
-	for i, txIn := range tx.TxIn {
+	for i := range tx.TxIn {
 		constraints := inputConstraints[i]
-
-		inputAddress := txIn.PreviousOutPoint.Hash.String()
-		inputAmount := big.NewInt(0)
-
-		if err := validateConstraint(constraints.address, inputAddress, compare.NewString); err != nil {
-			return fmt.Errorf("input %d address validation failed: %w", i, err)
+		addressConstraint := constraints.address.GetConstraint().GetFixedValue()
+		if addressConstraint == "" {
+			return fmt.Errorf("input %d address constraint is empty", i)
 		}
 
-		if err := validateConstraint(constraints.amount, inputAmount, compare.NewBigInt); err != nil {
-			return fmt.Errorf("input %d amount validation failed: %w", i, err)
+		valueConstraint := constraints.value.GetConstraint().GetFixedValue()
+		if valueConstraint == "" {
+			return fmt.Errorf("input %d value constraint is empty", i)
+		}
+		if _, ok := big.NewInt(0).SetString(valueConstraint, 10); !ok {
+			return fmt.Errorf("input %d value constraint is not a valid number: %s", i, valueConstraint)
 		}
 	}
 	return nil
@@ -173,8 +187,8 @@ func (b *Btc) validateOutputs(outputConstraints map[int]*ioConstraints, tx *wire
 			return fmt.Errorf("output %d address validation failed: %w", i, err)
 		}
 
-		if err := validateConstraint(constraints.amount, outputAmount, compare.NewBigInt); err != nil {
-			return fmt.Errorf("output %d amount validation failed: %w", i, err)
+		if err := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); err != nil {
+			return fmt.Errorf("output %d value validation failed: %w", i, err)
 		}
 	}
 	return nil
