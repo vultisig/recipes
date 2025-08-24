@@ -85,9 +85,9 @@ func (b *Btc) validateInputsOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 func (b *Btc) parseConstraintName(name string) (index int, isInput bool, isAddress bool, err error) {
 	prefixes := map[string]struct{ isInput, isAddress bool }{
 		"input_address_":  {true, true},
-		"input_amount_":   {true, false},
+		"input_value_":    {true, false},
 		"output_address_": {false, true},
-		"output_amount_":  {false, false},
+		"output_value_":   {false, false},
 	}
 
 	for prefix, props := range prefixes {

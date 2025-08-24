@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -69,10 +70,10 @@ func TestBtc_Evaluate(t *testing.T) {
 		params = append(params, newFixed(arg.label, i, arg.address, arg.value)...)
 	}
 
-	// TODO parse tx bytes from hex testTxHex
-	var txBytes []byte
+	txBytes, err := hex.DecodeString(testTxHex)
+	assert.NoError(t, err)
 
-	err := NewBtc().Evaluate(&types.Rule{
+	err = NewBtc().Evaluate(&types.Rule{
 		Resource:             "bitcoin.btc.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
