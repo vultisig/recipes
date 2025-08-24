@@ -34,8 +34,8 @@ func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse bitcoin transaction: %w", err)
 	}
 
-	if err := b.validateInputsOutputs(rule, tx); err != nil {
-		return fmt.Errorf("failed to validate inputs/outputs: %w", err)
+	if err := b.validateOutputs(rule, tx); err != nil {
+		return fmt.Errorf("failed to validate outputs: %w", err)
 	}
 
 	return nil
@@ -50,59 +50,58 @@ func (b *Btc) parseTx(txBytes []byte) (*wire.MsgTx, error) {
 	return tx, nil
 }
 
-type ioConstraints struct {
+type outputConstraints struct {
 	address *types.ParameterConstraint
 	value   *types.ParameterConstraint
 }
 
-func (b *Btc) validateInputsOutputs(rule *types.Rule, tx *wire.MsgTx) error {
-	outputConstraints := make(map[int]*ioConstraints)
+func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
+	outputs := make(map[int]*outputConstraints)
 
-	// Only process output constraints, ignore input constraints
+	// Only process output constraints
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
-		if index, isInput, isAddress, err := b.parseConstraintName(name); err != nil {
-			return err
-		} else if !isInput {
-			// Only handle outputs
-			b.setConstraint(outputConstraints, index, constraint, isAddress)
+		if index, isAddress, err := b.parseConstraintName(name); err != nil {
+			return fmt.Errorf("failed to parse constraint name: %w", err)
+		} else {
+			// All constraints are output constraints now
+			b.setConstraint(outputs, index, constraint, isAddress)
 		}
-		// Skip input constraints completely
 	}
 
-	if err := b.validateOutputConstraintCounts(outputConstraints, tx); err != nil {
+	if err := b.validateOutputConstraintCounts(outputs, tx); err != nil {
 		return err
 	}
 
-	return b.validateOutputs(outputConstraints, tx)
+	return b.validateOutputConstraints(outputs, tx)
 }
 
-func (b *Btc) parseConstraintName(name string) (index int, isInput bool, isAddress bool, err error) {
-	prefixes := map[string]struct{ isInput, isAddress bool }{
-		"input_address_":  {true, true},
-		"input_value_":    {true, false},
-		"output_address_": {false, true},
-		"output_value_":   {false, false},
-	}
-
-	for prefix, props := range prefixes {
-		if strings.HasPrefix(name, prefix) {
-			indexStr := strings.TrimPrefix(name, prefix)
-			ind, er := strconv.Atoi(indexStr)
-			if er != nil {
-				return 0, false, false, fmt.Errorf("invalid constraint name: %s", name)
-			}
-			return ind, props.isInput, props.isAddress, nil
+func (b *Btc) parseConstraintName(name string) (index int, isAddress bool, err error) {
+	if strings.HasPrefix(name, "output_address_") {
+		indexStr := strings.TrimPrefix(name, "output_address_")
+		ind, er := strconv.Atoi(indexStr)
+		if er != nil {
+			return 0, false, fmt.Errorf("invalid constraint name: %s", name)
 		}
+		return ind, true, nil
 	}
 
-	return 0, false, false, fmt.Errorf("unknown constraint parameter name: %s", name)
+	if strings.HasPrefix(name, "output_value_") {
+		indexStr := strings.TrimPrefix(name, "output_value_")
+		ind, er := strconv.Atoi(indexStr)
+		if er != nil {
+			return 0, false, fmt.Errorf("invalid constraint name: %s", name)
+		}
+		return ind, false, nil
+	}
+
+	return 0, false, fmt.Errorf("unsupported constraint parameter name (only output_* supported): %s", name)
 }
 
-func (b *Btc) setConstraint(constraints map[int]*ioConstraints, index int, constraint *types.ParameterConstraint, isAddress bool) {
+func (b *Btc) setConstraint(constraints map[int]*outputConstraints, index int, constraint *types.ParameterConstraint, isAddress bool) {
 	if constraints[index] == nil {
-		constraints[index] = &ioConstraints{}
+		constraints[index] = &outputConstraints{}
 	}
 
 	if isAddress {
@@ -112,12 +111,12 @@ func (b *Btc) setConstraint(constraints map[int]*ioConstraints, index int, const
 	}
 }
 
-func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
+func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
 	if len(outputConstraints) != len(tx.TxOut) {
 		return fmt.Errorf("output count mismatch: rule has %d outputs, tx has %d outputs", len(outputConstraints), len(tx.TxOut))
 	}
 
-	for i := 0; i < len(tx.TxOut); i++ {
+	for i := 0; i < len(tx.TxOut); i += 1 {
 		if constraints, exists := outputConstraints[i]; !exists || constraints.address == nil || constraints.value == nil {
 			return fmt.Errorf("missing address or value constraint for output %d", i)
 		}
@@ -126,9 +125,7 @@ func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*ioConstr
 	return nil
 }
 
-// UTXO data structures and input validation functions removed
-
-func (b *Btc) validateOutputs(outputConstraints map[int]*ioConstraints, tx *wire.MsgTx) error {
+func (b *Btc) validateOutputConstraints(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
 	for i, txOut := range tx.TxOut {
 		constraints := outputConstraints[i]
 

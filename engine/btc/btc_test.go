@@ -324,7 +324,6 @@ func TestBtc_Evaluate_OutputsOnly(t *testing.T) {
 
 	var params []*types.ParameterConstraint
 
-	// Only outputs
 	params = append(params, newFixed(
 		0,
 		"bc1qw5alzf5pu2hlnmn429jqq54qd9dvf2a2jjvvv0",

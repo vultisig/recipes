@@ -87,7 +87,7 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			return rule, nil
 		}
 
-		if chain == common.Bitcoin {
+		if rule.GetResource() == "bitcoin.btc.transfer" {
 			er := btc.NewBtc().Evaluate(rule, txBytes)
 			if er != nil {
 				e.logger.Printf("Failed to evaluate BTC tx: %s: %v", chain.String(), er)
