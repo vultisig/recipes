@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	abi_embed "github.com/vultisig/recipes/abi"
+	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/engine/evm/compare"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/resolver"
@@ -96,7 +97,7 @@ func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes
 		rule.GetParameterConstraints(),
 		"amount",
 		tx.Value(),
-		compare.NewBigInt,
+		stdcompare.NewBigInt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to assert amount arg (tx value): %w", err)
@@ -233,7 +234,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				compare.NewString,
+				stdcompare.NewString,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -269,7 +270,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				compare.NewBigInt,
+				stdcompare.NewBigInt,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -281,7 +282,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				compare.NewUint8,
+				stdcompare.NewUint8,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -293,7 +294,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				compare.NewBool,
+				stdcompare.NewBool,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -305,7 +306,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 				rule.GetParameterConstraints(),
 				input.Name,
 				actual,
-				compare.NewBytes32,
+				stdcompare.NewBytes32,
 			)
 			if er != nil {
 				return fmt.Errorf("failed to assert: %w", er)
@@ -327,7 +328,7 @@ func assertArg[T any](
 	expectedList []*types.ParameterConstraint,
 	expectedName string,
 	actual T,
-	makeComparer compare.Constructor[T],
+	makeComparer stdcompare.Constructor[T],
 ) error {
 	const magicAssetIdDefault = "default"
 

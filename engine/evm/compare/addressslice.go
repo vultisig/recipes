@@ -5,14 +5,15 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/vultisig/recipes/engine/compare"
 )
 
 type AddressSlice struct {
-	Falsy[[]common.Address]
+	compare.Falsy[[]common.Address]
 	inner []common.Address
 }
 
-func NewAddressSlice(raw string) (Compare[[]common.Address], error) {
+func NewAddressSlice(raw string) (compare.Compare[[]common.Address], error) {
 	var addrs []common.Address
 	for _, s := range strings.Split(raw, ",") {
 		addrs = append(addrs, common.HexToAddress(s))
