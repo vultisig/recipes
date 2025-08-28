@@ -1592,6 +1592,7 @@ Call the cancelOrderRFQ function on routerv5_1inch
 | Name | Type | Description |
 |------|------|-------------|
 | orderInfo | decimal | orderInfo parameter of type uint256 |
+| additionalMask | decimal | additionalMask parameter of type uint256 |
 
 
 **Example Policy Rule:**
@@ -1602,6 +1603,10 @@ Call the cancelOrderRFQ function on routerv5_1inch
   "effect": "ALLOW",
   "constraints": {
     "orderInfo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "additionalMask": {
       "type": "fixed",
       "value": "example_value"
     },
@@ -1624,7 +1629,6 @@ Call the cancelOrderRFQ function on routerv5_1inch
 | Name | Type | Description |
 |------|------|-------------|
 | orderInfo | decimal | orderInfo parameter of type uint256 |
-| additionalMask | decimal | additionalMask parameter of type uint256 |
 
 
 **Example Policy Rule:**
@@ -1635,10 +1639,6 @@ Call the cancelOrderRFQ function on routerv5_1inch
   "effect": "ALLOW",
   "constraints": {
     "orderInfo": {
-      "type": "fixed",
-      "value": "example_value"
-    },
-    "additionalMask": {
       "type": "fixed",
       "value": "example_value"
     },
