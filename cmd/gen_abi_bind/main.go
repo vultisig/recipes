@@ -46,6 +46,11 @@ func main() {
 			outFile = path.Join(outSubfolder, pkgName+".go")
 		)
 
+		fmt.Println("abigen",
+			"--v2",
+			"--abi", abiFile,
+			"--pkg", pkgName,
+			"--out", outFile)
 		output, e := exec.Command(
 			"abigen",
 			"--v2",
