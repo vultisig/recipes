@@ -103,6 +103,12 @@ func registerProtocolValidators() error {
 		return fmt.Errorf("failed to register Uniswap v2 validator: %w", err)
 	}
 
+	// Register Angle Merkl Distributor validator
+	angleMerklDistributorValidator := NewAngleMerklDistributor()
+	if err := GlobalValidatorRegistry.RegisterValidator(angleMerklDistributorValidator.GetProtocolID(), angleMerklDistributorValidator); err != nil {
+		return fmt.Errorf("failed to register Angle Merkl Distributor validator: %w", err)
+	}
+
 	return nil
 }
 
