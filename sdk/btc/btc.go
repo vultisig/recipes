@@ -18,8 +18,6 @@ import (
 // btcd rpcclient interface - methods we use from the client
 type rpcClient interface {
 	SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) (*chainhash.Hash, error)
-	GetBlockCount() (int64, error)
-	Ping() error
 }
 
 // SDK represents the Bitcoin SDK for transaction signing and broadcasting
@@ -41,7 +39,7 @@ func NewSDK(chainID *big.Int, rpcClient rpcClient) *SDK {
 // signatures: Map where key is hash of message that was signed, value is the signature
 func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
 	// Parse PSBT
-	pkt, err := psbt.NewFromRawBytes(bytes.NewReader(psbtBytes), true)
+	pkt, err := psbt.NewFromRawBytes(bytes.NewReader(psbtBytes), false)
 	if err != nil {
 		return nil, fmt.Errorf("parse psbt: %w", err)
 	}
