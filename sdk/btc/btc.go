@@ -2,6 +2,8 @@ package btc
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -39,7 +41,6 @@ func NewSDK(chainID *big.Int, rpcClient rpcClient) *SDK {
 // signatures: Map where key is hash of message that was signed, value is the signature
 func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
 	// Parse PSBT
-	// TODO confirm psbt format
 	pkt, err := psbt.NewFromRawBytes(bytes.NewReader(psbtBytes), true)
 	if err != nil {
 		return nil, fmt.Errorf("parse psbt: %w", err)
@@ -51,20 +52,20 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 
 	for i, input := range pkt.Inputs {
 		var sig *tss.KeysignResponse
-		var messageHash string
 
-		// TODO: Need to calculate the signature hash for this input to find matching signature
-		calculatedHash, err := sdk.calculateInputSignatureHash(pkt, i)
+		// Calculate signature hash for this input
+		sigHash, err := sdk.calculateInputSignatureHash(pkt, i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate signature hash for input %d: %w", i, err)
 		}
 
-		messageHash = hex.EncodeToString(calculatedHash)
+		// Derive key in Signature map
+		derivedKey := sdk.deriveKeyFromMessage(sigHash)
 
-		// Find signature matching this input's message hash
-		sigResponse, exists := signatures[messageHash]
+		// Find signature matching this input's derived key
+		sigResponse, exists := signatures[derivedKey]
 		if !exists {
-			return nil, fmt.Errorf("missing signature for input %d (message hash: %s)", i, messageHash)
+			return nil, fmt.Errorf("missing signature for input %d (derived key: %s)", i, derivedKey)
 		}
 		sig = &sigResponse
 
@@ -117,36 +118,6 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 	return buf.Bytes(), nil
 }
 
-func trim0x(s string) string {
-	if len(s) >= 2 && (s[0:2] == "0x" || s[0:2] == "0X") {
-		return s[2:]
-	}
-	return s
-}
-
-// calculateInputSignatureHash calculates the signature hash for a specific input
-// This should match the logic in verifier.vault package
-func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([]byte, error) {
-	// TODO: Implement signature hash calculation
-	// This needs to match exactly what was sent to TSS
-	// Should follow the same logic as verifier.vault package for building message hash key
-	return nil, fmt.Errorf("signature hash calculation not implemented - need to match verifier.vault logic")
-}
-
-// extractPubkeyForInput extracts the public key for a PSBT input
-func (sdk *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
-	// Look for public key in BIP32 derivation
-	if len(input.Bip32Derivation) > 0 {
-		for _, derivation := range input.Bip32Derivation {
-			if len(derivation.PubKey) == 33 {
-				return derivation.PubKey, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("no public key found in PSBT input")
-}
-
 // Broadcast submits signed transaction to Bitcoin network
 func (sdk *SDK) Broadcast(signedTxBytes []byte) error {
 	if sdk.rpcClient == nil {
@@ -181,4 +152,120 @@ func (sdk *SDK) Send(psbt []byte, signatures map[string]tss.KeysignResponse) err
 	}
 
 	return nil
+}
+
+// deriveKeyFromMessage derives a key from a message hash using the same method as KeysignMessage.Hash
+// Steps: base64 encode message -> SHA256 -> base64 encode result
+func (sdk *SDK) deriveKeyFromMessage(messageHash []byte) string {
+	// 1. Encode message to base64
+	encodedMsg := base64.StdEncoding.EncodeToString(messageHash)
+
+	// 2. Decode from base64
+	decodedMsg, err := base64.StdEncoding.DecodeString(encodedMsg)
+	if err != nil {
+		// This should never happen since we just encoded it
+		return ""
+	}
+
+	// 3. Hash with SHA256
+	hash := sha256.Sum256(decodedMsg)
+
+	// 4. Encode result to base64
+	return base64.StdEncoding.EncodeToString(hash[:])
+}
+
+func trim0x(s string) string {
+	if len(s) >= 2 && (s[0:2] == "0x" || s[0:2] == "0X") {
+		return s[2:]
+	}
+	return s
+}
+
+// calculateInputSignatureHash calculates the signature hash for a specific PSBT input
+func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([]byte, error) {
+	if inputIndex >= len(pkt.Inputs) {
+		return nil, fmt.Errorf("input index %d out of range", inputIndex)
+	}
+
+	input := &pkt.Inputs[inputIndex]
+	tx := pkt.UnsignedTx
+
+	// Get sighash type (default to SIGHASH_ALL)
+	sighashType := input.SighashType
+	if sighashType == 0 {
+		sighashType = txscript.SigHashAll
+	}
+
+	// Check if this is a witness transaction
+	if input.WitnessUtxo != nil {
+		// Witness input (P2WPKH, P2WSH)
+		prevOutput := input.WitnessUtxo
+
+		// Create a simple prevOutput fetcher for NewTxSigHashes
+		prevFetcher := txscript.NewMultiPrevOutFetcher(nil)
+		prevFetcher.AddPrevOut(tx.TxIn[inputIndex].PreviousOutPoint, prevOutput)
+
+		// Create TxSigHashes for caching
+		sigHashes := txscript.NewTxSigHashes(tx, prevFetcher)
+
+		// Determine the signing script
+		var sigScript []byte
+		if input.WitnessScript != nil {
+			sigScript = input.WitnessScript // P2WSH
+		} else if input.RedeemScript != nil {
+			sigScript = input.RedeemScript // P2SH-wrapped segwit
+		} else {
+			// P2WPKH - use the witness UTXO's PkScript
+			sigScript = prevOutput.PkScript
+		}
+
+		return txscript.CalcWitnessSigHash(
+			sigScript,
+			sigHashes,
+			txscript.SigHashType(sighashType),
+			tx,
+			inputIndex,
+			prevOutput.Value,
+		)
+	} else if input.NonWitnessUtxo != nil {
+		// Non-witness input (legacy P2PKH, P2SH)
+		prevTx := input.NonWitnessUtxo
+		outIndex := tx.TxIn[inputIndex].PreviousOutPoint.Index
+		if int(outIndex) >= len(prevTx.TxOut) {
+			return nil, fmt.Errorf("invalid previous output index %d", outIndex)
+		}
+
+		prevOutput := prevTx.TxOut[outIndex]
+
+		// Determine the signing script
+		var sigScript []byte
+		if input.RedeemScript != nil {
+			sigScript = input.RedeemScript // P2SH
+		} else {
+			sigScript = prevOutput.PkScript // P2PKH
+		}
+
+		return txscript.CalcSignatureHash(
+			sigScript,
+			txscript.SigHashType(sighashType),
+			tx,
+			inputIndex,
+		)
+	}
+
+	return nil, fmt.Errorf("input %d missing both witness and non-witness UTXO", inputIndex)
+}
+
+// extractPubkeyForInput extracts the public key for a PSBT input
+func (sdk *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
+	// Look for public key in BIP32 derivation
+	if len(input.Bip32Derivation) > 0 {
+		for _, derivation := range input.Bip32Derivation {
+			if len(derivation.PubKey) == 33 {
+				return derivation.PubKey, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("no public key found in PSBT input")
 }
