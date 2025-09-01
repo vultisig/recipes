@@ -152,23 +152,10 @@ func (sdk *SDK) Send(psbt []byte, signatures map[string]tss.KeysignResponse) err
 	return nil
 }
 
-// deriveKeyFromMessage derives a key from a message hash using the same method as KeysignMessage.Hash
-// Steps: base64 encode message -> SHA256 -> base64 encode result
+// deriveKeyFromMessage derives a key from a message hash
 func (sdk *SDK) deriveKeyFromMessage(messageHash []byte) string {
-	// 1. Encode message to base64
-	encodedMsg := base64.StdEncoding.EncodeToString(messageHash)
+	hash := sha256.Sum256(messageHash)
 
-	// 2. Decode from base64
-	decodedMsg, err := base64.StdEncoding.DecodeString(encodedMsg)
-	if err != nil {
-		// This should never happen since we just encoded it
-		return ""
-	}
-
-	// 3. Hash with SHA256
-	hash := sha256.Sum256(decodedMsg)
-
-	// 4. Encode result to base64
 	return base64.StdEncoding.EncodeToString(hash[:])
 }
 
@@ -256,7 +243,6 @@ func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 
 // extractPubkeyForInput extracts the public key for a PSBT input
 func (sdk *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
-	// Look for public key in BIP32 derivation
 	if len(input.Bip32Derivation) > 0 {
 		for _, derivation := range input.Bip32Derivation {
 			if len(derivation.PubKey) == 33 {
