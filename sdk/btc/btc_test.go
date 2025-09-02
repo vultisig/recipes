@@ -237,22 +237,23 @@ func TestSDK_Sign_WithSignatureHashes(t *testing.T) {
 	}
 	t.Logf("✓ Signatures map created with key: %s", derivedKey)
 
-	// Test signing - should fail at finalization, not before
-	_, err = sdk.Sign(psbtBytes, signatures)
-
-	if err == nil {
-		t.Error("Expected error due to mock signature not being cryptographically valid")
-	} else {
-		errorMsg := err.Error()
-		t.Logf("Error occurred: %v", errorMsg)
-
-		// Check that it's specifically a finalization error
-		if bytes.Contains([]byte(errorMsg), []byte("failed to finalize input")) {
-			t.Logf("✓ CONFIRMED: Error is at finalization stage (expected)")
-		} else {
-			t.Errorf("❌ ERROR: PSBT parsing failed")
-		}
+	// Test signing - should succeed
+	signedTxBytes, err := sdk.Sign(psbtBytes, signatures)
+	if err != nil {
+		t.Fatalf("Signing failed: %v", err)
 	}
+
+	t.Logf("✓ Transaction signed successfully, %d bytes", len(signedTxBytes))
+
+	// Verify the signed transaction can be parsed
+	var signedTx wire.MsgTx
+	err = signedTx.Deserialize(bytes.NewReader(signedTxBytes))
+	if err != nil {
+		t.Fatalf("Failed to parse signed transaction: %v", err)
+	}
+
+	t.Logf("✓ Signed transaction hash: %s", signedTx.TxHash().String())
+	t.Logf("✓ PSBT signing test completed successfully")
 }
 
 func TestSDK_Sign_MissingSignature(t *testing.T) {

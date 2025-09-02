@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/psbt"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
@@ -48,7 +50,8 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 		return nil, fmt.Errorf("PSBT missing unsigned transaction")
 	}
 
-	for i, input := range pkt.Inputs {
+	for i := range pkt.Inputs {
+		input := &pkt.Inputs[i]
 		var sig *tss.KeysignResponse
 
 		// Calculate signature hash for this input
@@ -80,7 +83,7 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 		}
 		fullSig := append(der, byte(sighashType))
 
-		pubkey, err := sdk.extractPubkeyForInput(&input)
+		pubkey, err := sdk.extractPubkeyForInput(input)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract pubkey for input %d: %w", i, err)
 		}
@@ -183,7 +186,6 @@ func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 
 	// Check if this is a witness transaction
 	if input.WitnessUtxo != nil {
-		// Witness input (P2WPKH, P2WSH)
 		prevOutput := input.WitnessUtxo
 
 		// Create a simple prevOutput fetcher for NewTxSigHashes
@@ -193,14 +195,40 @@ func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 		// Create TxSigHashes for caching
 		sigHashes := txscript.NewTxSigHashes(tx, prevFetcher)
 
-		// Determine the signing script
+		// Determine the scriptCode for sighash calculation.
+		// P2WSH: use WitnessScript;
+		// P2SH-P2WPKH: derive P2PKH script from redeem witness program;
+		// native P2WPKH: derive P2PKH script from the witness program.
+		// P2TR: Calculate Taproot signature hash
 		var sigScript []byte
-		if input.WitnessScript != nil {
-			sigScript = input.WitnessScript // P2WSH
-		} else if input.RedeemScript != nil {
-			sigScript = input.RedeemScript // P2SH-wrapped segwit
-		} else {
-			// P2WPKH - use the witness UTXO's PkScript
+		switch {
+		case txscript.IsPayToWitnessScriptHash(prevOutput.PkScript):
+			// P2WSH or P2SH-P2WSH
+			sigScript = input.WitnessScript
+		case txscript.IsPayToWitnessPubKeyHash(prevOutput.PkScript):
+			// Native P2WPKH or P2SH-P2WPKH - create canonical P2PKH script
+			var err error
+			if input.RedeemScript != nil {
+				// P2SH-P2WPKH
+				sigScript, err = createP2PKHScriptFromWitnessProgram(input.RedeemScript)
+			} else {
+				// Native P2WPKH
+				sigScript, err = createP2PKHScriptFromWitnessProgram(prevOutput.PkScript)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("native P2WPKH: %w", err)
+			}
+		case txscript.IsPayToTaproot(prevOutput.PkScript):
+			// P2TR immediate return Taproot SigHash
+			return txscript.CalcTaprootSignatureHash(
+				sigHashes,
+				txscript.SigHashType(sighashType),
+				tx,
+				inputIndex,
+				prevFetcher,
+			)
+		default:
+			// Shouldn't land here for witness inputs, safe fallback.
 			sigScript = prevOutput.PkScript
 		}
 
@@ -239,6 +267,25 @@ func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 	}
 
 	return nil, fmt.Errorf("input %d missing both witness and non-witness UTXO", inputIndex)
+}
+
+// createP2PKHScriptFromWitnessProgram extracts pubkey hash from P2WPKH witness program
+// and creates the canonical P2PKH script for signature hash calculation
+func createP2PKHScriptFromWitnessProgram(witnessProgram []byte) ([]byte, error) {
+	if len(witnessProgram) != 22 || witnessProgram[0] != 0x00 || witnessProgram[1] != 0x14 {
+		return nil, fmt.Errorf("invalid P2WPKH witness program format")
+	}
+
+	// Extract the 20-byte pubkey hash
+	pkh := witnessProgram[2:22]
+
+	// Create P2PKH address and script (use mainnet params for script generation)
+	addr, err := btcutil.NewAddressPubKeyHash(pkh, &chaincfg.MainNetParams)
+	if err != nil {
+		return nil, fmt.Errorf("create P2PKH address: %w", err)
+	}
+
+	return txscript.PayToAddrScript(addr)
 }
 
 // extractPubkeyForInput extracts the public key for a PSBT input
