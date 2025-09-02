@@ -38,6 +38,7 @@ enum TargetType {
   TARGET_TYPE_UNSPECIFIED = 0;
   TARGET_TYPE_ADDRESS = 1;
   TARGET_TYPE_MAGIC_CONSTANT = 2;
+  TARGET_TYPE_WILDCARD = 3;
 }
 
 message Target {
@@ -45,6 +46,7 @@ message Target {
   oneof target {
     string address = 2;
     MagicConstant magic_constant = 3;
+    string wildcard = 4;
   }
 }
 

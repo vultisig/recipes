@@ -155,6 +155,14 @@ func assertTarget(resource *types.ResourcePath, target *types.Target, to *common
 			)
 		}
 		return nil
+	case types.TargetType_TARGET_TYPE_WILDCARD:
+		if resource.FunctionId != "approve" {
+			return fmt.Errorf(
+				"tx target is wrong: wildcard only available for: approve, have: %s",
+				resource.FunctionId,
+			)
+		}
+		return nil
 
 	default:
 		return fmt.Errorf("unknown target type: %s", targetKind.String())
