@@ -27,12 +27,12 @@ const (
 
 // Test transaction values
 const (
-	testPrevTxHash    = "9b1a2f3e4d5c6b7a8f9e1f0b4b4d5b2b4b8d3e0c8050b5b0e3f7650145cd65"
+	testPrevTxHash    = "9b1a2f3e4d5c6b7a8f9e1f0b4b4d5b2b4b8d3e0c8050b5b0e3f7650145cd"
 	testOutputValue   = 6300000 // 0.063 BTC
 	testInputValue    = 1000000 // 0.01 BTC
 	testOutputScript  = "0014abcdefabcdefabcdefabcdefabcdefabcdefabcd"
-	testWitnessScript = "0014fedcbafedcbafedcbafedcbafedcbafedcbafedcb"
-	testBroadcastHash = "9b1a2f3e4d5c6b7a8f9e1f0b4b4d5b2b4b8d3e0c8050b5b0e3f765014f5cd65"
+	testWitnessScript = "0014fedcbafedcbafedcbafedcbafedcbafedcbafedc"
+	testBroadcastHash = "9b1a2f3e4d5c6b7a8f9e1f0b4b4d5b2b4b8d3e0c8050b5b0e3f765014f5cd"
 )
 
 // Mock RPC client for testing
@@ -77,12 +77,18 @@ func createTestPSBT() (*psbt.Packet, error) {
 		Value:    testInputValue,
 		PkScript: []byte{0x00, 0x14}, // P2WPKH prefix
 	}
-	witnessScript, _ := hex.DecodeString(testWitnessScript)
+	witnessScript, err := hex.DecodeString(testWitnessScript)
+	if err != nil {
+		return nil, err
+	}
 	witnessUtxo.PkScript = witnessScript
 	psbtPacket.Inputs[0].WitnessUtxo = witnessUtxo
 
 	// Add BIP32 derivation for the test public key
-	pubKeyBytes, _ := hex.DecodeString(testPubKeyHex)
+	pubKeyBytes, err := hex.DecodeString(testPubKeyHex)
+	if err != nil {
+		return nil, err
+	}
 	derivation := &psbt.Bip32Derivation{
 		PubKey:               pubKeyBytes,
 		MasterKeyFingerprint: 0x12345678,
@@ -97,7 +103,10 @@ func TestSDK_extractPubkeyForInput(t *testing.T) {
 	sdk := &SDK{}
 
 	// Test with valid BIP32 derivation
-	pubKeyBytes, _ := hex.DecodeString(testPubKeyHex)
+	pubKeyBytes, err := hex.DecodeString(testPubKeyHex)
+	if err != nil {
+		t.Fatalf("invalid pubkey hex: %v", err)
+	}
 	derivation := &psbt.Bip32Derivation{
 		PubKey: pubKeyBytes,
 	}
@@ -149,10 +158,12 @@ func TestSDK_calculateInputSignatureHash(t *testing.T) {
 	}
 
 	// Test with input missing UTXO data
-	emptyPSBT, _ := psbt.NewFromUnsignedTx(wire.NewMsgTx(2))
-	emptyPSBT.UnsignedTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(&chainhash.Hash{}, 0), nil, nil))
-	emptyPSBT.Inputs = append(emptyPSBT.Inputs, psbt.PInput{})
-
+	tx := wire.NewMsgTx(2)
+	tx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(&chainhash.Hash{}, 0), nil, nil))
+	emptyPSBT, err := psbt.NewFromUnsignedTx(tx)
+	if err != nil {
+		t.Fatalf("Failed to create empty PSBT: %v", err)
+	}
 	_, err = sdk.calculateInputSignatureHash(emptyPSBT, 0)
 	if err == nil {
 		t.Error("Expected error for input with no UTXO data")
@@ -354,8 +365,14 @@ func TestSignatureApplication(t *testing.T) {
 	}
 
 	// Simulate applying a signature manually (bypass signature hash calculation)
-	pubKey, _ := hex.DecodeString(testPubKeyHex)
-	mockSig, _ := hex.DecodeString(mockDerSignature)
+	pubKey, err := hex.DecodeString(testPubKeyHex)
+	if err != nil {
+		t.Fatalf("invalid pubkey hex: %v", err)
+	}
+	mockSig, err := hex.DecodeString(mockDerSignature)
+	if err != nil {
+		t.Fatalf("invalid DER signature hex: %v", err)
+	}
 	fullSig := append(mockSig, 0x01) // SIGHASH_ALL
 
 	partialSig := &psbt.PartialSig{
