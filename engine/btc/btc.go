@@ -165,12 +165,25 @@ func (b *Btc) validateOutputConstraints(outputConstraints map[int]*outputConstra
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script: 0x6a <data_len> <data>
+			// Extract data from OP_RETURN script: 0x6a <push_opcode> <data>
 			var dataBytes []byte
 			if len(txOut.PkScript) > 2 {
-				dataLen := int(txOut.PkScript[1])
-				if len(txOut.PkScript) >= 2+dataLen {
-					dataBytes = txOut.PkScript[2 : 2+dataLen]
+				// Parse the data portion of the OP_RETURN script
+				dataScript := txOut.PkScript[1:]
+				if len(dataScript) > 0 {
+					// First byte after OP_RETURN is the push opcode or length
+					dataLen := int(dataScript[0])
+					if dataLen <= 75 && len(dataScript) >= 1+dataLen {
+						// Standard push: OP_RETURN <len> <data>
+						dataBytes = dataScript[1 : 1+dataLen]
+					} else if dataLen == 76 && len(dataScript) >= 2 {
+						// OP_PUSHDATA1: OP_RETURN 0x4c <len_byte> <data>
+						actualLen := int(dataScript[1])
+						if len(dataScript) >= 2+actualLen {
+							dataBytes = dataScript[2 : 2+actualLen]
+						}
+					}
+					// OP_PUSHDATA2/4 would be nonstandard in OP_RETURN and can be ignored
 				}
 			}
 
