@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -429,6 +430,22 @@ func assertArg[T any](
 					resolvedAddr,
 					actual,
 				)
+
+			case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
+				strVal := fmt.Sprintf("%v", actual)
+				ok, err := regexp.MatchString(
+					constraint.GetConstraint().GetRegexpValue(),
+					strVal,
+				)
+				if err != nil {
+					return fmt.Errorf("regexp match failed: expected=%v, actual=%v",
+						constraint.GetConstraint().GetRegexpValue(), actual)
+				}
+				if ok {
+					return nil
+				}
+				return fmt.Errorf("regexp value constraint failed: expected=%v, actual=%v",
+					constraint.GetConstraint().GetRegexpValue(), actual)
 
 			default:
 				return fmt.Errorf("unknown constraint type: %s", constraint.GetConstraint().GetType())

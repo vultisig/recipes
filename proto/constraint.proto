@@ -12,6 +12,7 @@ enum ConstraintType {
   CONSTRAINT_TYPE_MIN = 3;
   CONSTRAINT_TYPE_MAGIC_CONSTANT = 4;
   CONSTRAINT_TYPE_ANY = 5;
+  CONSTRAINT_TYPE_REGEXP = 6;
 }
 
 enum MagicConstant {
@@ -30,6 +31,7 @@ message Constraint {
     string max_value = 3;
     string min_value = 4;
     MagicConstant magic_constant_value = 5;
+    string regexp_value = 9;
   }
 
   // Additional metadata for the constraint

@@ -1187,3 +1187,123 @@ func TestEvaluate_ErrorCases(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluate_RegexpConstraints(t *testing.T) {
+	const (
+		usdc  = "0xA0b86a33E6842C040F93B1DE7dd5aEf8E71bcE64"
+		dumb1 = "0x742d35Cc6634C0532925a3b8D9C9d9f8C4669bE5"
+		dumb2 = "0x843d35Cc6634C0532925a3b8D9C9d9f8C4669bE5"
+	)
+
+	testCases := []struct {
+		name        string
+		rule        *types.Rule
+		to          common.Address
+		recipient   common.Address
+		amount      *big.Int
+		shouldError bool
+	}{
+		{
+			name: "Regexp constraint: address pattern match",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+							Value: &types.Constraint_RegexpValue{
+								RegexpValue: "(?i)0x742d.*", // Case-insensitive address pattern
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "1000000000000000000",
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb1), // Matches (?i)0x742d.*
+			amount:      big.NewInt(1000000000000000000),
+			shouldError: false,
+		},
+		{
+			name: "Regexp constraint: address pattern mismatch",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+							Value: &types.Constraint_RegexpValue{
+								RegexpValue: "0x843d.*", // Different address pattern
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "1000000000000000000",
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb1), // Doesnt match 0x843d.*
+			amount:      big.NewInt(1000000000000000000),
+			shouldError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		label := "[positive]"
+		if tc.shouldError {
+			label = "[negative]"
+		}
+		t.Run(fmt.Sprintf("%s %s", label, tc.name), func(t *testing.T) {
+			data := erc20.NewErc20().PackTransfer(tc.recipient, tc.amount)
+			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
+
+			evm, err := NewEvm("ethereum")
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			err = evm.Evaluate(tc.rule, txBytes)
+
+			if tc.shouldError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tc.shouldError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+		})
+	}
+}
