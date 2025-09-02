@@ -3,6 +3,7 @@ package evm
 import (
 	"context"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -101,6 +102,10 @@ func TestSDK_MakeTx_unit(t *testing.T) {
 }
 
 func TestSDK_MakeTx_e2e(t *testing.T) {
+	if os.Getenv("INTEGRATION_TESTS") != "true" {
+		t.Skip("Skipping integration test")
+	}
+
 	const rpcURL = "https://eth.llamarpc.com"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
