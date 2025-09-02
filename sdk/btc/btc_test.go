@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"math/big"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcutil/psbt"
@@ -133,7 +132,7 @@ func TestSDK_extractPubkeyForInput(t *testing.T) {
 }
 
 func TestSDK_calculateInputSignatureHash(t *testing.T) {
-	sdk := &SDK{chainID: big.NewInt(1)}
+	sdk := &SDK{}
 
 	// Create test PSBT with witness input
 	psbtPacket, err := createTestPSBT()
@@ -171,7 +170,7 @@ func TestSDK_calculateInputSignatureHash(t *testing.T) {
 }
 
 func TestSDK_deriveKeyFromMessage(t *testing.T) {
-	sdk := &SDK{chainID: big.NewInt(1)}
+	sdk := &SDK{}
 
 	testMessage := []byte("test message hash")
 	derivedKey := sdk.deriveKeyFromMessage(testMessage)
@@ -202,7 +201,6 @@ func TestSDK_deriveKeyFromMessage(t *testing.T) {
 
 func TestSDK_Sign_WithSignatureHashes(t *testing.T) {
 	sdk := &SDK{
-		chainID:   big.NewInt(1),
 		rpcClient: &mockRPCClient{},
 	}
 
@@ -269,7 +267,6 @@ func TestSDK_Sign_WithSignatureHashes(t *testing.T) {
 
 func TestSDK_Sign_MissingSignature(t *testing.T) {
 	sdk := &SDK{
-		chainID:   big.NewInt(1),
 		rpcClient: &mockRPCClient{},
 	}
 

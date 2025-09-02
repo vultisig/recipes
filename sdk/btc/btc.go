@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/psbt"
@@ -24,14 +23,12 @@ type rpcClient interface {
 
 // SDK represents the Bitcoin SDK for transaction signing and broadcasting
 type SDK struct {
-	chainID   *big.Int
 	rpcClient rpcClient
 }
 
 // NewSDK creates a new Bitcoin SDK instance
-func NewSDK(chainID *big.Int, rpcClient rpcClient) *SDK {
+func NewSDK(rpcClient rpcClient) *SDK {
 	return &SDK{
-		chainID:   chainID,
 		rpcClient: rpcClient,
 	}
 }
