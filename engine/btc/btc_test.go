@@ -1,10 +1,13 @@
 package btc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"testing"
 
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/vultisig/recipes/types"
 )
@@ -294,4 +297,155 @@ func TestBtc_Evaluate_InvalidTxBytes_ShouldFail(t *testing.T) {
 	}, invalidTxBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse bitcoin transaction")
+}
+
+func newRegexp(index int, addressPattern, value string) []*types.ParameterConstraint {
+	return []*types.ParameterConstraint{{
+		ParameterName: fmt.Sprintf("output_address_%d", index),
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+			Value: &types.Constraint_RegexpValue{
+				RegexpValue: addressPattern,
+			},
+			Required: true,
+		},
+	}, {
+		ParameterName: fmt.Sprintf("output_value_%d", index),
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: value,
+			},
+			Required: true,
+		},
+	}}
+}
+
+func TestBtc_Evaluate_RegexpConstraints(t *testing.T) {
+	txBytes, err := hex.DecodeString(testTxHex)
+	assert.NoError(t, err)
+
+	var params []*types.ParameterConstraint
+	params = append(params, newRegexp(
+		0,
+		"bc1q.",
+		"1000000",
+	)...)
+	params = append(params, newRegexp(
+		1,
+		"bc1q.",
+		"4772191",
+	)...)
+
+	err = NewBtc().Evaluate(&types.Rule{
+		Resource:             "bitcoin.btc.transfer",
+		Effect:               types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: params,
+	}, txBytes)
+	assert.NoError(t, err)
+}
+
+func TestBtc_Evaluate_RegexpConstraints_ShouldFail(t *testing.T) {
+	txBytes, err := hex.DecodeString(testTxHex)
+	assert.NoError(t, err)
+
+	var params []*types.ParameterConstraint
+	params = append(params, newRegexp(
+		0,
+		"^1[A-Za-z0-9].*",
+		"1000000",
+	)...)
+	params = append(params, newRegexp(
+		1,
+		"^1[A-Za-z0-9].*",
+		"4772191",
+	)...)
+
+	err = NewBtc().Evaluate(&types.Rule{
+		Resource:             "bitcoin.btc.transfer",
+		Effect:               types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: params,
+	}, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "regexp value constraint failed")
+}
+
+func newDataRegexp(index int, dataPattern string) []*types.ParameterConstraint {
+	return []*types.ParameterConstraint{{
+		ParameterName: fmt.Sprintf("output_data_%d", index),
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+			Value: &types.Constraint_RegexpValue{
+				RegexpValue: dataPattern,
+			},
+			Required: true,
+		},
+	}}
+}
+
+func TestBtc_Evaluate_DataRegexpConstraints(t *testing.T) {
+	txBytes := createOpReturnTransaction(t, "=:e:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0")
+
+	var params []*types.ParameterConstraint
+	params = append(params, newDataRegexp(
+		0,
+		"^=:e:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:.",
+	)...)
+
+	err := NewBtc().Evaluate(&types.Rule{
+		Resource:             "bitcoin.btc.transfer",
+		Effect:               types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: params,
+	}, txBytes)
+	assert.NoError(t, err)
+}
+
+func TestBtc_Evaluate_DataRegexpConstraints_ShouldFail(t *testing.T) {
+	txBytes := createOpReturnTransaction(t, "=:e:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0")
+
+	var params []*types.ParameterConstraint
+	params = append(params, newDataRegexp(
+		0,
+		"^=:e:0x86d526d6624AbC0178cF7296cD538Ecc08088888:.",
+	)...)
+
+	err := NewBtc().Evaluate(&types.Rule{
+		Resource:             "bitcoin.btc.transfer",
+		Effect:               types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: params,
+	}, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "regexp value constraint failed")
+}
+
+func createOpReturnTransaction(t *testing.T, data string) []byte {
+	pkScript, err := txscript.NullDataScript([]byte(data))
+	assert.NoError(t, err)
+
+	tx := &wire.MsgTx{
+		Version: 2,
+		TxIn: []*wire.TxIn{
+			{
+				PreviousOutPoint: wire.OutPoint{
+					Hash:  [32]byte{},
+					Index: 0,
+				},
+				SignatureScript: []byte{},
+				Sequence:        0xffffffff,
+			},
+		},
+		TxOut: []*wire.TxOut{
+			{
+				Value:    0,
+				PkScript: pkScript,
+			},
+		},
+		LockTime: 0,
+	}
+
+	var buf bytes.Buffer
+	err = tx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
+	assert.NoError(t, err)
+
+	return buf.Bytes()
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -53,6 +54,7 @@ func (b *Btc) parseTx(txBytes []byte) (*wire.MsgTx, error) {
 type outputConstraints struct {
 	address *types.ParameterConstraint
 	value   *types.ParameterConstraint
+	data    *types.ParameterConstraint
 }
 
 func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
@@ -61,10 +63,10 @@ func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
-		if index, isAddress, err := b.parseConstraintName(name); err != nil {
+		if index, constraintType, err := b.parseConstraintName(name); err != nil {
 			return fmt.Errorf("failed to parse constraint name: %w", err)
 		} else {
-			b.setConstraint(outputs, index, constraint, isAddress)
+			b.setConstraint(outputs, index, constraint, constraintType)
 		}
 	}
 
@@ -75,37 +77,49 @@ func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	return b.validateOutputConstraints(outputs, tx)
 }
 
-func (b *Btc) parseConstraintName(name string) (index int, isAddress bool, err error) {
+func (b *Btc) parseConstraintName(name string) (index int, constraintType string, err error) {
 	if strings.HasPrefix(name, "output_address_") {
 		indexStr := strings.TrimPrefix(name, "output_address_")
 		ind, er := strconv.Atoi(indexStr)
 		if er != nil {
-			return 0, false, fmt.Errorf("invalid constraint name: %s", name)
+			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
 		}
-		return ind, true, nil
+		return ind, "address", nil
 	}
 
 	if strings.HasPrefix(name, "output_value_") {
 		indexStr := strings.TrimPrefix(name, "output_value_")
 		ind, er := strconv.Atoi(indexStr)
 		if er != nil {
-			return 0, false, fmt.Errorf("invalid constraint name: %s", name)
+			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
 		}
-		return ind, false, nil
+		return ind, "value", nil
 	}
 
-	return 0, false, fmt.Errorf("unsupported constraint parameter name (only output_* supported): %s", name)
+	if strings.HasPrefix(name, "output_data_") {
+		indexStr := strings.TrimPrefix(name, "output_data_")
+		ind, er := strconv.Atoi(indexStr)
+		if er != nil {
+			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
+		}
+		return ind, "data", nil
+	}
+
+	return 0, "", fmt.Errorf("unsupported constraint parameter name (only output_* supported): %s", name)
 }
 
-func (b *Btc) setConstraint(constraints map[int]*outputConstraints, index int, constraint *types.ParameterConstraint, isAddress bool) {
+func (b *Btc) setConstraint(constraints map[int]*outputConstraints, index int, constraint *types.ParameterConstraint, constraintType string) {
 	if constraints[index] == nil {
 		constraints[index] = &outputConstraints{}
 	}
 
-	if isAddress {
+	switch constraintType {
+	case "address":
 		constraints[index].address = constraint
-	} else {
+	case "value":
 		constraints[index].value = constraint
+	case "data":
+		constraints[index].data = constraint
 	}
 }
 
@@ -115,8 +129,26 @@ func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*outputCo
 	}
 
 	for i := 0; i < len(tx.TxOut); i += 1 {
-		if constraints, exists := outputConstraints[i]; !exists || constraints.address == nil || constraints.value == nil {
-			return fmt.Errorf("missing address or value constraint for output %d", i)
+		constraints, exists := outputConstraints[i]
+		if !exists {
+			return fmt.Errorf("missing constraints for output %d", i)
+		}
+
+		// Exclusivity logic: output must be either data OR (address+value), but not both
+		hasData := constraints.data != nil
+		hasAddressValue := constraints.address != nil && constraints.value != nil
+
+		if hasData && hasAddressValue {
+			return fmt.Errorf("output %d cannot have both data and address+value constraints", i)
+		}
+
+		if !hasData && !hasAddressValue {
+			return fmt.Errorf("output %d must have either data constraint or both address and value constraints", i)
+		}
+
+		// If using address+value format, both must be present
+		if !hasData && (constraints.address == nil || constraints.value == nil) {
+			return fmt.Errorf("output %d with non-data format must have both address and value constraints", i)
 		}
 	}
 
@@ -127,19 +159,43 @@ func (b *Btc) validateOutputConstraints(outputConstraints map[int]*outputConstra
 	for i, txOut := range tx.TxOut {
 		constraints := outputConstraints[i]
 
-		outputAddress, err := b.extractAddress(txOut)
-		if err != nil {
-			return fmt.Errorf("failed to extract address from output %d: %w", i, err)
-		}
+		if constraints.data != nil {
+			// Data constraint validation - validate against OP_RETURN data
+			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != 0x6a {
+				return fmt.Errorf("output %d is not an OP_RETURN script", i)
+			}
 
-		outputAmount := big.NewInt(txOut.Value)
+			// Extract data from OP_RETURN script: 0x6a <data_len> <data>
+			var dataBytes []byte
+			if len(txOut.PkScript) > 2 {
+				dataLen := int(txOut.PkScript[1])
+				if len(txOut.PkScript) >= 2+dataLen {
+					dataBytes = txOut.PkScript[2 : 2+dataLen]
+				}
+			}
 
-		if er := validateConstraint(constraints.address, outputAddress, compare.NewString); er != nil {
-			return fmt.Errorf("output %d address validation failed: %w", i, er)
-		}
+			// Use raw bytes as string for regexp matching (ASCII data)
+			dataStr := string(dataBytes)
 
-		if er := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); er != nil {
-			return fmt.Errorf("output %d value validation failed: %w", i, er)
+			if er := validateConstraint(constraints.data, dataStr, compare.NewString); er != nil {
+				return fmt.Errorf("output %d data validation failed: %w", i, er)
+			}
+		} else {
+			// Address+value constraint validation
+			outputAddress, err := b.extractAddress(txOut)
+			if err != nil {
+				return fmt.Errorf("failed to extract address from output %d: %w", i, err)
+			}
+
+			outputAmount := big.NewInt(txOut.Value)
+
+			if er := validateConstraint(constraints.address, outputAddress, compare.NewString); er != nil {
+				return fmt.Errorf("output %d address validation failed: %w", i, er)
+			}
+
+			if er := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); er != nil {
+				return fmt.Errorf("output %d value validation failed: %w", i, er)
+			}
 		}
 	}
 	return nil
@@ -240,6 +296,22 @@ func validateConstraint[T any](
 			resolvedValue,
 			actual,
 		)
+
+	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
+		strVal := fmt.Sprintf("%v", actual)
+		ok, err := regexp.MatchString(
+			constraint.GetConstraint().GetRegexpValue(),
+			strVal,
+		)
+		if err != nil {
+			return fmt.Errorf("regexp match failed: expected=%v, actual=%v",
+				constraint.GetConstraint().GetRegexpValue(), actual)
+		}
+		if ok {
+			return nil
+		}
+		return fmt.Errorf("regexp value constraint failed: expected=%v, actual=%v",
+			constraint.GetConstraint().GetRegexpValue(), actual)
 
 	default:
 		return fmt.Errorf("unknown constraint type: %s", kind.String())
