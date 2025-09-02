@@ -142,7 +142,7 @@ func TestSDK_calculateInputSignatureHash(t *testing.T) {
 	}
 
 	// Test calculateInputSignatureHash for witness input
-	sigHash, err := sdk.calculateInputSignatureHash(psbtPacket, 0)
+	sigHash, err := sdk.CalculateInputSignatureHash(psbtPacket, 0)
 	if err != nil {
 		t.Fatalf("calculateInputSignatureHash failed: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestSDK_calculateInputSignatureHash(t *testing.T) {
 	}
 
 	// Test with invalid input index
-	_, err = sdk.calculateInputSignatureHash(psbtPacket, 1)
+	_, err = sdk.CalculateInputSignatureHash(psbtPacket, 1)
 	if err == nil {
 		t.Error("Expected error for invalid input index")
 	}
@@ -164,7 +164,7 @@ func TestSDK_calculateInputSignatureHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create empty PSBT: %v", err)
 	}
-	_, err = sdk.calculateInputSignatureHash(emptyPSBT, 0)
+	_, err = sdk.CalculateInputSignatureHash(emptyPSBT, 0)
 	if err == nil {
 		t.Error("Expected error for input with no UTXO data")
 	}
@@ -218,7 +218,7 @@ func TestSDK_Sign_WithSignatureHashes(t *testing.T) {
 	}
 
 	// Calculate the signature hash for input 0
-	sigHash, err := sdk.calculateInputSignatureHash(psbtPacket, 0)
+	sigHash, err := sdk.CalculateInputSignatureHash(psbtPacket, 0)
 	if err != nil {
 		t.Fatalf("Failed to calculate signature hash: %v", err)
 	}

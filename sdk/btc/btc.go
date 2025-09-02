@@ -55,7 +55,7 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 		var sig *tss.KeysignResponse
 
 		// Calculate signature hash for this input
-		sigHash, err := sdk.calculateInputSignatureHash(pkt, i)
+		sigHash, err := sdk.CalculateInputSignatureHash(pkt, i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate signature hash for input %d: %w", i, err)
 		}
@@ -170,7 +170,7 @@ func trim0x(s string) string {
 }
 
 // calculateInputSignatureHash calculates the signature hash for a specific PSBT input
-func (sdk *SDK) calculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([]byte, error) {
+func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([]byte, error) {
 	if inputIndex >= len(pkt.Inputs) {
 		return nil, fmt.Errorf("input index %d out of range", inputIndex)
 	}
