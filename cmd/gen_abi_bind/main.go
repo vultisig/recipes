@@ -32,6 +32,10 @@ func main() {
 	}
 
 	for _, entry := range list {
+		if !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
 		noExt := strings.TrimSuffix(entry.Name(), ".json")
 		outSubfolder := path.Join(outPath, strings.ToLower(noExt))
 

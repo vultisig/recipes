@@ -63,10 +63,10 @@ func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
-		if index, constraintType, err := b.parseConstraintName(name); err != nil {
+		if index, constrType, err := b.parseConstraintName(name); err != nil {
 			return fmt.Errorf("failed to parse constraint name: %w", err)
 		} else {
-			b.setConstraint(outputs, index, constraint, constraintType)
+			b.setConstraint(outputs, index, constraint, constrType)
 		}
 	}
 
@@ -77,14 +77,22 @@ func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	return b.validateOutputConstraints(outputs, tx)
 }
 
-func (b *Btc) parseConstraintName(name string) (index int, constraintType string, err error) {
+type constraintType string
+
+const (
+	address constraintType = "address"
+	value   constraintType = "value"
+	data    constraintType = "data"
+)
+
+func (b *Btc) parseConstraintName(name string) (index int, constraintType constraintType, err error) {
 	if strings.HasPrefix(name, "output_address_") {
 		indexStr := strings.TrimPrefix(name, "output_address_")
 		ind, er := strconv.Atoi(indexStr)
 		if er != nil {
 			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
 		}
-		return ind, "address", nil
+		return ind, address, nil
 	}
 
 	if strings.HasPrefix(name, "output_value_") {
@@ -93,7 +101,7 @@ func (b *Btc) parseConstraintName(name string) (index int, constraintType string
 		if er != nil {
 			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
 		}
-		return ind, "value", nil
+		return ind, value, nil
 	}
 
 	if strings.HasPrefix(name, "output_data_") {
@@ -102,23 +110,28 @@ func (b *Btc) parseConstraintName(name string) (index int, constraintType string
 		if er != nil {
 			return 0, "", fmt.Errorf("invalid constraint name: %s", name)
 		}
-		return ind, "data", nil
+		return ind, data, nil
 	}
 
 	return 0, "", fmt.Errorf("unsupported constraint parameter name (only output_* supported): %s", name)
 }
 
-func (b *Btc) setConstraint(constraints map[int]*outputConstraints, index int, constraint *types.ParameterConstraint, constraintType string) {
+func (b *Btc) setConstraint(
+	constraints map[int]*outputConstraints,
+	index int,
+	constraint *types.ParameterConstraint,
+	constraintType constraintType,
+) {
 	if constraints[index] == nil {
 		constraints[index] = &outputConstraints{}
 	}
 
 	switch constraintType {
-	case "address":
+	case address:
 		constraints[index].address = constraint
-	case "value":
+	case value:
 		constraints[index].value = constraint
-	case "data":
+	case data:
 		constraints[index].data = constraint
 	}
 }
