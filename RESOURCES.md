@@ -373,6 +373,392 @@ Transfer Ether to another address
 ```
 
 
+### ethereum.thorchain_router.RUNE
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.RUNE  
+
+Call the RUNE function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.RUNE",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.deposit
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.deposit  
+
+Call the deposit function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.deposit",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.depositWithExpiry
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.depositWithExpiry  
+
+Call the depositWithExpiry function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| expiration | decimal | expiration parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.depositWithExpiry",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "expiration": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.returnVaultAssets
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.returnVaultAssets  
+
+Call the returnVaultAssets function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| router | address | router parameter of type address |
+| asgard | address | asgard parameter of type address payable |
+| coins | array | coins parameter of type struct THORChain_Router.Coin[] |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.returnVaultAssets",
+  "effect": "ALLOW",
+  "constraints": {
+    "router": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asgard": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "coins": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.transferAllowance
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.transferAllowance  
+
+Call the transferAllowance function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| router | address | router parameter of type address |
+| newVault | address | newVault parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.transferAllowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "router": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "newVault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.transferOut
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.transferOut  
+
+Call the transferOut function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | address | to parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.transferOut",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.transferOutAndCall
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.transferOutAndCall  
+
+Call the transferOutAndCall function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| aggregator | address | aggregator parameter of type address payable |
+| finalToken | address | finalToken parameter of type address |
+| to | address | to parameter of type address |
+| amountOutMin | decimal | amountOutMin parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.transferOutAndCall",
+  "effect": "ALLOW",
+  "constraints": {
+    "aggregator": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "finalToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amountOutMin": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.thorchain_router.vaultAllowance
+
+**Chain:** Ethereum  
+**Protocol:** thorchain_router  
+**Function:** thorchain_router.vaultAllowance  
+
+Call the vaultAllowance function on thorchain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address |
+| token | address | token parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.thorchain_router.vaultAllowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.uniswapv2_router.WETH
 
 **Chain:** Ethereum  
