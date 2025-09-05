@@ -17,6 +17,7 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 
 	// Register all resolvers
 	registry.Register(NewDefaultTreasuryResolver())
+	registry.Register(NewTHORChainVaultResolver())
 
 	return registry
 }
