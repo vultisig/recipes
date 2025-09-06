@@ -18,6 +18,7 @@ enum ConstraintType {
 enum MagicConstant {
   UNSPECIFIED = 0;
   VULTISIG_TREASURY = 1;
+  THORCHAIN_VAULT = 2;
 }
 
 // Constraint defines restrictions on a parameter
