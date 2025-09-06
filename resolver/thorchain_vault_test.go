@@ -79,7 +79,7 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 		},
 		{
 			name:    "resolve using uppercase chain",
-			chainID: "BTC",
+			chainID: "bitcoin",
 			assetID: "btc",
 			wantErr: false,
 		},
@@ -171,7 +171,7 @@ func TestTHORChainVaultResolver_UnsupportedChainError(t *testing.T) {
 		return
 	}
 
-	expectedError := "chain polygon is not supported by this resolver"
+	expectedError := "chain Polygon not supported by ThorChain"
 	if !strings.Contains(err.Error(), expectedError) {
 		t.Errorf("Expected error message to contain '%s', got: %s", expectedError, err.Error())
 	}

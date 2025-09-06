@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 type THORChainVaultResolver struct {
@@ -90,29 +91,21 @@ func (r *THORChainVaultResolver) getInboundAddresses() ([]InboundAddress, error)
 
 // findAddressForChain finds the inbound address for a specific chain
 func (r *THORChainVaultResolver) findAddressForChain(addresses []InboundAddress, chainID string) (string, error) {
-	// Normalize chainID to uppercase for comparison (THORChain uses uppercase)
-	normalizedChainID := strings.ToUpper(chainID)
-
-	// Handle common chain ID mappings
-	chainMap := map[string]string{
-		"ETHEREUM":  "ETH",
-		"ETH":       "ETH",
-		"BITCOIN":   "BTC",
-		"BTC":       "BTC",
-		"AVALANCHE": "AVAX",
-		"AVAX":      "AVAX",
-		"BASE":      "BASE",
+	// Convert chainID string to Chain enum
+	chain, err := common.FromString(chainID)
+	if err != nil {
+		return "", fmt.Errorf("unsupported chain: %s", err)
 	}
 
-	if mapped, exists := chainMap[normalizedChainID]; exists {
-		normalizedChainID = mapped
-	} else {
-		return "", fmt.Errorf("chain %s is not supported by this resolver", chainID)
+	// Get ThorChain's native symbol for this chain
+	thorchainSymbol, err := r.getThorChainSymbol(chain)
+	if err != nil {
+		return "", fmt.Errorf("chain %s not supported: %w", chainID, err)
 	}
 
 	// Find the address for the chain
 	for _, addr := range addresses {
-		if strings.ToUpper(addr.Chain) == normalizedChainID {
+		if strings.ToUpper(addr.Chain) == thorchainSymbol {
 			if addr.Halted {
 				return "", fmt.Errorf("inbound address for chain %s is currently halted", chainID)
 			}
@@ -121,4 +114,28 @@ func (r *THORChainVaultResolver) findAddressForChain(addresses []InboundAddress,
 	}
 
 	return "", fmt.Errorf("no inbound address found for chain %s", chainID)
+}
+
+// getThorChainSymbol maps our Chain enum to ThorChain's expected symbols
+func (r *THORChainVaultResolver) getThorChainSymbol(chain common.Chain) (string, error) {
+	switch chain {
+	case common.Bitcoin:
+		return "BTC", nil
+	case common.Ethereum:
+		return "ETH", nil
+	case common.Avalanche:
+		return "AVAX", nil
+	case common.BscChain:
+		return "BSC", nil
+	case common.Base:
+		return "BASE", nil
+	case common.Litecoin:
+		return "LTC", nil
+	case common.Dogecoin:
+		return "DOGE", nil
+	case common.BitcoinCash:
+		return "BCH", nil
+	default:
+		return "", fmt.Errorf("chain %s not supported by ThorChain", chain.String())
+	}
 }
