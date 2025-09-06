@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -151,7 +152,7 @@ func TestTHORChainVaultResolver_UnsupportedConstant(t *testing.T) {
 	}
 
 	expectedError := "THORChainVaultResolver does not support type"
-	if err != nil && len(err.Error()) > 0 && err.Error()[:len(expectedError)] != expectedError {
+	if err != nil && !strings.HasPrefix(err.Error(), expectedError) {
 		t.Errorf("Expected error message to start with '%s', got: %s", expectedError, err.Error())
 	}
 }
@@ -217,7 +218,12 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 			var apiAddress string
 			for _, addr := range apiAddresses {
 				if strings.ToUpper(addr.Chain) == chain.thorchainName {
-					apiAddress = addr.Address
+					// For EVM chains, expect router address if available, otherwise vault address
+					if (chain.chainID == "ethereum" || chain.chainID == "base") && addr.Router != "" {
+						apiAddress = addr.Router
+					} else {
+						apiAddress = addr.Address
+					}
 					break
 				}
 			}
@@ -248,7 +254,8 @@ func queryTHORChainAPIDirect() ([]InboundAddress, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, err
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("thornode inbound_addresses status %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
 
 	body, err := io.ReadAll(resp.Body)

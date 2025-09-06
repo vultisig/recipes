@@ -109,6 +109,11 @@ func (r *THORChainVaultResolver) findAddressForChain(addresses []InboundAddress,
 			if addr.Halted {
 				return "", fmt.Errorf("inbound address for chain %s is currently halted", chainID)
 			}
+			
+			// For EVM chains, use router if available, otherwise use vault address
+			if chain.IsEvm() && addr.Router != "" {
+				return addr.Router, nil
+			}
 			return addr.Address, nil
 		}
 	}
