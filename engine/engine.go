@@ -33,6 +33,7 @@ func (e *Engine) SetLogger(log *log.Logger) {
 }
 
 func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []byte) (*types.Rule, error) {
+	var errs []error
 	for _, rule := range policy.GetRules() {
 		if rule == nil {
 			continue
@@ -79,6 +80,7 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 
 			er = evmEng.Evaluate(rule, txBytes)
 			if er != nil {
+				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
 				e.logger.Printf("Failed to evaluate EVM tx: %s: %v", chain.String(), er)
 				continue
 			}
@@ -90,6 +92,7 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 		if rule.GetResource() == "bitcoin.btc.transfer" {
 			er := btc.NewBtc().Evaluate(rule, txBytes)
 			if er != nil {
+				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
 				e.logger.Printf("Failed to evaluate BTC tx: %s: %v", chain.String(), er)
 				continue
 			}
@@ -98,8 +101,15 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			return rule, nil
 		}
 	}
+	if len(errs) == 0 {
+		return nil, errors.New("no matching rule")
+	}
 
-	return nil, errors.New("no matching rule")
+	var errStrs []string
+	for _, err := range errs {
+		errStrs = append(errStrs, err.Error())
+	}
+	return nil, fmt.Errorf("failed to evaluate tx: %s", strings.Join(errStrs, " "))
 }
 
 func (e *Engine) ValidatePolicyWithSchema(policy *types.Policy, schema *types.RecipeSchema) error {
