@@ -88,6 +88,7 @@ type MagicConstant int32
 const (
 	MagicConstant_UNSPECIFIED       MagicConstant = 0
 	MagicConstant_VULTISIG_TREASURY MagicConstant = 1
+	MagicConstant_THORCHAIN_VAULT   MagicConstant = 2
 )
 
 // Enum value maps for MagicConstant.
@@ -95,10 +96,12 @@ var (
 	MagicConstant_name = map[int32]string{
 		0: "UNSPECIFIED",
 		1: "VULTISIG_TREASURY",
+		2: "THORCHAIN_VAULT",
 	}
 	MagicConstant_value = map[string]int32{
 		"UNSPECIFIED":       0,
 		"VULTISIG_TREASURY": 1,
+		"THORCHAIN_VAULT":   2,
 	}
 )
 
@@ -321,10 +324,11 @@ const file_constraint_proto_rawDesc = "" +
 	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\"\n" +
 	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\x04\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_ANY\x10\x05\x12\x1a\n" +
-	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*7\n" +
+	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*L\n" +
 	"\rMagicConstant\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
-	"\x11VULTISIG_TREASURY\x10\x01B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x11VULTISIG_TREASURY\x10\x01\x12\x13\n" +
+	"\x0fTHORCHAIN_VAULT\x10\x02B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once
