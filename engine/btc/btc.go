@@ -26,7 +26,7 @@ func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
-	if rule.GetTarget() != nil {
+	if rule.GetTarget().GetTargetType() != types.TargetType_TARGET_TYPE_UNSPECIFIED {
 		return fmt.Errorf("target must be nil for BTC, got: %s", rule.GetTarget().String())
 	}
 
