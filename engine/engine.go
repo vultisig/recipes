@@ -11,6 +11,7 @@ import (
 	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
+	"github.com/vultisig/recipes/engine/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -65,7 +66,8 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 		e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
 			resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
 
-		if chain.IsEvm() {
+		switch {
+		case chain.IsEvm():
 			nativeSymbol, er := chain.NativeSymbol()
 			if er != nil {
 				e.logger.Printf("Error getting native symbol for chain: %s: %v", chain.String(), er)
@@ -87,9 +89,8 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 
 			e.logger.Printf("EVM tx validated: %s", chain.String())
 			return rule, nil
-		}
 
-		if rule.GetResource() == "bitcoin.btc.transfer" {
+		case rule.GetResource() == "bitcoin.btc.transfer":
 			er := btc.NewBtc().Evaluate(rule, txBytes)
 			if er != nil {
 				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
@@ -98,6 +99,29 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			}
 
 			e.logger.Printf("BTC tx validated: %s", chain.String())
+			return rule, nil
+
+		case chain == common.Solana:
+			nativeSymbol, er := chain.NativeSymbol()
+			if er != nil {
+				e.logger.Printf("Error getting native symbol for chain: %s: %v", chain.String(), er)
+				continue
+			}
+
+			solanaEng, er := solana.NewSolana(nativeSymbol)
+			if er != nil {
+				e.logger.Printf("Failed to create Solana engine: %s: %v", chain.String(), er)
+				continue
+			}
+
+			er = solanaEng.Evaluate(rule, txBytes)
+			if er != nil {
+				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
+				e.logger.Printf("Failed to evaluate Solana tx: %s: %v", chain.String(), er)
+				continue
+			}
+
+			e.logger.Printf("Solana tx validated: %s", chain.String())
 			return rule, nil
 		}
 	}
