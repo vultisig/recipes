@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
@@ -17,13 +18,15 @@ type ChainEngine interface {
 
 // ChainEngineRegistry manages chain-specific engines
 type ChainEngineRegistry struct {
-	engines []ChainEngine
+	engines    []ChainEngine
+	evmEngines map[string]ChainEngine
 }
 
 // NewChainEngineRegistry creates a new engine registry with all engines registered
 func NewChainEngineRegistry() *ChainEngineRegistry {
 	registry := &ChainEngineRegistry{
-		engines: make([]ChainEngine, 0),
+		engines:    make([]ChainEngine, 0),
+		evmEngines: make(map[string]ChainEngine),
 	}
 
 	// Register non-EVM engines (EVM engines are created on-demand in GetEngine)
@@ -49,11 +52,15 @@ func (r *ChainEngineRegistry) GetEngine(chain common.Chain) (ChainEngine, error)
 			return nil, fmt.Errorf("failed to get native symbol for %s: %w", chain.String(), err)
 		}
 
-		evmEngine, err := evm.NewEvm(nativeSymbol)
+		key := strings.ToLower(nativeSymbol)
+		if eng, ok := r.evmEngines[key]; ok {
+			return eng, nil
+		}
+		evmEngine, err := evm.NewEvm(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create EVM engine for %s: %w", chain.String(), err)
 		}
-
+		r.evmEngines[key] = evmEngine
 		return evmEngine, nil
 	}
 
