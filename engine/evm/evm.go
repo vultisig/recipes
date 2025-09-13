@@ -18,6 +18,7 @@ import (
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	vultisigcommon "github.com/vultisig/vultisig-go/common"
 )
 
 type Evm struct {
@@ -35,6 +36,13 @@ func NewEvm(nativeSymbol string) (*Evm, error) {
 		nativeSymbol: strings.ToLower(nativeSymbol),
 		abi:          abis,
 	}, nil
+}
+
+// Supports returns true if this engine supports the given chain (all EVM chains)
+func (e *Evm) Supports(chain vultisigcommon.Chain) bool {
+	nativeSymbol, _ := chain.NativeSymbol()
+
+	return chain.IsEvm() && e.nativeSymbol == strings.ToLower(nativeSymbol)
 }
 
 func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
