@@ -1,8 +1,28 @@
 package xrpl
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"regexp"
+	"strings"
+
 	"github.com/vultisig/recipes/types"
+	xrpgo "github.com/xyield/xrpl-go/binary-codec"
+	"github.com/xyield/xrpl-go/model/transactions"
 )
+
+// XRPLTransaction represents a parsed XRPL Payment transaction
+type XRPLTransaction struct {
+	Account         string              `json:"Account"`
+	TransactionType transactions.TxType `json:"TransactionType"`
+	Destination     string              `json:"Destination"`
+	Amount          string              `json:"Amount"` // For XRP (drops) or object for tokens
+	DestinationTag  *uint32             `json:"DestinationTag,omitempty"`
+	Fee             string              `json:"Fee"`
+	Sequence        uint32              `json:"Sequence"`
+}
 
 // XRPL represents the XRP Ledger engine implementation
 type XRPL struct{}
@@ -15,108 +35,237 @@ func NewXRPL() *XRPL {
 // Evaluate validates an XRPL transaction against policy rules
 // This is the main entry point called by the main engine
 func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
-	// TODO: Implement XRPL transaction evaluation logic
-	// - Validate rule effect is ALLOW
-	// - Parse XRPL transaction from txBytes
-	// - Validate target if specified
-	// - Validate parameter constraints
+	// Validate rule effect is ALLOW (following existing pattern from BTC/EVM engines)
+	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
+		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
+	}
+
+	// Parse XRPL transaction from txBytes using binary codec
+	tx, err := x.parseTransaction(txBytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse XRPL transaction: %w", err)
+	}
+
+	// Validate it's a Payment transaction
+	if tx.TransactionType != transactions.PaymentTx {
+		return fmt.Errorf("only Payment transactions are supported, got: %s", tx.TransactionType)
+	}
+
+	// Validate target if specified
+	if err := x.validateTarget(rule.GetTarget(), tx); err != nil {
+		return fmt.Errorf("failed to validate target: %w", err)
+	}
+
+	// Validate parameter constraints
+	if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
+		return fmt.Errorf("failed to validate parameter constraints: %w", err)
+	}
+
 	return nil
 }
 
 // parseTransaction parses XRPL transaction bytes into a structured format
-func (x *XRPL) parseTransaction(txBytes []byte) error {
-	// TODO: Implement XRPL transaction parsing
-	// - Parse JSON-based XRPL transaction format
-	// - Validate required fields (Account, TransactionType, Destination, Amount)
-	// - Validate XRPL address formats
-	// - Handle destination tags if present
-	return nil
+func (x *XRPL) parseTransaction(txBytes []byte) (*XRPLTransaction, error) {
+	// Convert bytes to hex string for binary codec
+	hexStr := hex.EncodeToString(txBytes)
+
+	// Use XRPL binary codec to decode hex to JSON
+	jsonData, err := xrpgo.Decode(hexStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode XRPL binary format: %w", err)
+	}
+
+	// Convert map to JSON bytes for unmarshaling
+	jsonBytes, err := json.Marshal(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal decoded JSON: %w", err)
+	}
+
+	// Unmarshal into our struct
+	var tx XRPLTransaction
+	if err := json.Unmarshal(jsonBytes, &tx); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal XRPL transaction: %w", err)
+	}
+
+	// Validate required fields for Payment transactions
+	if tx.Account == "" {
+		return nil, fmt.Errorf("account field is required")
+	}
+	if tx.TransactionType == "" {
+		return nil, fmt.Errorf("transactionType field is required")
+	}
+	if tx.Destination == "" {
+		return nil, fmt.Errorf("destination field is required")
+	}
+	if tx.Amount == "" {
+		return nil, fmt.Errorf("amount field is required")
+	}
+
+	return &tx, nil
 }
 
 // validateTarget validates the transaction target against the rule target
-func (x *XRPL) validateTarget(target *types.Target, tx interface{}) error {
-	// TODO: Implement target validation
-	// - Handle TARGET_TYPE_ADDRESS for recipient validation
-	// - Compare against transaction destination
+func (x *XRPL) validateTarget(target *types.Target, tx *XRPLTransaction) error {
+	if target == nil || target.GetTargetType() == types.TargetType_TARGET_TYPE_UNSPECIFIED {
+		return nil // No target validation required
+	}
+
+	switch target.GetTargetType() {
+	case types.TargetType_TARGET_TYPE_ADDRESS:
+		expectedAddress := target.GetAddress()
+		if expectedAddress == "" {
+			return fmt.Errorf("target address cannot be empty")
+		}
+		// For XRPL, we validate against the Destination (recipient)
+		if !strings.EqualFold(tx.Destination, expectedAddress) {
+			return fmt.Errorf("target address mismatch: expected=%s, actual=%s",
+				expectedAddress, tx.Destination)
+		}
+	default:
+		return fmt.Errorf("unsupported target type: %s", target.GetTargetType())
+	}
+
 	return nil
 }
 
 // validateParameterConstraints validates all parameter constraints
-func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstraint, tx interface{}) error {
-	// TODO: Implement parameter constraint validation
-	// - Iterate through all constraints
-	// - Validate each constraint against transaction data
-	// - Support "recipient" and "amount" parameters
+func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstraint, tx *XRPLTransaction) error {
+	for _, constraint := range constraints {
+		paramName := constraint.GetParameterName()
+
+		var err error
+		switch paramName {
+		case "recipient":
+			err = x.validateRecipientConstraint(constraint, tx.Destination)
+		case "amount":
+			err = x.validateAmountConstraint(constraint, tx.Amount)
+		default:
+			err = fmt.Errorf("unsupported parameter: %s", paramName)
+		}
+
+		if err != nil {
+			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
+		}
+	}
 	return nil
 }
 
 // validateRecipientConstraint validates recipient address constraints
 func (x *XRPL) validateRecipientConstraint(constraint *types.ParameterConstraint, recipient string) error {
-	// TODO: Implement recipient constraint validation
-	// - Support FIXED, REGEXP, ANY, MAGIC_CONSTANT constraint types
-	// - Handle case-insensitive address comparison
+	constraintType := constraint.GetConstraint().GetType()
+
+	switch constraintType {
+	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
+		return nil
+
+	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
+		expectedValue := constraint.GetConstraint().GetFixedValue()
+		// Case-insensitive comparison for addresses
+		if !strings.EqualFold(recipient, expectedValue) {
+			return fmt.Errorf("fixed recipient constraint failed: expected=%s, actual=%s",
+				expectedValue, recipient)
+		}
+
+	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
+		pattern := constraint.GetConstraint().GetRegexpValue()
+		if pattern == "" {
+			return fmt.Errorf("regexp pattern cannot be empty")
+		}
+		matched, err := regexp.MatchString(pattern, recipient)
+		if err != nil {
+			return fmt.Errorf("invalid regexp pattern: %w", err)
+		}
+		if !matched {
+			return fmt.Errorf("regexp constraint failed: pattern=%s, value=%s", pattern, recipient)
+		}
+
+	case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
+		magicConstant := constraint.GetConstraint().GetMagicConstantValue()
+		switch magicConstant {
+		case types.MagicConstant_VULTISIG_TREASURY:
+			// TODO: Replace with actual Vultisig treasury XRPL address
+			treasuryAddress := "rVultisigTreasuryAddress123456789"
+			if !strings.EqualFold(recipient, treasuryAddress) {
+				return fmt.Errorf("magic constant VULTISIG_TREASURY constraint failed: expected=%s, actual=%s",
+					treasuryAddress, recipient)
+			}
+		case types.MagicConstant_THORCHAIN_VAULT:
+			// TODO: Replace with actual THORChain vault XRPL address
+			thorchainAddress := "rThorchainVaultAddress123456789"
+			if !strings.EqualFold(recipient, thorchainAddress) {
+				return fmt.Errorf("magic constant THORCHAIN_VAULT constraint failed: expected=%s, actual=%s",
+					thorchainAddress, recipient)
+			}
+		default:
+			return fmt.Errorf("unsupported magic constant: %s", magicConstant)
+		}
+
+	default:
+		return fmt.Errorf("unsupported constraint type for recipient: %s", constraintType)
+	}
+
 	return nil
 }
 
 // validateAmountConstraint validates amount constraints (in drops)
 func (x *XRPL) validateAmountConstraint(constraint *types.ParameterConstraint, amount string) error {
-	// TODO: Implement amount constraint validation
-	// - Support FIXED, MIN, MAX, ANY, REGEXP constraint types
-	// - Handle XRP drops (1 XRP = 1,000,000 drops)
-	// - Convert strings to big.Int for numeric comparisons
+	// Convert amount to big.Int for numeric comparisons
+	amountBigInt := new(big.Int)
+	if _, ok := amountBigInt.SetString(amount, 10); !ok {
+		return fmt.Errorf("invalid amount format: %s", amount)
+	}
+
+	constraintType := constraint.GetConstraint().GetType()
+
+	switch constraintType {
+	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
+		return nil
+
+	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
+		expectedAmount := constraint.GetConstraint().GetFixedValue()
+		if amount != expectedAmount {
+			return fmt.Errorf("fixed amount constraint failed: expected=%s, actual=%s",
+				expectedAmount, amount)
+		}
+
+	case types.ConstraintType_CONSTRAINT_TYPE_MIN:
+		minValue := constraint.GetConstraint().GetMinValue()
+		minBigInt := new(big.Int)
+		if _, ok := minBigInt.SetString(minValue, 10); !ok {
+			return fmt.Errorf("invalid min constraint value: %s", minValue)
+		}
+		if amountBigInt.Cmp(minBigInt) < 0 {
+			return fmt.Errorf("min amount constraint failed: expected>=%s, actual=%s",
+				minValue, amount)
+		}
+
+	case types.ConstraintType_CONSTRAINT_TYPE_MAX:
+		maxValue := constraint.GetConstraint().GetMaxValue()
+		maxBigInt := new(big.Int)
+		if _, ok := maxBigInt.SetString(maxValue, 10); !ok {
+			return fmt.Errorf("invalid max constraint value: %s", maxValue)
+		}
+		if amountBigInt.Cmp(maxBigInt) > 0 {
+			return fmt.Errorf("max amount constraint failed: expected<=%s, actual=%s",
+				maxValue, amount)
+		}
+
+	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
+		pattern := constraint.GetConstraint().GetRegexpValue()
+		if pattern == "" {
+			return fmt.Errorf("regexp pattern cannot be empty")
+		}
+		matched, err := regexp.MatchString(pattern, amount)
+		if err != nil {
+			return fmt.Errorf("invalid regexp pattern: %w", err)
+		}
+		if !matched {
+			return fmt.Errorf("regexp constraint failed: pattern=%s, value=%s", pattern, amount)
+		}
+
+	default:
+		return fmt.Errorf("unsupported constraint type for amount: %s", constraintType)
+	}
+
 	return nil
-}
-
-// validateXRPLAddress validates XRPL address format
-func (x *XRPL) validateXRPLAddress(address string) error {
-	// TODO: Implement XRPL address validation
-	// - Validate r-address format (starts with 'r')
-	// - Validate length (25-34 characters)
-	// - Validate Base58 encoding with checksum
-	return nil
-}
-
-// validateConstraintType validates a constraint of any supported type
-func (x *XRPL) validateConstraintType(constraint *types.Constraint, actualValue string, paramName string) error {
-	// TODO: Implement generic constraint type validation
-	// - Handle FIXED, MIN, MAX, ANY, REGEXP, MAGIC_CONSTANT types
-	// - Route to appropriate validation logic based on constraint type
-	return nil
-}
-
-// validateMagicConstant validates magic constant constraints
-func (x *XRPL) validateMagicConstant(magicConstant types.MagicConstant, value string) error {
-	// TODO: Implement magic constant validation
-	// - Handle VULTISIG_TREASURY constant
-	// - Handle THORCHAIN_VAULT constant
-	// - Resolve constants to actual XRPL addresses
-	return nil
-}
-
-// validateRegexpConstraint validates regular expression constraints
-func (x *XRPL) validateRegexpConstraint(pattern, value string) error {
-	// TODO: Implement regexp constraint validation
-	// - Compile and execute regex pattern
-	// - Handle regex compilation errors
-	return nil
-}
-
-// Helper functions for XRP denomination conversion
-
-// DropsToXRP converts drops to XRP (1 XRP = 1,000,000 drops)
-func DropsToXRP(drops string) (string, error) {
-	// TODO: Implement drops to XRP conversion
-	// - Parse drops string to big.Int
-	// - Divide by 1,000,000
-	// - Return XRP amount as string
-	return "", nil
-}
-
-// XRPToDrops converts XRP to drops (1 XRP = 1,000,000 drops)
-func XRPToDrops(xrp string) (string, error) {
-	// TODO: Implement XRP to drops conversion
-	// - Parse XRP string to big.Int
-	// - Multiply by 1,000,000
-	// - Return drops amount as string
-	return "", nil
 }
