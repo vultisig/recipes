@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
@@ -16,21 +15,41 @@ type ChainEngine interface {
 	Supports(chain common.Chain) bool
 }
 
+// SupportedEVMChains is the list of all EVM chains that have engines registered.
+// To add a new EVM chain, simply add it to this list and ensure it has a valid
+// NativeSymbol() implementation in the vultisig-go/common package.
+var SupportedEVMChains = []common.Chain{
+	common.Ethereum, common.BscChain, common.Arbitrum, common.Avalanche,
+	common.Base, common.Blast, common.CronosChain, common.Optimism,
+	common.Polygon, common.Zksync,
+}
+
 // ChainEngineRegistry manages chain-specific engines
 type ChainEngineRegistry struct {
-	engines    []ChainEngine
-	evmEngines map[string]ChainEngine
+	engines []ChainEngine
 }
 
 // NewChainEngineRegistry creates a new engine registry with all engines registered
 func NewChainEngineRegistry() *ChainEngineRegistry {
 	registry := &ChainEngineRegistry{
-		engines:    make([]ChainEngine, 0),
-		evmEngines: make(map[string]ChainEngine),
+		engines: make([]ChainEngine, 0),
 	}
 
-	// Register non-EVM engines (EVM engines are created on-demand in GetEngine)
-
+	// Register EVM engines - one for each supported EVM chain
+	for _, chain := range SupportedEVMChains {
+		nativeSymbol, err := chain.NativeSymbol()
+		if err != nil {
+			continue // Skip chains that don't have native symbols
+		}
+		
+		evmEngine, err := evm.NewEvm(nativeSymbol)
+		if err != nil {
+			continue // Skip if engine creation fails
+		}
+		
+		registry.Register(evmEngine)
+	}
+	
 	// Register BTC engine
 	registry.Register(&btc.Btc{})
 
@@ -42,34 +61,12 @@ func (r *ChainEngineRegistry) Register(engine ChainEngine) {
 	r.engines = append(r.engines, engine)
 }
 
-// GetEngine returns the appropriate engine for the given chain.
-// EVM engines are created on-demand to avoid unnecessary ABI loading.
+// GetEngine returns the first engine that supports the given chain
 func (r *ChainEngineRegistry) GetEngine(chain common.Chain) (ChainEngine, error) {
-	// Handle EVM chains with on-demand instantiation
-	if chain.IsEvm() {
-		nativeSymbol, err := chain.NativeSymbol()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get native symbol for %s: %w", chain.String(), err)
-		}
-
-		key := strings.ToLower(nativeSymbol)
-		if eng, ok := r.evmEngines[key]; ok {
-			return eng, nil
-		}
-		evmEngine, err := evm.NewEvm(key)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create EVM engine for %s: %w", chain.String(), err)
-		}
-		r.evmEngines[key] = evmEngine
-		return evmEngine, nil
-	}
-
-	// For non-EVM chains, use the pre-registered engines
 	for _, engine := range r.engines {
 		if engine.Supports(chain) {
 			return engine, nil
 		}
 	}
-
 	return nil, fmt.Errorf("no engine found for chain: %v", chain)
 }
