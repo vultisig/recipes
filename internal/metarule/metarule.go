@@ -3,7 +3,6 @@ package metarule
 import (
 	"fmt"
 
-	"github.com/vultisig/recipes/internal/conv"
 	"github.com/vultisig/recipes/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
@@ -73,7 +72,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 			return nil, fmt.Errorf("failed to parse `amount`: %w", er)
 		}
 
-		out := proto.Clone(in)
+		out := proto.Clone(in).(*types.Rule)
 
 		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
 			// native transfer

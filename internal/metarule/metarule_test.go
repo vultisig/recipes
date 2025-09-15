@@ -59,7 +59,7 @@ func TestTryFormat_UnsupportedChain(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	assert.Contains(t, err.Error(), "got meta format (bitcoin.send) but chain not supported: Bitcoin")
 }
 
 func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
@@ -95,9 +95,13 @@ func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
 		},
 	}
 
-	_, err := metaRule.TryFormat(rule)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	result, err := metaRule.TryFormat(rule)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "solana.sol.transfer", result.Resource)
+	assert.Equal(t, testAddress, result.Target.GetAddress())
+	assert.Len(t, result.ParameterConstraints, 1)
+	assert.Equal(t, "amount", result.ParameterConstraints[0].ParameterName)
 }
 
 func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
@@ -135,9 +139,12 @@ func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
 		},
 	}
 
-	_, err := metaRule.TryFormat(rule)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	result, err := metaRule.TryFormat(rule)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "solana.spl_token.transfer", result.Resource)
+	assert.Equal(t, tokenMintAddress, result.Target.GetAddress())
+	assert.Len(t, result.ParameterConstraints, 4)
 }
 
 func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
@@ -167,7 +174,7 @@ func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	assert.Contains(t, err.Error(), "failed to parse `recipient`")
 }
 
 func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
@@ -197,7 +204,7 @@ func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	assert.Contains(t, err.Error(), "failed to parse `amount`")
 }
 
 func TestTryFormat_SolanaUnsupportedProtocol(t *testing.T) {
@@ -215,7 +222,7 @@ func TestTryFormat_SolanaUnsupportedProtocol(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	assert.Contains(t, err.Error(), "unsupported protocol id: stake")
 }
 
 func TestTryFormat_SolanaInvalidRecipientConstraintType(t *testing.T) {
@@ -250,5 +257,5 @@ func TestTryFormat_SolanaInvalidRecipientConstraintType(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse resource")
+	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
 }
