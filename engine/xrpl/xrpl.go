@@ -10,6 +10,7 @@ import (
 
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	"github.com/vultisig/vultisig-go/common"
 	xrpgo "github.com/xyield/xrpl-go/binary-codec"
 	"github.com/xyield/xrpl-go/model/transactions"
 )
@@ -31,6 +32,11 @@ type XRPL struct{}
 // NewXRPL creates a new XRPL engine instance
 func NewXRPL() *XRPL {
 	return &XRPL{}
+}
+
+// Supports returns true if this engine supports the given chain
+func (x *XRPL) Supports(chain common.Chain) bool {
+	return chain == common.XRP
 }
 
 // Evaluate validates an XRPL transaction against policy rules

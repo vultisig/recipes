@@ -34,10 +34,10 @@ func TestChainEngineRegistry(t *testing.T) {
 			description: "Bitcoin should be supported by BTC engine",
 		},
 		{
-			name:        "Unsupported chain - XRP",
+			name:        "XRP",
 			chain:       common.XRP,
-			shouldFind:  false,
-			description: "XRP should not be supported yet",
+			shouldFind:  true,
+			description: "XRP should be supported by XRPL engine",
 		},
 		{
 			name:        "Unsupported chain - Solana",
@@ -82,6 +82,7 @@ func TestChainEngineInterface(t *testing.T) {
 	supportedChains := []common.Chain{
 		common.Ethereum, common.BscChain, common.Arbitrum, // EVM chains
 		common.Bitcoin, // BTC chains
+		common.XRP, // XRPL chains
 	}
 
 	for _, chain := range supportedChains {

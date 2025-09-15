@@ -5,6 +5,7 @@ import (
 
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
+	"github.com/vultisig/recipes/engine/xrpl"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
@@ -52,6 +53,9 @@ func NewChainEngineRegistry() *ChainEngineRegistry {
 	
 	// Register BTC engine
 	registry.Register(&btc.Btc{})
+	
+	// Register XRPL engine
+	registry.Register(xrpl.NewXRPL())
 
 	return registry
 }
