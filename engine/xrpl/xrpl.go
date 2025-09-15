@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/recipes/util"
 	xrpgo "github.com/xyield/xrpl-go/binary-codec"
 	"github.com/xyield/xrpl-go/model/transactions"
 )
@@ -38,6 +39,22 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 	// Validate rule effect is ALLOW (following existing pattern from BTC/EVM engines)
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
+	}
+
+	// Parse resource to extract protocol and function information
+	r, err := util.ParseResource(rule.GetResource())
+	if err != nil {
+		return fmt.Errorf("failed to parse rule resource: %w", err)
+	}
+
+	// Validate it's an XRPL resource
+	if r.ProtocolId != "xrpl" {
+		return fmt.Errorf("expected xrpl protocol, got: %s", r.ProtocolId)
+	}
+
+	// For now, only support xrpl.send
+	if r.FunctionId != "send" {
+		return fmt.Errorf("only 'send' function supported, got: %s", r.FunctionId)
 	}
 
 	// Parse XRPL transaction from txBytes using binary codec
@@ -190,7 +207,7 @@ func (x *XRPL) validateRecipientConstraint(constraint *types.ParameterConstraint
 					treasuryAddress, recipient)
 			}
 		case types.MagicConstant_THORCHAIN_VAULT:
-			// TODO: Replace with actual THORChain vault XRPL address
+			// TODO: Resolve and replace with actual THORChain vault XRPL address
 			thorchainAddress := "rThorchainVaultAddress123456789"
 			if !strings.EqualFold(recipient, thorchainAddress) {
 				return fmt.Errorf("magic constant THORCHAIN_VAULT constraint failed: expected=%s, actual=%s",
