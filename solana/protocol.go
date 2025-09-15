@@ -9,13 +9,11 @@ import (
 	"github.com/gagliardetto/solana-go/programs/token"
 )
 
-// TransactionData represents a decoded Solana transaction using proper types
 type TransactionData struct {
 	Transaction *solana.Transaction `json:"transaction"`
 	Message     *solana.Message     `json:"message"`
 }
 
-// IDL types for instruction parsing (kept for compatibility)
 type IDLInstruction struct {
 	Name     string        `json:"name"`
 	Accounts []IDLAccount  `json:"accounts"`
@@ -175,9 +173,6 @@ func GetTransferDestination(instruction solana.CompiledInstruction, accounts []s
 
 // ParseInstructionArgs parses instruction arguments based on IDL (simplified version for compatibility)
 func ParseInstructionArgs(data []byte, instruction *IDLInstruction) ([]interface{}, error) {
-	// This is a simplified parser that maintains compatibility with the existing interface
-	// In practice, you'd use the proper instruction decoders from solana-go
-
 	args := make([]interface{}, len(instruction.Args))
 
 	// For basic instruction types, we can still do simple parsing
@@ -230,26 +225,9 @@ func ParseInstructionArgs(data []byte, instruction *IDLInstruction) ([]interface
 	return args, nil
 }
 
-// GetProgramNameByID returns the human-readable name for a program ID
-func GetProgramNameByID(programID solana.PublicKey) string {
-	switch {
-	case programID.Equals(SystemProgramID):
-		return "system"
-	case IsSPLTokenProgram(programID):
-		return "spl_token"
-	default:
-		return "unknown"
-	}
-}
-
 // IsSPLTokenProgram checks if the given program ID is an SPL Token program
 func IsSPLTokenProgram(programID solana.PublicKey) bool {
 	return programID.Equals(SPLTokenProgramID) || programID.Equals(SPLToken2022ID)
-}
-
-// IsSystemProgram checks if the given program ID is the System Program
-func IsSystemProgram(programID solana.PublicKey) bool {
-	return programID.Equals(SystemProgramID)
 }
 
 // FindTransferInstruction finds the first transfer instruction in a transaction

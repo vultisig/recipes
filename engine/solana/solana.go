@@ -243,8 +243,22 @@ func (s *Solana) getTransferDestination(txData *solanautil.TransactionData) stri
 }
 
 func (s *Solana) getProgramDestination(resource *types.ResourcePath, txData *solanautil.TransactionData) string {
-	// This would need to be implemented based on specific program logic
-	// For now, return empty string as placeholder
+	if len(txData.Message.Instructions) == 0 {
+		return ""
+	}
+
+	instruction := &txData.Message.Instructions[0]
+	accounts := txData.Message.AccountKeys
+
+	// Handle SPL token transfers
+	if resource.ProtocolId == "spl_token" && resource.FunctionId == "transfer" {
+		destination, err := solanautil.GetTransferDestination(*instruction, accounts)
+		if err != nil {
+			return ""
+		}
+		return destination.String()
+	}
+
 	return ""
 }
 
@@ -291,6 +305,11 @@ func (s *Solana) assertArgsIDL(
 	rule *types.Rule,
 	txData *solanautil.TransactionData,
 ) error {
+	// Handle SPL token transfers specially
+	if resource.ProtocolId == "spl_token" && resource.FunctionId == "transfer" {
+		return s.assertArgsSPLToken(resource, rule, txData)
+	}
+
 	idlItem, ok := s.idl[resource.ProtocolId]
 	if !ok {
 		return fmt.Errorf("failed to get idl: protocolId=%s", resource.ProtocolId)
@@ -423,6 +442,42 @@ func (s *Solana) assertArgsIDL(
 			return fmt.Errorf("unsupported arg type: %T", actual)
 		}
 	}
+	return nil
+}
+
+func (s *Solana) assertArgsSPLToken(
+	resource *types.ResourcePath,
+	rule *types.Rule,
+	txData *solanautil.TransactionData,
+) error {
+	if len(rule.GetParameterConstraints()) != 1 {
+		return fmt.Errorf(
+			"expected 1 parameter constraint for SPL token transfer, got: %d",
+			len(rule.GetParameterConstraints()),
+		)
+	}
+
+	// Get the first instruction (already validated to be single instruction)
+	instruction := &txData.Message.Instructions[0]
+
+	// Parse the SPL token transfer amount
+	amount, err := solanautil.ParseSPLTransferAmount(*instruction, txData.Message.AccountKeys)
+	if err != nil {
+		return fmt.Errorf("failed to parse SPL transfer amount: %w", err)
+	}
+
+	// Assert the amount parameter
+	err = assertArg(
+		resource.ChainId,
+		rule.GetParameterConstraints(),
+		"amount",
+		amount,
+		compare.NewU64,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to assert amount arg: %w", err)
+	}
+
 	return nil
 }
 
