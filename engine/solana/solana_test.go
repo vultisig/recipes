@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
@@ -605,4 +606,87 @@ func TestEvaluate_SPLTokenTransfer_MaxAmount(t *testing.T) {
 	err = engine.Evaluate(invalidRule, txBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to compare max values")
+}
+
+func buildMockFakeSPLTokenTransferTx(source, destination, authority solana.PublicKey, amount uint64) []byte {
+	fakeProgramID := solana.NewWallet().PublicKey()
+
+	instructionData := make([]byte, 9)
+	instructionData[0] = 3
+	for i := 0; i < 8; i++ {
+		instructionData[1+i] = byte(amount >> (i * 8))
+	}
+
+	instruction := solana.NewInstruction(
+		fakeProgramID,
+		solana.AccountMetaSlice{
+			{PublicKey: source, IsWritable: true, IsSigner: false},
+			{PublicKey: destination, IsWritable: true, IsSigner: false},
+			{PublicKey: authority, IsWritable: false, IsSigner: true},
+		},
+		instructionData,
+	)
+
+	tx, err := solana.NewTransaction(
+		[]solana.Instruction{instruction},
+		solana.Hash{},
+		solana.TransactionPayer(authority),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func TestEvaluate_SPLTokenTransfer_InvalidProgram(t *testing.T) {
+	const tokenAmount = uint64(500000)
+	authorityKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	sourceTokenAccount := solana.NewWallet().PublicKey()
+	destinationTokenAccount := solana.NewWallet().PublicKey()
+
+	txBytes := buildMockFakeSPLTokenTransferTx(
+		sourceTokenAccount,
+		destinationTokenAccount,
+		authorityKey.PublicKey(),
+		tokenAmount,
+	)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "500000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.True(t,
+		strings.Contains(err.Error(), "instruction is not calling official SPL Token program") ||
+			strings.Contains(err.Error(), "tx target is wrong"),
+		"Expected security-related error, got: %s", err.Error(),
+	)
 }

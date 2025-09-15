@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gagliardetto/solana-go"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/engine/solana/compare"
 	idl_embed "github.com/vultisig/recipes/idl"
@@ -378,12 +379,17 @@ func (s *Solana) assertArgsIDL(
 			}
 
 		case []byte:
-			pubkeyStr := string(actual)
+			if len(actual) != 32 {
+				return fmt.Errorf("invalid pubkey length: expected 32 bytes, got %d", len(actual))
+			}
+
+			pubkey := solana.PublicKeyFromBytes(actual)
+
 			er := assertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				argDef.Name,
-				pubkeyStr,
+				pubkey.String(),
 				compare.NewPubkey,
 			)
 			if er != nil {
@@ -446,6 +452,14 @@ func (s *Solana) assertArgsSPLToken(
 	}
 
 	instruction := &txData.Message.Instructions[0]
+
+	programID := txData.Message.AccountKeys[instruction.ProgramIDIndex]
+	if !solanautil.IsSPLTokenProgram(programID) {
+		return fmt.Errorf(
+			"instruction is not calling official SPL Token program, got program ID: %s",
+			programID.String(),
+		)
+	}
 
 	amount, err := solanautil.ParseSPLTransferAmount(*instruction, txData.Message.AccountKeys)
 	if err != nil {
