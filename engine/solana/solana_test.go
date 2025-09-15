@@ -72,7 +72,6 @@ func TestEvaluate_SOLTransfer(t *testing.T) {
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
-	// Test valid transfer
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
 		Resource: "solana.sol.transfer",
@@ -97,6 +96,207 @@ func TestEvaluate_SOLTransfer(t *testing.T) {
 	}
 	err = engine.Evaluate(rule, txBytes)
 	assert.NoError(t, err)
+}
+
+func TestEvaluate_SOLTransfer_InvalidAmount(t *testing.T) {
+	const lamports = uint64(1000000)
+	fromKey := solana.NewWallet()
+	toKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: toKey.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "2000000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare fixed values")
+}
+
+func TestEvaluate_SOLTransfer_InvalidRecipient(t *testing.T) {
+	const lamports = uint64(1000000)
+	fromKey := solana.NewWallet()
+	toKey := solana.NewWallet()
+	wrongRecipient := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: wrongRecipient.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "tx target is wrong")
+}
+
+func TestEvaluate_SOLTransfer_MinAmount(t *testing.T) {
+	const lamports = uint64(1000000)
+	fromKey := solana.NewWallet()
+	toKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: toKey.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+					Value: &types.Constraint_MinValue{
+						MinValue: "500000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
+
+	invalidRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: toKey.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+					Value: &types.Constraint_MinValue{
+						MinValue: "2000000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(invalidRule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare min values")
+}
+
+func TestEvaluate_SOLTransfer_MaxAmount(t *testing.T) {
+	const lamports = uint64(1000000)
+	fromKey := solana.NewWallet()
+	toKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: toKey.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "2000000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
+
+	invalidRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.sol.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: toKey.PublicKey().String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "500000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(invalidRule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare max values")
 }
 
 func TestEvaluate_MultipleInstructions(t *testing.T) {
@@ -141,7 +341,6 @@ func TestEvaluate_SPLTokenTransfer(t *testing.T) {
 	engine, err := NewSolana("sol")
 	require.NoError(t, err)
 
-	// Create mock SPL token accounts
 	sourceTokenAccount := solana.NewWallet().PublicKey()
 	destinationTokenAccount := solana.NewWallet().PublicKey()
 
@@ -177,4 +376,233 @@ func TestEvaluate_SPLTokenTransfer(t *testing.T) {
 
 	err = engine.Evaluate(rule, txBytes)
 	assert.NoError(t, err)
+}
+
+func TestEvaluate_SPLTokenTransfer_InvalidAmount(t *testing.T) {
+	const tokenAmount = uint64(500000)
+	authorityKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	sourceTokenAccount := solana.NewWallet().PublicKey()
+	destinationTokenAccount := solana.NewWallet().PublicKey()
+
+	txBytes := buildMockSPLTokenTransferTx(
+		sourceTokenAccount,
+		destinationTokenAccount,
+		authorityKey.PublicKey(),
+		tokenAmount,
+	)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare fixed values")
+}
+
+func TestEvaluate_SPLTokenTransfer_InvalidRecipient(t *testing.T) {
+	const tokenAmount = uint64(500000)
+	authorityKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	sourceTokenAccount := solana.NewWallet().PublicKey()
+	destinationTokenAccount := solana.NewWallet().PublicKey()
+	wrongDestination := solana.NewWallet().PublicKey()
+
+	txBytes := buildMockSPLTokenTransferTx(
+		sourceTokenAccount,
+		destinationTokenAccount,
+		authorityKey.PublicKey(),
+		tokenAmount,
+	)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: wrongDestination.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "500000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "tx target is wrong")
+}
+
+func TestEvaluate_SPLTokenTransfer_MinAmount(t *testing.T) {
+	const tokenAmount = uint64(500000)
+	authorityKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	sourceTokenAccount := solana.NewWallet().PublicKey()
+	destinationTokenAccount := solana.NewWallet().PublicKey()
+
+	txBytes := buildMockSPLTokenTransferTx(
+		sourceTokenAccount,
+		destinationTokenAccount,
+		authorityKey.PublicKey(),
+		tokenAmount,
+	)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+					Value: &types.Constraint_MinValue{
+						MinValue: "300000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
+
+	invalidRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+					Value: &types.Constraint_MinValue{
+						MinValue: "800000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(invalidRule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare min values")
+}
+
+func TestEvaluate_SPLTokenTransfer_MaxAmount(t *testing.T) {
+	const tokenAmount = uint64(500000)
+	authorityKey := solana.NewWallet()
+	engine, err := NewSolana("sol")
+	require.NoError(t, err)
+
+	sourceTokenAccount := solana.NewWallet().PublicKey()
+	destinationTokenAccount := solana.NewWallet().PublicKey()
+
+	txBytes := buildMockSPLTokenTransferTx(
+		sourceTokenAccount,
+		destinationTokenAccount,
+		authorityKey.PublicKey(),
+		tokenAmount,
+	)
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "800000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
+
+	invalidRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.spl_token.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: destinationTokenAccount.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "300000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(invalidRule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare max values")
 }

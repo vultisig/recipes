@@ -84,7 +84,6 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to decode tx payload: %w", err)
 	}
 
-	// Only allow single instruction transactions
 	if len(txData.Message.Instructions) != 1 {
 		return fmt.Errorf(
 			"only single instruction transactions are allowed, got %d instructions",
@@ -101,6 +100,14 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 		er := s.assertArgsNative(r, rule, txData)
 		if er != nil {
 			return fmt.Errorf("failed to evaluate native: symbol=%s, error=%w", s.nativeSymbol, er)
+		}
+		return nil
+	}
+
+	if r.ProtocolId == "spl_token" && r.FunctionId == "transfer" {
+		er := s.assertArgsSPLToken(r, rule, txData)
+		if er != nil {
+			return fmt.Errorf("failed to evaluate spl_token.transfer: %w", er)
 		}
 		return nil
 	}
@@ -132,13 +139,11 @@ func (s *Solana) assertArgsNative(
 		)
 	}
 
-	// Find the System Program transfer instruction
 	transferInstruction, err := solanautil.FindTransferInstruction(txData)
 	if err != nil {
 		return fmt.Errorf("no system program transfer instruction found: %w", err)
 	}
 
-	// Parse the lamports amount from instruction data
 	amount, err := solanautil.ParseTransferAmount(*transferInstruction, txData.Message.AccountKeys)
 	if err != nil {
 		return fmt.Errorf("failed to parse transfer amount: %w", err)
@@ -165,13 +170,10 @@ func (s *Solana) assertTarget(
 	targetKind := target.GetTargetType()
 	switch targetKind {
 	case types.TargetType_TARGET_TYPE_ADDRESS:
-		// For Solana, we need to check the appropriate account based on the instruction type
 		var targetAddr string
 		if resource.ProtocolId == s.nativeSymbol {
-			// For native transfers, check the destination account
 			targetAddr = s.getTransferDestination(txData)
 		} else {
-			// For program instructions, check based on the specific program logic
 			targetAddr = s.getProgramDestination(resource, txData)
 		}
 
@@ -228,7 +230,6 @@ func (s *Solana) assertTarget(
 }
 
 func (s *Solana) getTransferDestination(txData *solanautil.TransactionData) string {
-	// Find the transfer instruction and get its destination
 	transferInst, err := solanautil.FindTransferInstruction(txData)
 	if err != nil {
 		return ""
@@ -250,7 +251,6 @@ func (s *Solana) getProgramDestination(resource *types.ResourcePath, txData *sol
 	instruction := &txData.Message.Instructions[0]
 	accounts := txData.Message.AccountKeys
 
-	// Handle SPL token transfers
 	if resource.ProtocolId == "spl_token" && resource.FunctionId == "transfer" {
 		destination, err := solanautil.GetTransferDestination(*instruction, accounts)
 		if err != nil {
@@ -305,17 +305,11 @@ func (s *Solana) assertArgsIDL(
 	rule *types.Rule,
 	txData *solanautil.TransactionData,
 ) error {
-	// Handle SPL token transfers specially
-	if resource.ProtocolId == "spl_token" && resource.FunctionId == "transfer" {
-		return s.assertArgsSPLToken(resource, rule, txData)
-	}
-
 	idlItem, ok := s.idl[resource.ProtocolId]
 	if !ok {
 		return fmt.Errorf("failed to get idl: protocolId=%s", resource.ProtocolId)
 	}
 
-	// Find the instruction in the IDL
 	var instruction *idlInstruction
 	for _, inst := range idlItem.Instructions {
 		if inst.Name == resource.FunctionId {
@@ -328,16 +322,12 @@ func (s *Solana) assertArgsIDL(
 		return fmt.Errorf("failed to find idl instruction: %s", resource.FunctionId)
 	}
 
-	// Find the matching instruction in the transaction
-	// For now, we'll use the first instruction that matches the expected program
 	if len(txData.Message.Instructions) == 0 {
 		return fmt.Errorf("no instructions found in transaction")
 	}
 
-	// Use the first instruction
 	txInstruction := &txData.Message.Instructions[0]
 
-	// Convert IDL instruction to the format expected by the parser
 	solanaInstruction := &solanautil.IDLInstruction{
 		Name:     instruction.Name,
 		Accounts: make([]solanautil.IDLAccount, len(instruction.Accounts)),
@@ -359,7 +349,6 @@ func (s *Solana) assertArgsIDL(
 		}
 	}
 
-	// Parse instruction arguments - for proper implementation we'd use the compiled instruction data
 	args, err := solanautil.ParseInstructionArgs(txInstruction.Data, solanaInstruction)
 	if err != nil {
 		return fmt.Errorf("failed to parse instruction args: %w", err)
@@ -389,7 +378,6 @@ func (s *Solana) assertArgsIDL(
 			}
 
 		case []byte:
-			// Convert to string for comparison (Solana public keys are often represented as base58 strings)
 			pubkeyStr := string(actual)
 			er := assertArg(
 				resource.GetChainId(),
@@ -457,16 +445,13 @@ func (s *Solana) assertArgsSPLToken(
 		)
 	}
 
-	// Get the first instruction (already validated to be single instruction)
 	instruction := &txData.Message.Instructions[0]
 
-	// Parse the SPL token transfer amount
 	amount, err := solanautil.ParseSPLTransferAmount(*instruction, txData.Message.AccountKeys)
 	if err != nil {
 		return fmt.Errorf("failed to parse SPL transfer amount: %w", err)
 	}
 
-	// Assert the amount parameter
 	err = assertArg(
 		resource.ChainId,
 		rule.GetParameterConstraints(),
