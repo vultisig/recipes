@@ -14,12 +14,24 @@ import (
 	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 type Btc struct{}
 
 func NewBtc() *Btc {
 	return &Btc{}
+}
+
+// Supports returns true if this engine supports the given chain (Bitcoin and Bitcoin-like chains)
+func (b *Btc) Supports(chain common.Chain) bool {
+	switch chain {
+	// To expand to other UTXo based chains in the future
+	case common.Bitcoin:
+		return true
+	default:
+		return false
+	}
 }
 
 func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {

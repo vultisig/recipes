@@ -9,9 +9,6 @@ import (
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"github.com/vultisig/recipes/engine/btc"
-	"github.com/vultisig/recipes/engine/evm"
-	"github.com/vultisig/recipes/engine/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -19,13 +16,15 @@ import (
 )
 
 type Engine struct {
-	logger *log.Logger
+	logger   *log.Logger
+	registry *ChainEngineRegistry
 }
 
 func NewEngine() *Engine {
 	// Turn off logging by default
 	return &Engine{
-		logger: log.New(io.Discard, "", 0),
+		logger:   log.New(io.Discard, "", 0),
+		registry: NewChainEngineRegistry(),
 	}
 }
 
@@ -66,64 +65,23 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 		e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
 			resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
 
-		switch {
-		case chain.IsEvm():
-			nativeSymbol, er := chain.NativeSymbol()
-			if er != nil {
-				e.logger.Printf("Error getting native symbol for chain: %s: %v", chain.String(), er)
-				continue
-			}
-
-			evmEng, er := evm.NewEvm(nativeSymbol)
-			if er != nil {
-				e.logger.Printf("Failed to create EVM engine: %s: %v", chain.String(), er)
-				continue
-			}
-
-			er = evmEng.Evaluate(rule, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
-				e.logger.Printf("Failed to evaluate EVM tx: %s: %v", chain.String(), er)
-				continue
-			}
-
-			e.logger.Printf("EVM tx validated: %s", chain.String())
-			return rule, nil
-
-		case rule.GetResource() == "bitcoin.btc.transfer":
-			er := btc.NewBtc().Evaluate(rule, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
-				e.logger.Printf("Failed to evaluate BTC tx: %s: %v", chain.String(), er)
-				continue
-			}
-
-			e.logger.Printf("BTC tx validated: %s", chain.String())
-			return rule, nil
-
-		case chain == common.Solana:
-			nativeSymbol, er := chain.NativeSymbol()
-			if er != nil {
-				e.logger.Printf("Error getting native symbol for chain: %s: %v", chain.String(), er)
-				continue
-			}
-
-			solanaEng, er := solana.NewSolana(nativeSymbol)
-			if er != nil {
-				e.logger.Printf("Failed to create Solana engine: %s: %v", chain.String(), er)
-				continue
-			}
-
-			er = solanaEng.Evaluate(rule, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
-				e.logger.Printf("Failed to evaluate Solana tx: %s: %v", chain.String(), er)
-				continue
-			}
-
-			e.logger.Printf("Solana tx validated: %s", chain.String())
-			return rule, nil
+		// Get the appropriate engine for this chain
+		chainEngine, err := e.registry.GetEngine(chain)
+		if err != nil {
+			e.logger.Printf("No engine available for chain %s: %v", chain.String(), err)
+			continue
 		}
+
+		// Evaluate using the chain-specific engine
+		err = chainEngine.Evaluate(rule, txBytes)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, err))
+			e.logger.Printf("Failed to evaluate tx for %s: %v", chain.String(), err)
+			continue
+		}
+
+		e.logger.Printf("Tx validated for %s", chain.String())
+		return rule, nil
 	}
 	if len(errs) == 0 {
 		return nil, errors.New("no matching rule")
