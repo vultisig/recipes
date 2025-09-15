@@ -8,6 +8,7 @@ import (
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
+	"google.golang.org/protobuf/proto"
 )
 
 type MetaRule struct{}
@@ -72,10 +73,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 			return nil, fmt.Errorf("failed to parse `amount`: %w", er)
 		}
 
-		out, er := conv.CopyProto(in)
-		if er != nil {
-			return nil, fmt.Errorf("failed to copy rule: %w", er)
-		}
+		out := proto.Clone(in)
 
 		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
 			// native transfer
