@@ -3,11 +3,12 @@ package engine
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/vultisig/vultisig-go/common"
 )
 
 func TestChainEngineRegistry(t *testing.T) {
-	registry := NewChainEngineRegistry()
+	registry, _ := NewChainEngineRegistry()
 
 	tests := []struct {
 		name        string
@@ -76,7 +77,8 @@ func TestChainEngineRegistry(t *testing.T) {
 }
 
 func TestChainEngineInterface(t *testing.T) {
-	registry := NewChainEngineRegistry()
+	registry, err := NewChainEngineRegistry()
+	require.NoError(t, err)
 
 	// Test that all registered engines implement the interface correctly
 	supportedChains := []common.Chain{

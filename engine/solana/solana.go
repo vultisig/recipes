@@ -15,6 +15,7 @@ import (
 	solanautil "github.com/vultisig/recipes/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 type Solana struct {
@@ -62,6 +63,10 @@ func NewSolana(nativeSymbol string) (*Solana, error) {
 		nativeSymbol: strings.ToLower(nativeSymbol),
 		idl:          idls,
 	}, nil
+}
+
+func (s *Solana) Supports(chain common.Chain) bool {
+	return chain == common.Solana
 }
 
 func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {

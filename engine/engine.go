@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
+	"github.com/vultisig/recipes/internal/metarule"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -20,12 +21,16 @@ type Engine struct {
 	registry *ChainEngineRegistry
 }
 
-func NewEngine() *Engine {
-	// Turn off logging by default
+func NewEngine() (*Engine, error) {
+	reg, err := NewChainEngineRegistry()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create registry: %w", err)
+	}
+
 	return &Engine{
 		logger:   log.New(io.Discard, "", 0),
-		registry: NewChainEngineRegistry(),
-	}
+		registry: reg,
+	}, nil
 }
 
 func (e *Engine) SetLogger(log *log.Logger) {
@@ -34,9 +39,14 @@ func (e *Engine) SetLogger(log *log.Logger) {
 
 func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []byte) (*types.Rule, error) {
 	var errs []error
-	for _, rule := range policy.GetRules() {
-		if rule == nil {
+	for _, ruleRaw := range policy.GetRules() {
+		if ruleRaw == nil {
 			continue
+		}
+
+		rule, err := metarule.NewMetaRule().TryFormat(ruleRaw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format rule: %w", err)
 		}
 
 		resourcePathString := rule.GetResource()
