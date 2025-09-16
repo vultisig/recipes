@@ -38,7 +38,10 @@ func main() {
 	log.Printf("Successfully loaded policy: %s (Name: %s)\n", policy.GetId(), policy.GetName())
 
 	// 2. Initialize Engine
-	eng := engine.NewEngine()
+	eng, err := engine.NewEngine()
+	if err != nil {
+		log.Fatalf("Failed to create engine: %v", err)
+	}
 	eng.SetLogger(log.Default())
 
 	// 3. Load Schema and ValidatePolicy (if path given)
