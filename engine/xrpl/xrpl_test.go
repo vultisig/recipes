@@ -347,6 +347,36 @@ func TestXRPL_Evaluate_Failure(t *testing.T) {
 		"Should fail with target address mismatch")
 }
 
+func TestXRPL_ValidateAmountConstraint_PartialPaymentRejection(t *testing.T) {
+	xrpl := NewXRPL()
+	
+	// Create XRP amount
+	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(1000000000)
+	
+	// Create payment with partial payment flag set (tfPartialPayment = 131072)
+	payment := &transactions.Payment{
+		BaseTx: transactions.BaseTx{
+			Flags: 131072, // tfPartialPayment flag
+		},
+		Destination: xrptypes.Address("rRecipient456"),
+		Amount:      xrpAmount,
+	}
+
+	constraint := &types.ParameterConstraint{
+		ParameterName: "amount",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+			Value: &types.Constraint_MaxValue{
+				MaxValue: "2000000000", // 2000 XRP max
+			},
+		},
+	}
+
+	err := xrpl.validateAmountConstraint(constraint, payment)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "partial payments are not supported for policy validation")
+}
+
 func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
 	xrpl := NewXRPL()
 

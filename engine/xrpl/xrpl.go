@@ -42,6 +42,10 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
+	// Basic resource checks
+	if r.ChainId != "xrp" {
+		return fmt.Errorf("unsupported chain in resource: %s", r.ChainId)
+	}
 
 	// Parse XRPL transaction from txBytes using binary codec
 	tx, err := x.parseTransaction(txBytes)
@@ -174,7 +178,7 @@ func (x *XRPL) validateParameterConstraints(resource *types.ResourcePath, constr
 		case "recipient":
 			err = x.validateRecipientConstraint(chain, constraint, string(payment.Destination))
 		case "amount":
-			err = x.validateAmountConstraint(constraint, payment.Amount)
+			err = x.validateAmountConstraint(constraint, payment)
 		default:
 			err = fmt.Errorf("unsupported parameter: %s", paramName)
 		}
@@ -252,9 +256,16 @@ func (x *XRPL) validateRecipientConstraint(chain string, constraint *types.Param
 }
 
 // validateAmountConstraint validates amount constraints (XRP only)
-func (x *XRPL) validateAmountConstraint(constraint *types.ParameterConstraint, amount xrptypes.CurrencyAmount) error {
+func (x *XRPL) validateAmountConstraint(constraint *types.ParameterConstraint, payment *transactions.Payment) error {
+	// Check for partial payment flag (tfPartialPayment = 131072)
+	const tfPartialPayment uint = 131072
+	if payment.Flags&tfPartialPayment != 0 {
+		// For now, reject partial payments as they could bypass amount constraints
+		// The actual delivered amount could be less than payment.Amount
+		return fmt.Errorf("partial payments are not supported for policy validation")
+	}
 	// Convert amount to string for comparison
-	amountStr, err := x.formatCurrencyAmount(amount)
+	amountStr, err := x.formatCurrencyAmount(payment.Amount)
 	if err != nil {
 		return fmt.Errorf("failed to format currency amount: %w", err)
 	}
