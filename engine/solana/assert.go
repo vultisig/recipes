@@ -98,7 +98,7 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 
 func assertArgs(constraints []*types.ParameterConstraint, data solana.Base58, args []idlArgument) error {
 	const constraintPrefix = "arg_"
-	decoder := bin.NewBorshDecoder(data)
+	decoder := bin.NewBorshDecoder(data[4:]) // 4 is func selector bytes
 	for _, arg := range args {
 		switch arg.Type {
 		case argU8:
