@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
-	"strings"
 
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
@@ -131,7 +130,7 @@ func (x *XRPL) validateTarget(resource *types.ResourcePath, target *types.Target
 			return fmt.Errorf("target address cannot be empty")
 		}
 		// For XRPL, we validate against the Destination (recipient)
-		if !strings.EqualFold(tx.Destination, expectedAddress) {
+		if tx.Destination != expectedAddress {
 			return fmt.Errorf("target address mismatch: expected=%s, actual=%s",
 				expectedAddress, tx.Destination)
 		}
@@ -156,7 +155,7 @@ func (x *XRPL) validateTarget(resource *types.ResourcePath, target *types.Target
 				err,
 			)
 		}
-		if !strings.EqualFold(tx.Destination, resolvedAddr) {
+		if tx.Destination != resolvedAddr {
 			return fmt.Errorf(
 				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
 				tx.Destination,
@@ -205,8 +204,8 @@ func (x *XRPL) validateRecipientConstraint(chain string, constraint *types.Param
 
 	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 		expectedValue := constraint.GetConstraint().GetFixedValue()
-		// Case-insensitive comparison for addresses
-		if !strings.EqualFold(recipient, expectedValue) {
+
+		if recipient != expectedValue {
 			return fmt.Errorf("fixed recipient constraint failed: expected=%s, actual=%s",
 				expectedValue, recipient)
 		}
@@ -246,7 +245,7 @@ func (x *XRPL) validateRecipientConstraint(chain string, constraint *types.Param
 				err,
 			)
 		}
-		if !strings.EqualFold(recipient, resolvedAddr) {
+		if recipient != resolvedAddr {
 			return fmt.Errorf(
 				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
 				recipient,
