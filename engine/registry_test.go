@@ -3,11 +3,12 @@ package engine
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/vultisig/vultisig-go/common"
 )
 
 func TestChainEngineRegistry(t *testing.T) {
-	registry := NewChainEngineRegistry()
+	registry, _ := NewChainEngineRegistry()
 
 	tests := []struct {
 		name        string
@@ -40,10 +41,10 @@ func TestChainEngineRegistry(t *testing.T) {
 			description: "XRP should be supported by XRPL engine",
 		},
 		{
-			name:        "Unsupported chain - Solana",
+			name:        "Solana",
 			chain:       common.Solana,
-			shouldFind:  false,
-			description: "Solana should not be supported yet",
+			shouldFind:  true,
+			description: "Solana should be supported by Solana engine",
 		},
 	}
 
@@ -76,13 +77,15 @@ func TestChainEngineRegistry(t *testing.T) {
 }
 
 func TestChainEngineInterface(t *testing.T) {
-	registry := NewChainEngineRegistry()
+	registry, err := NewChainEngineRegistry()
+	require.NoError(t, err)
 
 	// Test that all registered engines implement the interface correctly
 	supportedChains := []common.Chain{
 		common.Ethereum, common.BscChain, common.Arbitrum, // EVM chains
 		common.Bitcoin, // BTC chains
 		common.XRP, // XRPL chains
+		common.Solana,  // Solana
 	}
 
 	for _, chain := range supportedChains {

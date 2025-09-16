@@ -6,6 +6,7 @@ import (
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
 	"github.com/vultisig/recipes/engine/xrpl"
+	"github.com/vultisig/recipes/engine/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
@@ -31,7 +32,7 @@ type ChainEngineRegistry struct {
 }
 
 // NewChainEngineRegistry creates a new engine registry with all engines registered
-func NewChainEngineRegistry() *ChainEngineRegistry {
+func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 	registry := &ChainEngineRegistry{
 		engines: make([]ChainEngine, 0),
 	}
@@ -40,24 +41,33 @@ func NewChainEngineRegistry() *ChainEngineRegistry {
 	for _, chain := range SupportedEVMChains {
 		nativeSymbol, err := chain.NativeSymbol()
 		if err != nil {
-			continue // Skip chains that don't have native symbols
+			return nil, fmt.Errorf("failed to get native symbol for %s: %w", chain.String(), err)
 		}
-		
+
 		evmEngine, err := evm.NewEvm(nativeSymbol)
 		if err != nil {
-			continue // Skip if engine creation fails
+			return nil, fmt.Errorf("failed to create evm engine for %s: %w", chain.String(), err)
 		}
-		
+
 		registry.Register(evmEngine)
 	}
-	
-	// Register BTC engine
+
 	registry.Register(&btc.Btc{})
 	
 	// Register XRPL engine
 	registry.Register(xrpl.NewXRPL())
 
-	return registry
+	solSymbol, err := common.Solana.NativeSymbol()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create evm engine: %s", err)
+	}
+	solEng, err := solana.NewSolana(solSymbol)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create solana engine: %s", err)
+	}
+	registry.Register(solEng)
+
+	return registry, nil
 }
 
 // Register adds an engine to the registry
