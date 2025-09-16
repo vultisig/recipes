@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -294,9 +295,14 @@ func (sdk *SDK) estimateTx(
 		"latest",
 	)
 	if err != nil {
-		return 0, 0, nil, nil, nil, fmt.Errorf("sdk.rpcClientRaw.CallContext: %v", err)
+		if strings.Contains(err.Error(), "does not exist") ||
+			strings.Contains(err.Error(), "not available") ||
+			strings.Contains(err.Error(), "unsupported method") {
+			return nonce, gasLimit, gasTipCap, maxFeePerGas, types.AccessList{}, nil
+		} else {
+			return 0, 0, nil, nil, nil, fmt.Errorf("sdk.rpcClientRaw.CallContext: %v", err)
+		}
 	}
-
 	return nonce, gasLimit, gasTipCap, maxFeePerGas, callRes.AccessList, nil
 }
 
