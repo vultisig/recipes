@@ -68,14 +68,14 @@ func TestEvaluate_SOLTransfer(t *testing.T) {
 	const lamports = uint64(1000000)
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -103,14 +103,14 @@ func TestEvaluate_SOLTransfer_InvalidAmount(t *testing.T) {
 	const lamports = uint64(1000000)
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -141,14 +141,14 @@ func TestEvaluate_SOLTransfer_InvalidRecipient(t *testing.T) {
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
 	wrongRecipient := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -178,14 +178,14 @@ func TestEvaluate_SOLTransfer_MinAmount(t *testing.T) {
 	const lamports = uint64(1000000)
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -211,7 +211,7 @@ func TestEvaluate_SOLTransfer_MinAmount(t *testing.T) {
 
 	invalidRule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -241,14 +241,14 @@ func TestEvaluate_SOLTransfer_MaxAmount(t *testing.T) {
 	const lamports = uint64(1000000)
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	txBytes := buildMockSystemTransferTx(fromKey.PublicKey(), toKey.PublicKey(), lamports)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -274,7 +274,7 @@ func TestEvaluate_SOLTransfer_MaxAmount(t *testing.T) {
 
 	invalidRule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -304,12 +304,12 @@ func TestEvaluate_MultipleInstructions(t *testing.T) {
 	const lamports = uint64(1000000)
 	fromKey := solana.NewWallet()
 	toKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.sol.transfer",
+		Resource: "solana.system.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -339,7 +339,7 @@ func TestEvaluate_MultipleInstructions(t *testing.T) {
 func TestEvaluate_SPLTokenTransfer(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
@@ -382,7 +382,7 @@ func TestEvaluate_SPLTokenTransfer(t *testing.T) {
 func TestEvaluate_SPLTokenTransfer_InvalidAmount(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
@@ -426,7 +426,7 @@ func TestEvaluate_SPLTokenTransfer_InvalidAmount(t *testing.T) {
 func TestEvaluate_SPLTokenTransfer_InvalidRecipient(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
@@ -471,7 +471,7 @@ func TestEvaluate_SPLTokenTransfer_InvalidRecipient(t *testing.T) {
 func TestEvaluate_SPLTokenTransfer_MinAmount(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
@@ -541,7 +541,7 @@ func TestEvaluate_SPLTokenTransfer_MinAmount(t *testing.T) {
 func TestEvaluate_SPLTokenTransfer_MaxAmount(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
@@ -646,7 +646,7 @@ func buildMockFakeSPLTokenTransferTx(source, destination, authority solana.Publi
 func TestEvaluate_SPLTokenTransfer_InvalidProgram(t *testing.T) {
 	const tokenAmount = uint64(500000)
 	authorityKey := solana.NewWallet()
-	engine, err := NewSolana("sol")
+	engine, err := NewSolana()
 	require.NoError(t, err)
 
 	sourceTokenAccount := solana.NewWallet().PublicKey()
