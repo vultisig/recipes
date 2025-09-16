@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vultisig/recipes/types"
+	"github.com/xyield/xrpl-go/model/transactions"
+	xrptypes "github.com/xyield/xrpl-go/model/transactions/types"
 )
 
 func TestNewXRPL(t *testing.T) {
@@ -76,7 +78,9 @@ func TestXRPL_Evaluate_InvalidTransactionData(t *testing.T) {
 
 func TestXRPL_ValidateTarget_Success(t *testing.T) {
 	xrpl := NewXRPL()
-	tx := &XRPLTransaction{Destination: "rRecipient456"}
+	payment := &transactions.Payment{
+		Destination: xrptypes.Address("rRecipient456"),
+	}
 
 	resource := &types.ResourcePath{
 		ChainId:    "xrp",
@@ -91,13 +95,15 @@ func TestXRPL_ValidateTarget_Success(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateTarget(resource, target, tx)
+	err := xrpl.validateTarget(resource, target, payment)
 	assert.NoError(t, err)
 }
 
 func TestXRPL_ValidateTarget_Mismatch(t *testing.T) {
 	xrpl := NewXRPL()
-	tx := &XRPLTransaction{Destination: "rRecipient456"}
+	payment := &transactions.Payment{
+		Destination: xrptypes.Address("rRecipient456"),
+	}
 
 	resource := &types.ResourcePath{
 		ChainId:    "xrp",
@@ -112,16 +118,20 @@ func TestXRPL_ValidateTarget_Mismatch(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateTarget(resource, target, tx)
+	err := xrpl.validateTarget(resource, target, payment)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "target address mismatch")
 }
 
 func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 	xrpl := NewXRPL()
-	tx := &XRPLTransaction{
-		Destination: "rRecipient456",
-		Amount:      "1000000000", // 1000 XRP
+	
+	// Create XRP amount (1000 XRP = 1000000000 drops)
+	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(1000000000)
+	
+	payment := &transactions.Payment{
+		Destination: xrptypes.Address("rRecipient456"),
+		Amount:      xrpAmount,
 	}
 
 	resource := &types.ResourcePath{
@@ -151,15 +161,19 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(resource, constraints, tx)
+	err := xrpl.validateParameterConstraints(resource, constraints, payment)
 	assert.NoError(t, err)
 }
 
 func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 	xrpl := NewXRPL()
-	tx := &XRPLTransaction{
-		Destination: "rRecipient456",
-		Amount:      "3000000000", // 3000 XRP - exceeds max
+	
+	// Create XRP amount (3000 XRP = 3000000000 drops - exceeds max)
+	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(3000000000)
+	
+	payment := &transactions.Payment{
+		Destination: xrptypes.Address("rRecipient456"),
+		Amount:      xrpAmount,
 	}
 
 	resource := &types.ResourcePath{
@@ -180,7 +194,7 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(resource, constraints, tx)
+	err := xrpl.validateParameterConstraints(resource, constraints, payment)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "max amount constraint failed")
 }
