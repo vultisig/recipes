@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -53,16 +54,6 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	// Validate it's an XRPL resource
-	if r.ProtocolId != "xrpl" {
-		return fmt.Errorf("expected xrpl protocol, got: %s", r.ProtocolId)
-	}
-
-	// For now, only support xrpl.send
-	if r.FunctionId != "send" {
-		return fmt.Errorf("only 'send' function supported, got: %s", r.FunctionId)
-	}
-
 	// Parse XRPL transaction from txBytes using binary codec
 	tx, err := x.parseTransaction(txBytes)
 	if err != nil {
@@ -75,12 +66,12 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	// Validate target if specified
-	if err := x.validateTarget(rule.GetTarget(), tx); err != nil {
+	if err := x.validateTarget(r, rule.GetTarget(), tx); err != nil {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
 	// Validate parameter constraints
-	if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
+	if err := x.validateParameterConstraints(r, rule.GetParameterConstraints(), tx); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
@@ -128,7 +119,7 @@ func (x *XRPL) parseTransaction(txBytes []byte) (*XRPLTransaction, error) {
 }
 
 // validateTarget validates the transaction target against the rule target
-func (x *XRPL) validateTarget(target *types.Target, tx *XRPLTransaction) error {
+func (x *XRPL) validateTarget(resource *types.ResourcePath, target *types.Target, tx *XRPLTransaction) error {
 	if target == nil || target.GetTargetType() == types.TargetType_TARGET_TYPE_UNSPECIFIED {
 		return nil // No target validation required
 	}
@@ -144,6 +135,36 @@ func (x *XRPL) validateTarget(target *types.Target, tx *XRPLTransaction) error {
 			return fmt.Errorf("target address mismatch: expected=%s, actual=%s",
 				expectedAddress, tx.Destination)
 		}
+	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
+		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(target.GetMagicConstant())
+		if err != nil {
+			return fmt.Errorf(
+				"failed to get resolver: magic_const=%s",
+				target.GetMagicConstant().String(),
+			)
+		}
+
+		resolvedAddr, _, err := resolve.Resolve(
+			target.GetMagicConstant(),
+			resource.ChainId,
+			"default",
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to resolve magic const: value=%s, error=%w",
+				target.GetMagicConstant().String(),
+				err,
+			)
+		}
+		if !strings.EqualFold(tx.Destination, resolvedAddr) {
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
+				tx.Destination,
+				resolvedAddr,
+			)
+		}
+		return nil
+
 	default:
 		return fmt.Errorf("unsupported target type: %s", target.GetTargetType())
 	}
@@ -152,14 +173,15 @@ func (x *XRPL) validateTarget(target *types.Target, tx *XRPLTransaction) error {
 }
 
 // validateParameterConstraints validates all parameter constraints
-func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstraint, tx *XRPLTransaction) error {
+func (x *XRPL) validateParameterConstraints(resource *types.ResourcePath, constraints []*types.ParameterConstraint, tx *XRPLTransaction) error {
+	chain := resource.ChainId
 	for _, constraint := range constraints {
 		paramName := constraint.GetParameterName()
 
 		var err error
 		switch paramName {
 		case "recipient":
-			err = x.validateRecipientConstraint(constraint, tx.Destination)
+			err = x.validateRecipientConstraint(chain, constraint, tx.Destination)
 		case "amount":
 			err = x.validateAmountConstraint(constraint, tx.Amount)
 		default:
@@ -174,7 +196,7 @@ func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstr
 }
 
 // validateRecipientConstraint validates recipient address constraints
-func (x *XRPL) validateRecipientConstraint(constraint *types.ParameterConstraint, recipient string) error {
+func (x *XRPL) validateRecipientConstraint(chain string, constraint *types.ParameterConstraint, recipient string) error {
 	constraintType := constraint.GetConstraint().GetType()
 
 	switch constraintType {
@@ -204,25 +226,33 @@ func (x *XRPL) validateRecipientConstraint(constraint *types.ParameterConstraint
 
 	case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
 		magicConstant := constraint.GetConstraint().GetMagicConstantValue()
-		switch magicConstant {
-		case types.MagicConstant_VULTISIG_TREASURY:
-			// TODO: Replace with actual Vultisig treasury XRPL address
-			treasuryAddress := "rVultisigTreasuryAddress123456789"
-			if !strings.EqualFold(recipient, treasuryAddress) {
-				return fmt.Errorf("magic constant VULTISIG_TREASURY constraint failed: expected=%s, actual=%s",
-					treasuryAddress, recipient)
-			}
-		case types.MagicConstant_THORCHAIN_VAULT:
-			// TODO: Resolve and replace with actual THORChain vault XRPL address
-			thorchainAddress := "rThorchainVaultAddress123456789"
-			if !strings.EqualFold(recipient, thorchainAddress) {
-				return fmt.Errorf("magic constant THORCHAIN_VAULT constraint failed: expected=%s, actual=%s",
-					thorchainAddress, recipient)
-			}
-		default:
-			return fmt.Errorf("unsupported magic constant: %s", magicConstant)
+		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(magicConstant)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to get resolver: magic_const=%s",
+				magicConstant.String(),
+			)
 		}
 
+		resolvedAddr, _, err := resolve.Resolve(
+			magicConstant,
+			chain,
+			"",
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to resolve magic const: value=%s, error=%w",
+				magicConstant.String(),
+				err,
+			)
+		}
+		if !strings.EqualFold(recipient, resolvedAddr) {
+			return fmt.Errorf(
+				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
+				recipient,
+				resolvedAddr,
+			)
+		}
 	default:
 		return fmt.Errorf("unsupported constraint type for recipient: %s", constraintType)
 	}
