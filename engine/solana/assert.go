@@ -27,7 +27,7 @@ func assertTarget(
 	case types.TargetType_TARGET_TYPE_ADDRESS:
 		if !actual.Equals(expectedRuleTarget) {
 			return fmt.Errorf(
-				"tx targetRule is wrong: tx_to=%s, rule_target_address=%s",
+				"tx target is wrong: tx_to=%s, rule_target_address=%s",
 				actual.String(),
 				expectedRuleTarget.String(),
 			)
@@ -60,9 +60,9 @@ func assertTarget(
 			return fmt.Errorf("failed to parse resolved targetRule: %w", er)
 		}
 
-		if actual.Equals(resolvedTarget) {
+		if !actual.Equals(resolvedTarget) {
 			return fmt.Errorf(
-				"tx targetRule is wrong: tx_to=%s, rule_magic_const_resolved=%s",
+				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
 				actual.String(),
 				resolvedTarget.String(),
 			)
