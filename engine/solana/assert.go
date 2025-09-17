@@ -17,14 +17,19 @@ func assertTarget(
 	targetRule *types.Target,
 	actual solana.PublicKey,
 ) error {
-	expectedRuleTarget, err := solana.PublicKeyFromBase58(targetRule.GetAddress())
-	if err != nil {
-		return fmt.Errorf("failed to parse `targetRule` address: %w", err)
-	}
-
 	targetKind := targetRule.GetTargetType()
 	switch targetKind {
 	case types.TargetType_TARGET_TYPE_ADDRESS:
+		address := targetRule.GetAddress()
+		if address == "" {
+			return fmt.Errorf("address cannot be empty for TARGET_TYPE_ADDRESS")
+		}
+
+		expectedRuleTarget, err := solana.PublicKeyFromBase58(address)
+		if err != nil {
+			return fmt.Errorf("failed to parse `targetRule` address: %w", err)
+		}
+
 		if !actual.Equals(expectedRuleTarget) {
 			return fmt.Errorf(
 				"tx target is wrong: tx_to=%s, rule_target_address=%s",

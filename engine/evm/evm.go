@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	abi_embed "github.com/vultisig/recipes/abi"
-	cmp "github.com/vultisig/recipes/engine/compare"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/engine/evm/compare"
 	"github.com/vultisig/recipes/ethereum"
@@ -101,7 +100,7 @@ func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes
 		return fmt.Errorf("expected 1 parameter constraint, got: %d", len(rule.GetParameterConstraints()))
 	}
 
-	err := cmp.AssertArg(
+	err := stdcompare.AssertArg(
 		resource.ChainId,
 		rule.GetParameterConstraints(),
 		"amount",
@@ -238,7 +237,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 		input := method.Inputs[i]
 		switch actual := arg.(type) {
 		case string:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -250,7 +249,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case common.Address:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -262,7 +261,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case []common.Address:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -274,7 +273,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case *big.Int:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -286,7 +285,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case uint8:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -298,7 +297,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case bool:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
@@ -310,7 +309,7 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 			}
 
 		case [32]byte:
-			er := cmp.AssertArg(
+			er := stdcompare.AssertArg(
 				resource.GetChainId(),
 				rule.GetParameterConstraints(),
 				input.Name,
