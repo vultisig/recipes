@@ -68,7 +68,7 @@ func TestXRPL_Evaluate_InvalidTransactionData(t *testing.T) {
 	xrpl := NewXRPL()
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.xrpl.send",
+		Resource: "xrp.xrp.send",
 	}
 
 	err := xrpl.Evaluate(rule, []byte("invalid-tx-data"))
@@ -125,10 +125,10 @@ func TestXRPL_ValidateTarget_Mismatch(t *testing.T) {
 
 func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 	xrpl := NewXRPL()
-	
+
 	// Create XRP amount (1000 XRP = 1000000000 drops)
 	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(1000000000)
-	
+
 	payment := &transactions.Payment{
 		Destination: xrptypes.Address("rRecipient456"),
 		Amount:      xrpAmount,
@@ -167,10 +167,10 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 
 func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 	xrpl := NewXRPL()
-	
+
 	// Create XRP amount (3000 XRP = 3000000000 drops - exceeds max)
 	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(3000000000)
-	
+
 	payment := &transactions.Payment{
 		Destination: xrptypes.Address("rRecipient456"),
 		Amount:      xrpAmount,
@@ -214,7 +214,7 @@ func TestXRPL_Evaluate_Success(t *testing.T) {
 	// Create a rule with parameter constraints matching the example policy structure
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.xrpl.send",
+		Resource: "xrp.xrp.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -266,7 +266,7 @@ func TestXRPL_MagicConstant_THORChainVault(t *testing.T) {
 	// won't match THORChain's vault address, but it tests the resolution mechanism)
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.xrpl.send",
+		Resource: "xrp.xrp.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 			Target: &types.Target_MagicConstant{
@@ -308,7 +308,7 @@ func TestXRPL_Evaluate_Failure(t *testing.T) {
 	// Create a rule with WRONG recipient and WRONG amount constraints
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.xrpl.send",
+		Resource: "xrp.xrp.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -349,10 +349,10 @@ func TestXRPL_Evaluate_Failure(t *testing.T) {
 
 func TestXRPL_ValidateAmountConstraint_PartialPaymentRejection(t *testing.T) {
 	xrpl := NewXRPL()
-	
+
 	// Create XRP amount
 	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(1000000000)
-	
+
 	// Create payment with partial payment flag set (tfPartialPayment = 131072)
 	payment := &transactions.Payment{
 		BaseTx: transactions.BaseTx{
@@ -391,7 +391,7 @@ func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
 	// Create a rule with correct target but wrong parameter constraints
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.xrpl.send",
+		Resource: "xrp.xrp.send",
 		// Correct target so we get to parameter validation
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,

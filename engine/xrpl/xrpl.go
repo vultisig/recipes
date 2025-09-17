@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"regexp"
 
+	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
@@ -284,29 +285,33 @@ func (x *XRPL) validateAmountConstraint(constraint *types.ParameterConstraint, p
 
 	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 		expectedAmount := constraint.GetConstraint().GetFixedValue()
-		if amountStr != expectedAmount {
+		comparator, err := compare.NewBigInt(expectedAmount)
+		if err != nil {
+			return fmt.Errorf("invalid fixed constraint value: %s", expectedAmount)
+		}
+		if !comparator.Fixed(amountBigInt) {
 			return fmt.Errorf("fixed amount constraint failed: expected=%s, actual=%s",
 				expectedAmount, amountStr)
 		}
 
 	case types.ConstraintType_CONSTRAINT_TYPE_MIN:
 		minValue := constraint.GetConstraint().GetMinValue()
-		minBigInt := new(big.Int)
-		if _, ok := minBigInt.SetString(minValue, 10); !ok {
+		comparator, err := compare.NewBigInt(minValue)
+		if err != nil {
 			return fmt.Errorf("invalid min constraint value: %s", minValue)
 		}
-		if amountBigInt.Cmp(minBigInt) < 0 {
+		if !comparator.Min(amountBigInt) {
 			return fmt.Errorf("min amount constraint failed: expected>=%s, actual=%s",
 				minValue, amountStr)
 		}
 
 	case types.ConstraintType_CONSTRAINT_TYPE_MAX:
 		maxValue := constraint.GetConstraint().GetMaxValue()
-		maxBigInt := new(big.Int)
-		if _, ok := maxBigInt.SetString(maxValue, 10); !ok {
+		comparator, err := compare.NewBigInt(maxValue)
+		if err != nil {
 			return fmt.Errorf("invalid max constraint value: %s", maxValue)
 		}
-		if amountBigInt.Cmp(maxBigInt) > 0 {
+		if !comparator.Max(amountBigInt) {
 			return fmt.Errorf("max amount constraint failed: expected<=%s, actual=%s",
 				maxValue, amountStr)
 		}
