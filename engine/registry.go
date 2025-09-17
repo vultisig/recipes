@@ -53,11 +53,7 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 
 	registry.Register(&btc.Btc{})
 
-	solSymbol, err := common.Solana.NativeSymbol()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create evm engine: %s", err)
-	}
-	solEng, err := solana.NewSolana(solSymbol)
+	solEng, err := solana.NewSolana()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create solana engine: %s", err)
 	}

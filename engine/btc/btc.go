@@ -313,7 +313,7 @@ func validateConstraint[T any](
 				resolvedValue,
 			)
 		}
-		if comparer.Magic(actual) {
+		if comparer.Fixed(actual) {
 			return nil
 		}
 		return fmt.Errorf(

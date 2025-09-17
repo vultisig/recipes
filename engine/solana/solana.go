@@ -11,8 +11,7 @@ import (
 )
 
 type Solana struct {
-	nativeSymbol string
-	idl          map[protocolID]idl
+	idl map[protocolID]idl
 }
 
 func NewSolana() (*Solana, error) {
