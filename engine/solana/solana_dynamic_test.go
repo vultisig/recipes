@@ -77,8 +77,12 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 			assert.NoErrorf(t, er, "Failed to generate accounts and args for wrong argument test: %v", er)
 
 			for argName := range wrongArgs {
-				if a := getArgType(instruction.Args, argName); a == argU64 || a == argU8 {
-					wrongArgs[argName] = "999999999"
+				switch getArgType(instruction.Args, argName) {
+				case argU8:
+					wrongArgs[argName] = "7"       // original is "6"; stays in-range
+					break
+				case argU64:
+					wrongArgs[argName] = "999999"  // differs from "1000000"
 					break
 				}
 			}
