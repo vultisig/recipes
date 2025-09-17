@@ -167,8 +167,9 @@ func assertArgs(
 			if err != nil {
 				return fmt.Errorf("failed to decode & assert: %w", err)
 			}
+		default:
+			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
 		}
-	}
 	return nil
 }
 
