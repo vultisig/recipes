@@ -76,8 +76,20 @@ func assertTarget(
 
 func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message, accs []idlAccount) error {
 	const constraintPrefix = "account_"
+
+	inst := msg.Instructions[0]
+	if len(accs) != len(inst.Accounts) {
+		return fmt.Errorf(
+			"account count mismatch: IDL has %d accounts, tx has %d accounts",
+			len(accs),
+			len(inst.Accounts),
+		)
+	}
+
 	for i, acc := range accs {
-		actual, err := msg.Account(uint16(i))
+		name := constraintPrefix + acc.Name
+
+		actual, err := msg.Account(inst.Accounts[i])
 		if err != nil {
 			return fmt.Errorf("failed to get account %d: %w", i, err)
 		}
@@ -85,36 +97,43 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 		err = compare.AssertArg(
 			common.Solana.String(),
 			constraints,
-			constraintPrefix+acc.Name,
+			name,
 			actual,
 			solcmp.NewPubKey,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to assert: name=%s: %w", acc.Name, err)
+			return fmt.Errorf("failed to assert: name=%s: %w", name, err)
 		}
 	}
 	return nil
 }
 
-func assertArgs(constraints []*types.ParameterConstraint, data solana.Base58, args []idlArgument) error {
+func assertArgs(
+	constraints []*types.ParameterConstraint,
+	data solana.Base58,
+	args []idlArgument,
+	selectorBytes int,
+) error {
 	const constraintPrefix = "arg_"
-	decoder := bin.NewBorshDecoder(data[4:]) // 4 is func selector bytes
+	decoder := bin.NewBorshDecoder(data[selectorBytes:]) // Skip func selector bytes
 	for _, arg := range args {
+		name := constraintPrefix + arg.Name
+
 		switch arg.Type {
 		case argU8:
-			err := decodeAndAssert(decoder, constraints, constraintPrefix+arg.Name, compare.NewUint8)
+			err := decodeAndAssert(decoder, constraints, name, compare.NewUint8)
 			if err != nil {
 				return fmt.Errorf("failed to decode & assert: %w", err)
 			}
 
 		case argU64:
-			err := decodeAndAssert(decoder, constraints, constraintPrefix+arg.Name, compare.NewUint64)
+			err := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
 			if err != nil {
 				return fmt.Errorf("failed to decode & assert: %w", err)
 			}
 
 		case argPublicKey:
-			err := decodeAndAssert(decoder, constraints, constraintPrefix+arg.Name, solcmp.NewPubKey)
+			err := decodeAndAssert(decoder, constraints, name, solcmp.NewPubKey)
 			if err != nil {
 				return fmt.Errorf("failed to decode & assert: %w", err)
 			}

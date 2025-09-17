@@ -1,6 +1,7 @@
 {
   "version": "1.0.0",
   "name": "system",
+  "selectorBytes": 4,
   "instructions": [
     {
       "name": "transfer",

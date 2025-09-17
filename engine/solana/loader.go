@@ -10,11 +10,12 @@ import (
 )
 
 type idl struct {
-	Instructions []idlInstruction `json:"instructions"`
-	Accounts     []idlAccount     `json:"accounts,omitempty"`
-	Types        []idlType        `json:"types,omitempty"`
-	Name         string           `json:"name"`
-	Version      string           `json:"version"`
+	Instructions  []idlInstruction `json:"instructions"`
+	Accounts      []idlAccount     `json:"accounts,omitempty"`
+	Types         []idlType        `json:"types,omitempty"`
+	Name          string           `json:"name"`
+	Version       string           `json:"version"`
+	SelectorBytes int              `json:"selectorBytes,omitempty"`
 }
 
 type idlInstruction struct {

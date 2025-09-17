@@ -77,7 +77,7 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to assert accounts: %w", err)
 	}
 
-	err = assertArgs(rule.GetParameterConstraints(), inst.Data, idlInstSchema.Args)
+	err = assertArgs(rule.GetParameterConstraints(), inst.Data, idlInstSchema.Args, idlProtocolSchema.SelectorBytes)
 	if err != nil {
 		return fmt.Errorf("failed to assert args: %w", err)
 	}
