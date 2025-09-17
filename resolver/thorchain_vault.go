@@ -140,6 +140,8 @@ func (r *THORChainVaultResolver) getThorChainSymbol(chain common.Chain) (string,
 		return "DOGE", nil
 	case common.BitcoinCash:
 		return "BCH", nil
+	case common.XRP:
+		return "XRP", nil
 	default:
 		return "", fmt.Errorf("chain %s not supported by ThorChain", chain.String())
 	}
