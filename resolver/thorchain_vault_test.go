@@ -79,6 +79,12 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve XRP vault address",
+			chainID: "xrp",
+			assetID: "xrp",
+			wantErr: false,
+		},
+		{
 			name:    "resolve using uppercase chain",
 			chainID: "bitcoin",
 			assetID: "btc",
@@ -200,6 +206,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 		{"ethereum", "ETH"},
 		{"bitcoin", "BTC"},
 		{"base", "BASE"},
+		{"xrp", "XRP"},
 	}
 
 	for _, chain := range supportedChains {
