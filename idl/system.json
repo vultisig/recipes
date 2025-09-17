@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "name": "system",
-  "selectorBytes": 4,
   "instructions": [
     {
       "name": "transfer",
@@ -22,7 +21,10 @@
           "name": "lamports",
           "type": "u64"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [2, 0, 0, 0]
+      }
     },
     {
       "name": "create_account",
@@ -51,7 +53,10 @@
           "name": "owner",
           "type": "publicKey"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [0, 0, 0, 0]
+      }
     }
   ]
 }

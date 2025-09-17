@@ -10,18 +10,22 @@ import (
 )
 
 type idl struct {
-	Instructions  []idlInstruction `json:"instructions"`
-	Accounts      []idlAccount     `json:"accounts,omitempty"`
-	Types         []idlType        `json:"types,omitempty"`
-	Name          string           `json:"name"`
-	Version       string           `json:"version"`
-	SelectorBytes int              `json:"selectorBytes,omitempty"`
+	Instructions []idlInstruction `json:"instructions"`
+	Accounts     []idlAccount     `json:"accounts,omitempty"`
+	Types        []idlType        `json:"types,omitempty"`
+	Name         string           `json:"name"`
+	Version      string           `json:"version"`
 }
 
 type idlInstruction struct {
 	Name     string        `json:"name"`
 	Accounts []idlAccount  `json:"accounts"`
 	Args     []idlArgument `json:"args"`
+	Metadata idlMetadata   `json:"metadata"`
+}
+
+type idlMetadata struct {
+	Discriminator []byte `json:"discriminator,omitempty"`
 }
 
 type idlAccount struct {
@@ -35,7 +39,7 @@ type argType string
 const (
 	argU8        argType = "u8"
 	argU64       argType = "u64"
-	argPublicKey argType = "string"
+	argPublicKey argType = "publicKey"
 )
 
 type idlArgument struct {

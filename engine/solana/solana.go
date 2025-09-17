@@ -71,13 +71,21 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to find instruction: %w", err)
 	}
+	if len(idlInstSchema.Metadata.Discriminator) == 0 {
+		return fmt.Errorf("instruction %s.%s is missing discriminator in metadata", r.ProtocolId, r.FunctionId)
+	}
 
 	err = assertAccounts(rule.GetParameterConstraints(), tx.Message, idlInstSchema.Accounts)
 	if err != nil {
 		return fmt.Errorf("failed to assert accounts: %w", err)
 	}
 
-	err = assertArgs(rule.GetParameterConstraints(), inst.Data, idlInstSchema.Args, idlProtocolSchema.SelectorBytes)
+	err = assertArgs(
+		rule.GetParameterConstraints(),
+		inst.Data,
+		idlInstSchema.Args,
+		idlInstSchema.Metadata.Discriminator,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to assert args: %w", err)
 	}

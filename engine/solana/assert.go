@@ -74,6 +74,25 @@ func assertTarget(
 	}
 }
 
+func assertFuncSelector(expected []byte, data solana.Base58) error {
+	if len(expected) == 0 {
+		return fmt.Errorf("discriminator cannot be empty")
+	}
+
+	if len(data) < len(expected) {
+		return fmt.Errorf("instruction data too short: expected at least %d bytes for discriminator, got %d", len(expected), len(data))
+	}
+
+	actual := []byte(data[:len(expected)])
+	for i, expectedByte := range expected {
+		if actual[i] != expectedByte {
+			return fmt.Errorf("function discriminator mismatch at byte %d: expected %02x, got %02x", i, expectedByte, actual[i])
+		}
+	}
+
+	return nil
+}
+
 func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message, accs []idlAccount) error {
 	const constraintPrefix = "account_"
 
@@ -112,10 +131,16 @@ func assertArgs(
 	constraints []*types.ParameterConstraint,
 	data solana.Base58,
 	args []idlArgument,
-	selectorBytes int,
+	discriminator []byte,
 ) error {
 	const constraintPrefix = "arg_"
-	decoder := bin.NewBorshDecoder(data[selectorBytes:]) // Skip func selector bytes
+
+	err := assertFuncSelector(discriminator, data)
+	if err != nil {
+		return fmt.Errorf("discriminator validation failed: %w", err)
+	}
+
+	decoder := bin.NewBorshDecoder(data[len(discriminator):])
 	for _, arg := range args {
 		name := constraintPrefix + arg.Name
 
