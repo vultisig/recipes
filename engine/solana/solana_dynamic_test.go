@@ -79,10 +79,10 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 			for argName := range wrongArgs {
 				switch getArgType(instruction.Args, argName) {
 				case argU8:
-					wrongArgs[argName] = "7"       // original is "6"; stays in-range
+					wrongArgs[argName] = "7" // original is "6"; stays in-range
 					break
 				case argU64:
-					wrongArgs[argName] = "999999"  // differs from "1000000"
+					wrongArgs[argName] = "999999" // differs from "1000000"
 					break
 				}
 			}
@@ -447,7 +447,12 @@ func buildInstructionData(
 		case argPublicKey:
 			pubkey, err := solana.PublicKeyFromBase58(value)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse publicKey value %q for arg %s: %w", value, arg.Name, err)
+				return nil, fmt.Errorf(
+					"failed to parse publicKey value %q for arg %s: %w",
+					value,
+					arg.Name,
+					err,
+				)
 			}
 			if er := encoder.WriteBytes(pubkey.Bytes(), false); er != nil {
 				return nil, fmt.Errorf("failed to encode publicKey value for arg %s: %w", arg.Name, er)

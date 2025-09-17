@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"bytes"
 	"fmt"
 
 	bin "github.com/gagliardetto/binary"
@@ -85,14 +86,16 @@ func assertFuncSelector(expected []byte, data solana.Base58) error {
 	}
 
 	if len(data) < len(expected) {
-		return fmt.Errorf("instruction data too short: expected at least %d bytes for discriminator, got %d", len(expected), len(data))
+		return fmt.Errorf(
+			"instruction data too short: expected at least %d bytes for discriminator, got %d",
+			len(expected),
+			len(data),
+		)
 	}
 
 	actual := []byte(data[:len(expected)])
-	for i, expectedByte := range expected {
-		if actual[i] != expectedByte {
-			return fmt.Errorf("function discriminator mismatch at byte %d: expected %02x, got %02x", i, expectedByte, actual[i])
-		}
+	if !bytes.Equal(expected, actual) {
+		return fmt.Errorf("function discriminator mismatch: expected %x, got %x", expected, actual)
 	}
 
 	return nil
@@ -151,25 +154,26 @@ func assertArgs(
 
 		switch arg.Type {
 		case argU8:
-			err := decodeAndAssert(decoder, constraints, name, compare.NewUint8)
-			if err != nil {
-				return fmt.Errorf("failed to decode & assert: %w", err)
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint8)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
 		case argU64:
-			err := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
-			if err != nil {
-				return fmt.Errorf("failed to decode & assert: %w", err)
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
 		case argPublicKey:
-			err := decodeAndAssert(decoder, constraints, name, solcmp.NewPubKey)
-			if err != nil {
-				return fmt.Errorf("failed to decode & assert: %w", err)
+			er := decodeAndAssert(decoder, constraints, name, solcmp.NewPubKey)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 		default:
 			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
 		}
+	}
 	return nil
 }
 
