@@ -278,7 +278,7 @@ func (sdk *SDK) estimateTx(
 	gas := hexutil.EncodeUint64(gasLimit)
 
 	var callRes createAccessListRes
-	err = sdk.rpcClientRaw.CallContext(
+	_ = sdk.rpcClientRaw.CallContext(
 		ctx,
 		&callRes,
 		"eth_createAccessList",
@@ -293,10 +293,6 @@ func (sdk *SDK) estimateTx(
 		},
 		"latest",
 	)
-	if err != nil {
-		return 0, 0, nil, nil, nil, fmt.Errorf("sdk.rpcClientRaw.CallContext: %v", err)
-	}
-
 	return nonce, gasLimit, gasTipCap, maxFeePerGas, callRes.AccessList, nil
 }
 
