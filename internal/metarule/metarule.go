@@ -3,7 +3,7 @@ package metarule
 import (
 	"fmt"
 
-	"github.com/vultisig/recipes/solana"
+	"github.com/gagliardetto/solana-go"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -17,8 +17,8 @@ func NewMetaRule() *MetaRule {
 }
 
 // TryFormat meta-rule to exact rule. For example:
-// solana.send -> solana.sol.transfer or solana.spl_token.transfer
-// solana.sol.transfer -> unmodified solana.sol.transfer
+// solana.send -> solana.system.transfer or solana.spl_token.transfer
+// solana.system.transfer -> unmodified solana.system.transfer
 // *.*.* (any 3 fields rule) -> unmodified *.*.*
 func (m *MetaRule) TryFormat(in *types.Rule) (*types.Rule, error) {
 	r, err := util.ParseResource(in.GetResource())
@@ -99,10 +99,16 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 				)
 			}
 
-			out.Resource = "solana.sol.transfer"
+			out.Resource = "solana.system.transfer"
 			out.Target = outTarget
 			out.ParameterConstraints = []*types.ParameterConstraint{{
-				ParameterName: "amount",
+				ParameterName: "account_from",
+				Constraint:    anyConstraint(),
+			}, {
+				ParameterName: "account_to",
+				Constraint:    recipient,
+			}, {
+				ParameterName: "arg_lamports",
 				Constraint:    amount,
 			}}
 			return out, nil
@@ -111,17 +117,17 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 		// SPL token transfer
 		out.Resource = "solana.spl_token.transfer"
 		out.ParameterConstraints = []*types.ParameterConstraint{{
-			ParameterName: "destination",
+			ParameterName: "account_source",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_destination",
 			Constraint:    recipient,
 		}, {
-			ParameterName: "amount",
+			ParameterName: "account_authority",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_amount",
 			Constraint:    amount,
-		}, {
-			ParameterName: "source",
-			Constraint:    anyConstraint(),
-		}, {
-			ParameterName: "authority",
-			Constraint:    anyConstraint(),
 		}}
 		return out, nil
 	default:
