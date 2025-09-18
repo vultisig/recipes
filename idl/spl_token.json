@@ -26,7 +26,10 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [3]
+      }
     },
     {
       "name": "transferChecked",
@@ -61,7 +64,10 @@
           "name": "decimals",
           "type": "u8"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [12]
+      }
     },
     {
       "name": "approve",
@@ -87,7 +93,10 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [4]
+      }
     },
     {
       "name": "mintTo",
@@ -113,7 +122,10 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [7]
+      }
     },
     {
       "name": "burn",
@@ -139,7 +151,10 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "metadata": {
+        "discriminator": [8]
+      }
     }
   ]
 }

@@ -3,9 +3,9 @@ package metarule
 import (
 	"testing"
 
+	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vultisig/recipes/solana"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -98,10 +98,17 @@ func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
 	result, err := metaRule.TryFormat(rule)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, "solana.sol.transfer", result.Resource)
+	assert.Equal(t, "solana.system.transfer", result.Resource)
 	assert.Equal(t, testAddress, result.Target.GetAddress())
-	assert.Len(t, result.ParameterConstraints, 1)
-	assert.Equal(t, "amount", result.ParameterConstraints[0].ParameterName)
+	assert.Len(t, result.ParameterConstraints, 3)
+
+	paramNames := make([]string, len(result.ParameterConstraints))
+	for i, param := range result.ParameterConstraints {
+		paramNames[i] = param.ParameterName
+	}
+	assert.Contains(t, paramNames, "account_from")
+	assert.Contains(t, paramNames, "account_to")
+	assert.Contains(t, paramNames, "arg_lamports")
 }
 
 func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {

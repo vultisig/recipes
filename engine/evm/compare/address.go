@@ -21,7 +21,3 @@ func NewAddress(raw string) (compare.Compare[common.Address], error) {
 func (a *Address) Fixed(v common.Address) bool {
 	return bytes.Equal(a.inner[:], v[:])
 }
-
-func (a *Address) Magic(v common.Address) bool {
-	return bytes.Equal(a.inner[:], v[:])
-}
