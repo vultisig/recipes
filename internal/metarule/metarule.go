@@ -2,6 +2,7 @@ package metarule
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/vultisig/recipes/types"
@@ -34,11 +35,17 @@ func (m *MetaRule) TryFormat(in *types.Rule) (*types.Rule, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse chain id: %w", err)
 	}
-	switch chain {
-	case common.Solana:
+	switch {
+	case chain == common.Solana:
 		out, er := m.handleSolana(in, r)
 		if er != nil {
 			return nil, fmt.Errorf("failed to handle solana: %w", er)
+		}
+		return out, nil
+	case chain.IsEvm():
+		out, er := m.handleEVM(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle evm: %w", er)
 		}
 		return out, nil
 	default:
@@ -132,6 +139,67 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 		return out, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) (*types.Rule, error) {
+	switch r.GetProtocolId() {
+	case "send":
+		amount, er := m.getConstraint(in, "amount")
+		if er != nil {
+			return nil, fmt.Errorf("failed to parse `amount`: %w", er)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+
+		chain, err := common.FromString(r.GetChainId())
+		if err != nil {
+			return nil, fmt.Errorf("invalid chainID: %w", err)
+		}
+
+		nativeSymbol, err := chain.NativeSymbol()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find native symbol: %w", err)
+		}
+
+		recipient, err := m.getConstraint(in, "recipient")
+		if err != nil {
+			// if there is an error then there are no constraint 'recipient' in rule.
+			// Native transfer then
+			var outTarget *types.Target
+			switch in.GetTarget().GetTargetType() {
+			case types.TargetType_TARGET_TYPE_ADDRESS, types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
+				outTarget = in.GetTarget()
+			default:
+				return nil, fmt.Errorf(
+					"invalid constraint type for `target`: %s",
+					in.GetTarget().GetTargetType().String(),
+				)
+			}
+
+			out.Resource = fmt.Sprintf("%s.%s.transfer", strings.ToLower(chain.String()), nativeSymbol)
+			out.Target = outTarget
+			out.ParameterConstraints = []*types.ParameterConstraint{{
+				ParameterName: "amount",
+				Constraint:    amount,
+			}}
+
+			return out, nil
+		}
+
+		// erc20 token transfer
+		out.Resource = fmt.Sprintf("%s.erc20.transfer", strings.ToLower(chain.String()))
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "recipient",
+			Constraint:    recipient,
+		}, {
+			ParameterName: "amount",
+			Constraint:    amount,
+		}}
+		return out, nil
+	default:
+		// pass it as is if it's not send
+		return in, nil
 	}
 }
 
