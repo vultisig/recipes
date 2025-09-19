@@ -7,6 +7,7 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vultisig/recipes/sdk/evm"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -282,10 +283,19 @@ func TestHandleEVM_NativeTransfer(t *testing.T) {
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: testRecipientAddress,
+				Address: evm.ZeroAddress.String(),
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
@@ -309,7 +319,7 @@ func TestHandleEVM_NativeTransfer(t *testing.T) {
 	nativeSymbol, _ := chain.NativeSymbol()
 	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
 	assert.Equal(t, expectedResource, result.Resource)
-	assert.Equal(t, in.Target, result.Target)
+	assert.Equal(t, testRecipientAddress, result.Target.GetAddress())
 	assert.Equal(t, "amount", result.ParameterConstraints[0].ParameterName)
 }
 
@@ -391,6 +401,17 @@ func TestHandleEVM_MissingAmount(t *testing.T) {
 				Address: testRecipientAddress,
 			},
 		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
+		},
 	}
 
 	r, err := util.ParseResource(in.GetResource())
@@ -401,6 +422,38 @@ func TestHandleEVM_MissingAmount(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to parse `amount`")
 }
 
+func TestHandleEVM_MissingRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: testRecipientAddress,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	_, err = metaRule.handleEVM(in, r)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+}
+
 func TestHandleEVM_InvalidChain(t *testing.T) {
 	metaRule := NewMetaRule()
 
@@ -409,10 +462,19 @@ func TestHandleEVM_InvalidChain(t *testing.T) {
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: testRecipientAddress,
+				Address: evm.ZeroAddress.String(),
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
@@ -439,9 +501,18 @@ func TestHandleEVM_InvalidTargetTypeForNative(t *testing.T) {
 	in := &types.Rule{
 		Resource: fmt.Sprintf("%s.send", testEVMChain),
 		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
+			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED,
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
@@ -459,7 +530,7 @@ func TestHandleEVM_InvalidTargetTypeForNative(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid constraint type for `target`")
+	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
 }
 
 func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
@@ -468,12 +539,21 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 	in := &types.Rule{
 		Resource: fmt.Sprintf("%s.send", testEVMChain),
 		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
-			Target: &types.Target_MagicConstant{
-				MagicConstant: types.MagicConstant_VULTISIG_TREASURY,
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_VULTISIG_TREASURY,
+					},
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
@@ -497,5 +577,5 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 	nativeSymbol, _ := chain.NativeSymbol()
 	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
 	assert.Equal(t, expectedResource, result.Resource)
-	assert.Equal(t, in.Target, result.Target)
+	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result.Target.GetMagicConstant())
 }
