@@ -44,54 +44,56 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			continue
 		}
 
-		rule, err := metarule.NewMetaRule().TryFormat(ruleRaw)
+		rules, err := metarule.NewMetaRule().TryFormat(ruleRaw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to format rule: %w", err)
 		}
 
-		resourcePathString := rule.GetResource()
-		resourcePath, err := util.ParseResource(resourcePathString)
-		if err != nil {
-			e.logger.Printf(
-				"Skipping rule %s: invalid resource path %s: %v",
-				rule.GetId(),
-				resourcePathString,
-				err,
-			)
-			continue
+		for _, rule := range rules {
+			resourcePathString := rule.GetResource()
+			resourcePath, er := util.ParseResource(resourcePathString)
+			if er != nil {
+				e.logger.Printf(
+					"Skipping rule %s: invalid resource path %s: %v",
+					rule.GetId(),
+					resourcePathString,
+					er,
+				)
+				continue
+			}
+
+			if resourcePath.ChainId != strings.ToLower(chain.String()) {
+				e.logger.Printf(
+					"Skipping rule %s: target chain %s is not '%s'",
+					rule.GetId(),
+					resourcePath.ChainId,
+					chain.String(),
+				)
+				continue
+			}
+
+			e.logger.Printf("Evaluating rule: %s: %s", rule.GetId(), resourcePathString)
+			e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
+				resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
+
+			// Get the appropriate engine for this chain
+			chainEngine, er := e.registry.GetEngine(chain)
+			if er != nil {
+				e.logger.Printf("No engine available for chain %s: %v", chain.String(), er)
+				continue
+			}
+
+			// Evaluate using the chain-specific engine
+			er = chainEngine.Evaluate(rule, txBytes)
+			if er != nil {
+				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
+				e.logger.Printf("Failed to evaluate tx for %s: %v", chain.String(), er)
+				continue
+			}
+
+			e.logger.Printf("Tx validated for %s", chain.String())
+			return rule, nil
 		}
-
-		if resourcePath.ChainId != strings.ToLower(chain.String()) {
-			e.logger.Printf(
-				"Skipping rule %s: target chain %s is not '%s'",
-				rule.GetId(),
-				resourcePath.ChainId,
-				chain.String(),
-			)
-			continue
-		}
-
-		e.logger.Printf("Evaluating rule: %s: %s", rule.GetId(), resourcePathString)
-		e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
-			resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
-
-		// Get the appropriate engine for this chain
-		chainEngine, err := e.registry.GetEngine(chain)
-		if err != nil {
-			e.logger.Printf("No engine available for chain %s: %v", chain.String(), err)
-			continue
-		}
-
-		// Evaluate using the chain-specific engine
-		err = chainEngine.Evaluate(rule, txBytes)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, err))
-			e.logger.Printf("Failed to evaluate tx for %s: %v", chain.String(), err)
-			continue
-		}
-
-		e.logger.Printf("Tx validated for %s", chain.String())
-		return rule, nil
 	}
 	if len(errs) == 0 {
 		return nil, errors.New("no matching rule")
