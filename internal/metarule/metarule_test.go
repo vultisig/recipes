@@ -1,12 +1,16 @@
 package metarule
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vultisig/recipes/sdk/evm"
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/recipes/util"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 const testAddress = "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
@@ -265,4 +269,313 @@ func TestTryFormat_SolanaInvalidRecipientConstraintType(t *testing.T) {
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
+}
+
+const testEVMChain = "ethereum"
+const testRecipientAddress = "0x1234567890abcdef1234567890abcdef12345678"
+const testTokenAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+
+func TestHandleEVM_NativeTransfer(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	result, err := metaRule.handleEVM(in, r)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	chain, _ := common.FromString(testEVMChain)
+	nativeSymbol, _ := chain.NativeSymbol()
+	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
+	assert.Equal(t, expectedResource, result.Resource)
+	assert.Equal(t, testRecipientAddress, result.Target.GetAddress())
+	assert.Equal(t, "amount", result.ParameterConstraints[0].ParameterName)
+}
+
+func TestHandleEVM_ERC20Transfer(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: testTokenAddress,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	result, err := metaRule.handleEVM(in, r)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	expectedResource := fmt.Sprintf("%s.erc20.transfer", testEVMChain)
+	assert.Equal(t, expectedResource, result.Resource)
+	assert.Equal(t, in.Target, result.Target)
+
+	paramNames := make([]string, len(result.ParameterConstraints))
+	for i, param := range result.ParameterConstraints {
+		paramNames[i] = param.ParameterName
+	}
+	assert.Contains(t, paramNames, "recipient")
+	assert.Contains(t, paramNames, "amount")
+}
+
+func TestHandleEVM_NonSendProtocol(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.uniswapV2_router.swap", testEVMChain),
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	result, err := metaRule.handleEVM(in, r)
+	require.NoError(t, err)
+	assert.Equal(t, in, result) // Returned unchanged
+}
+
+func TestHandleEVM_MissingAmount(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: testRecipientAddress,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	_, err = metaRule.handleEVM(in, r)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse `amount`")
+}
+
+func TestHandleEVM_MissingRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: testRecipientAddress,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	_, err = metaRule.handleEVM(in, r)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+}
+
+func TestHandleEVM_InvalidChain(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: "invalidchain.send",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testRecipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	_, err = metaRule.handleEVM(in, r)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid chainID")
+}
+
+func TestHandleEVM_InvalidTargetTypeForNative(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED,
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	_, err = metaRule.handleEVM(in, r)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
+}
+
+func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	in := &types.Rule{
+		Resource: fmt.Sprintf("%s.send", testEVMChain),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: evm.ZeroAddress.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_VULTISIG_TREASURY,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1",
+					},
+				},
+			},
+		},
+	}
+
+	r, err := util.ParseResource(in.GetResource())
+	require.NoError(t, err)
+
+	result, err := metaRule.handleEVM(in, r)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	chain, _ := common.FromString(testEVMChain)
+	nativeSymbol, _ := chain.NativeSymbol()
+	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
+	assert.Equal(t, expectedResource, result.Resource)
+	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result.Target.GetMagicConstant())
 }
