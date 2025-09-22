@@ -73,7 +73,7 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return nil
 	}
 
-	if tx.Value() != nil && tx.Value().Sign() != 0 {
+	if (tx.Value() != nil && tx.Value().Sign() != 0) && !e.isPaidMethod(r.ProtocolId, r.FunctionId) {
 		return fmt.Errorf(
 			"tx value must be zero for non-native: abi=%s, tx_value=%s",
 			r.ProtocolId,
@@ -223,6 +223,13 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
 
+	// remove value constraint if present
+	for i, constraint := range rule.GetParameterConstraints() {
+		if constraint.GetParameterName() == "value" {
+			rule.ParameterConstraints = append(rule.ParameterConstraints[:i], rule.ParameterConstraints[i+1:]...)
+		}
+	}
+
 	if len(rule.GetParameterConstraints()) != len(args) {
 		// if some arg not found by name, assertArg returns the error below during assertion,
 		// so there 2 (len check and get later) it's enough to determine that lists are equal
@@ -329,4 +336,20 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 
 func addrEqual(a, b common.Address) bool {
 	return bytes.Equal(a[:], b[:])
+}
+
+func (e *Evm) isPaidMethod(protocolId string, methodName string) bool {
+	abi, ok := e.abi[protocolId]
+	if !ok {
+		fmt.Println("abi not found", protocolId)
+		return false
+	}
+
+	method, ok := abi.Methods[methodName]
+	if !ok {
+		fmt.Println("method not found", methodName)
+		return false
+	}
+
+	return method.IsPayable()
 }
