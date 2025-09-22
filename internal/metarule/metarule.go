@@ -18,18 +18,25 @@ func NewMetaRule() *MetaRule {
 	return &MetaRule{}
 }
 
-// TryFormat meta-rule to exact rule. For example:
+type metaProtocol string
+
+const (
+	send metaProtocol = "send"
+	swap metaProtocol = "swap"
+)
+
+// TryFormat meta-rule to exact rule(s). For example:
 // solana.send -> solana.system.transfer or solana.spl_token.transfer
 // solana.system.transfer -> unmodified solana.system.transfer
 // *.*.* (any 3 fields rule) -> unmodified *.*.*
-func (m *MetaRule) TryFormat(in *types.Rule) (*types.Rule, error) {
+func (m *MetaRule) TryFormat(in *types.Rule) ([]*types.Rule, error) {
 	r, err := util.ParseResource(in.GetResource())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse resource: %w", err)
 	}
 	if r.GetFunctionId() != "" {
 		// it's not a meta-rule
-		return in, nil
+		return []*types.Rule{in}, nil
 	}
 
 	chain, err := common.FromString(r.ChainId)
@@ -67,9 +74,9 @@ func (m *MetaRule) getConstraint(rule *types.Rule, name string) (*types.Constrai
 	return nil, fmt.Errorf("failed to find constraint: %s", name)
 }
 
-func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.Rule, error) {
-	switch r.GetProtocolId() {
-	case "send":
+func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
 		recipient, er := m.getConstraint(in, "recipient")
 		if er != nil {
 			return nil, fmt.Errorf("failed to parse `recipient`: %w", er)
@@ -119,7 +126,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 				ParameterName: "arg_lamports",
 				Constraint:    amount,
 			}}
-			return out, nil
+			return []*types.Rule{out}, nil
 		}
 
 		// SPL token transfer
@@ -137,15 +144,15 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) (*types.R
 			ParameterName: "arg_amount",
 			Constraint:    amount,
 		}}
-		return out, nil
+		return []*types.Rule{out}, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
 }
 
-func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) (*types.Rule, error) {
-	switch r.GetProtocolId() {
-	case "send":
+func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
 		recipient, err := m.getConstraint(in, "recipient")
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse `recipient`: %w", err)
@@ -198,7 +205,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) (*types.Rule
 				Constraint:    amount,
 			}}
 
-			return out, nil
+			return []*types.Rule{out}, nil
 		}
 
 		// erc20 token transfer
@@ -211,10 +218,9 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) (*types.Rule
 			ParameterName: "amount",
 			Constraint:    amount,
 		}}
-		return out, nil
+		return []*types.Rule{out}, nil
 	default:
-		// pass it as is if it's not send
-		return in, nil
+		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
 }
 
