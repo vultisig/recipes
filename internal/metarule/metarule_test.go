@@ -59,12 +59,12 @@ func TestTryFormat_UnsupportedChain(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "bitcoin.send", // Unsupported chain
+		Resource: "unsupported.send", // Actually unsupported chain
 	}
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "got meta format (bitcoin.send) but chain not supported: Bitcoin")
+	assert.Contains(t, err.Error(), "failed to parse chain id")
 }
 
 func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
@@ -582,4 +582,74 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
 	assert.Equal(t, expectedResource, result[0].Resource)
 	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result[0].Target.GetMagicConstant())
+}
+
+const testBitcoinAddress = "bc1qw589q7vva3wxju9zxz8gt59pfz2frwsazglsj8"
+
+func TestTryFormat_BitcoinSwap(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testBitcoinAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "ethereum",
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
 }
