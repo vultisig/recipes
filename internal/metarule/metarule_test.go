@@ -188,7 +188,7 @@ func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
 }
 
 func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
@@ -218,7 +218,7 @@ func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `amount`")
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
 }
 
 func TestTryFormat_SolanaUnsupportedProtocol(t *testing.T) {
@@ -422,7 +422,7 @@ func TestHandleEVM_MissingAmount(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `amount`")
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
 }
 
 func TestHandleEVM_MissingRecipient(t *testing.T) {
@@ -454,7 +454,7 @@ func TestHandleEVM_MissingRecipient(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
 }
 
 func TestHandleEVM_InvalidChain(t *testing.T) {
