@@ -133,7 +133,7 @@ func MakeAsset(chain common.Chain, asset string) (string, error) {
 		// Check if the address matches (case-insensitive)
 		poolAddress := tokenParts[1]
 		if strings.EqualFold(poolAddress, targetAsset) {
-			return pp.asset, nil
+			return parts[0] + "." + tokenParts[0], nil
 		}
 	}
 
