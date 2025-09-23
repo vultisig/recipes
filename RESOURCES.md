@@ -373,6 +373,2136 @@ Transfer Ether to another address
 ```
 
 
+### ethereum.routerv6_1inch.advanceEpoch
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.advanceEpoch  
+
+Call the advanceEpoch function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| series | decimal | series parameter of type uint96 |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.advanceEpoch",
+  "effect": "ALLOW",
+  "constraints": {
+    "series": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.and
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.and  
+
+Call the and function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| offsets | decimal | offsets parameter of type uint256 |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.and",
+  "effect": "ALLOW",
+  "constraints": {
+    "offsets": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.arbitraryStaticCall
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.arbitraryStaticCall  
+
+Call the arbitraryStaticCall function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| target | address | target parameter of type address |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.arbitraryStaticCall",
+  "effect": "ALLOW",
+  "constraints": {
+    "target": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.bitInvalidatorForOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.bitInvalidatorForOrder  
+
+Call the bitInvalidatorForOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| maker | address | maker parameter of type address |
+| slot | decimal | slot parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.bitInvalidatorForOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "maker": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "slot": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.bitsInvalidateForOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.bitsInvalidateForOrder  
+
+Call the bitsInvalidateForOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| makerTraits | decimal | makerTraits parameter of type MakerTraits |
+| additionalMask | decimal | additionalMask parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.bitsInvalidateForOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "makerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "additionalMask": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.cancelOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.cancelOrder  
+
+Call the cancelOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| makerTraits | decimal | makerTraits parameter of type MakerTraits |
+| orderHash | string | orderHash parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.cancelOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "makerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "orderHash": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.cancelOrders
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.cancelOrders  
+
+Call the cancelOrders function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| makerTraits | decimal | makerTraits parameter of type MakerTraits[] |
+| orderHashes | array | orderHashes parameter of type bytes32[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.cancelOrders",
+  "effect": "ALLOW",
+  "constraints": {
+    "makerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "orderHashes": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.checkPredicate
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.checkPredicate  
+
+Call the checkPredicate function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| predicate | bytes | predicate parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.checkPredicate",
+  "effect": "ALLOW",
+  "constraints": {
+    "predicate": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.clipperSwap
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.clipperSwap  
+
+Call the clipperSwap function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| clipperExchange | address | clipperExchange parameter of type contract IClipperExchange |
+| srcToken | decimal | srcToken parameter of type Address |
+| dstToken | address | dstToken parameter of type contract IERC20 |
+| inputAmount | decimal | inputAmount parameter of type uint256 |
+| outputAmount | decimal | outputAmount parameter of type uint256 |
+| goodUntil | decimal | goodUntil parameter of type uint256 |
+| r | string | r parameter of type bytes32 |
+| vs | string | vs parameter of type bytes32 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.clipperSwap",
+  "effect": "ALLOW",
+  "constraints": {
+    "clipperExchange": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "srcToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dstToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "inputAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "outputAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "goodUntil": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "r": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "vs": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.clipperSwapTo
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.clipperSwapTo  
+
+Call the clipperSwapTo function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| clipperExchange | address | clipperExchange parameter of type contract IClipperExchange |
+| recipient | address | recipient parameter of type address payable |
+| srcToken | decimal | srcToken parameter of type Address |
+| dstToken | address | dstToken parameter of type contract IERC20 |
+| inputAmount | decimal | inputAmount parameter of type uint256 |
+| outputAmount | decimal | outputAmount parameter of type uint256 |
+| goodUntil | decimal | goodUntil parameter of type uint256 |
+| r | string | r parameter of type bytes32 |
+| vs | string | vs parameter of type bytes32 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.clipperSwapTo",
+  "effect": "ALLOW",
+  "constraints": {
+    "clipperExchange": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "srcToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dstToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "inputAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "outputAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "goodUntil": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "r": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "vs": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.curveSwapCallback
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.curveSwapCallback  
+
+Call the curveSwapCallback function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| param0 | address |  parameter of type address |
+| param1 | address |  parameter of type address |
+| inCoin | address | inCoin parameter of type address |
+| dx | decimal | dx parameter of type uint256 |
+| param4 | decimal |  parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.curveSwapCallback",
+  "effect": "ALLOW",
+  "constraints": {
+    "param0": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "param1": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "inCoin": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dx": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "param4": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.eip712Domain
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.eip712Domain  
+
+Call the eip712Domain function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.eip712Domain",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.epoch
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.epoch  
+
+Call the epoch function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| maker | address | maker parameter of type address |
+| series | decimal | series parameter of type uint96 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.epoch",
+  "effect": "ALLOW",
+  "constraints": {
+    "maker": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "series": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.epochEquals
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.epochEquals  
+
+Call the epochEquals function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| maker | address | maker parameter of type address |
+| series | decimal | series parameter of type uint256 |
+| makerEpoch | decimal | makerEpoch parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.epochEquals",
+  "effect": "ALLOW",
+  "constraints": {
+    "maker": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "series": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "makerEpoch": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.eq
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.eq  
+
+Call the eq function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | decimal | value parameter of type uint256 |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.eq",
+  "effect": "ALLOW",
+  "constraints": {
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswap
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswap  
+
+Call the ethUnoswap function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswap",
+  "effect": "ALLOW",
+  "constraints": {
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswap2
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswap2  
+
+Call the ethUnoswap2 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswap2",
+  "effect": "ALLOW",
+  "constraints": {
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswap3
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswap3  
+
+Call the ethUnoswap3 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| dex3 | decimal | dex3 parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswap3",
+  "effect": "ALLOW",
+  "constraints": {
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex3": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswapTo
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswapTo  
+
+Call the ethUnoswapTo function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswapTo",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswapTo2
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswapTo2  
+
+Call the ethUnoswapTo2 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswapTo2",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.ethUnoswapTo3
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.ethUnoswapTo3  
+
+Call the ethUnoswapTo3 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| dex3 | decimal | dex3 parameter of type Address |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.ethUnoswapTo3",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex3": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.fillContractOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.fillContractOrder  
+
+Call the fillContractOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct IOrderMixin.Order |
+| signature | bytes | signature parameter of type bytes |
+| amount | decimal | amount parameter of type uint256 |
+| takerTraits | decimal | takerTraits parameter of type TakerTraits |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.fillContractOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "signature": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "takerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.fillContractOrderArgs
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.fillContractOrderArgs  
+
+Call the fillContractOrderArgs function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct IOrderMixin.Order |
+| signature | bytes | signature parameter of type bytes |
+| amount | decimal | amount parameter of type uint256 |
+| takerTraits | decimal | takerTraits parameter of type TakerTraits |
+| args | bytes | args parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.fillContractOrderArgs",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "signature": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "takerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "args": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.fillOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.fillOrder  
+
+Call the fillOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct IOrderMixin.Order |
+| r | string | r parameter of type bytes32 |
+| vs | string | vs parameter of type bytes32 |
+| amount | decimal | amount parameter of type uint256 |
+| takerTraits | decimal | takerTraits parameter of type TakerTraits |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.fillOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "r": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "vs": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "takerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.fillOrderArgs
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.fillOrderArgs  
+
+Call the fillOrderArgs function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct IOrderMixin.Order |
+| r | string | r parameter of type bytes32 |
+| vs | string | vs parameter of type bytes32 |
+| amount | decimal | amount parameter of type uint256 |
+| takerTraits | decimal | takerTraits parameter of type TakerTraits |
+| args | bytes | args parameter of type bytes |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.fillOrderArgs",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "r": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "vs": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "takerTraits": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "args": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.gt
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.gt  
+
+Call the gt function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | decimal | value parameter of type uint256 |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.gt",
+  "effect": "ALLOW",
+  "constraints": {
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.hashOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.hashOrder  
+
+Call the hashOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct IOrderMixin.Order |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.hashOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.increaseEpoch
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.increaseEpoch  
+
+Call the increaseEpoch function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| series | decimal | series parameter of type uint96 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.increaseEpoch",
+  "effect": "ALLOW",
+  "constraints": {
+    "series": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.lt
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.lt  
+
+Call the lt function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | decimal | value parameter of type uint256 |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.lt",
+  "effect": "ALLOW",
+  "constraints": {
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.not
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.not  
+
+Call the not function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.not",
+  "effect": "ALLOW",
+  "constraints": {
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.or
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.or  
+
+Call the or function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| offsets | decimal | offsets parameter of type uint256 |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.or",
+  "effect": "ALLOW",
+  "constraints": {
+    "offsets": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.owner
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.owner  
+
+Call the owner function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.owner",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.pause
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.pause  
+
+Call the pause function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.pause",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.paused
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.paused  
+
+Call the paused function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.paused",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.permitAndCall
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.permitAndCall  
+
+Call the permitAndCall function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| permit | bytes | permit parameter of type bytes |
+| action | bytes | action parameter of type bytes |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.permitAndCall",
+  "effect": "ALLOW",
+  "constraints": {
+    "permit": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "action": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.rawRemainingInvalidatorForOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.rawRemainingInvalidatorForOrder  
+
+Call the rawRemainingInvalidatorForOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| maker | address | maker parameter of type address |
+| orderHash | string | orderHash parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.rawRemainingInvalidatorForOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "maker": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "orderHash": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.remainingInvalidatorForOrder
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.remainingInvalidatorForOrder  
+
+Call the remainingInvalidatorForOrder function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| maker | address | maker parameter of type address |
+| orderHash | string | orderHash parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.remainingInvalidatorForOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "maker": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "orderHash": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.renounceOwnership
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.renounceOwnership  
+
+Call the renounceOwnership function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.renounceOwnership",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.rescueFunds
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.rescueFunds  
+
+Call the rescueFunds function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| token | address | token parameter of type contract IERC20 |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.rescueFunds",
+  "effect": "ALLOW",
+  "constraints": {
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.simulate
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.simulate  
+
+Call the simulate function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| target | address | target parameter of type address |
+| data | bytes | data parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.simulate",
+  "effect": "ALLOW",
+  "constraints": {
+    "target": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.swap
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.swap  
+
+Call the swap function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| executor | address | executor parameter of type contract IAggregationExecutor |
+| desc | string | desc parameter of type struct GenericRouter.SwapDescription |
+| data | bytes | data parameter of type bytes |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.swap",
+  "effect": "ALLOW",
+  "constraints": {
+    "executor": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "desc": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.transferOwnership
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.transferOwnership  
+
+Call the transferOwnership function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| newOwner | address | newOwner parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.transferOwnership",
+  "effect": "ALLOW",
+  "constraints": {
+    "newOwner": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.uniswapV3SwapCallback
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.uniswapV3SwapCallback  
+
+Call the uniswapV3SwapCallback function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| amount0Delta | decimal | amount0Delta parameter of type int256 |
+| amount1Delta | decimal | amount1Delta parameter of type int256 |
+| param2 | bytes |  parameter of type bytes |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.uniswapV3SwapCallback",
+  "effect": "ALLOW",
+  "constraints": {
+    "amount0Delta": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount1Delta": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "param2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswap
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswap  
+
+Call the unoswap function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswap",
+  "effect": "ALLOW",
+  "constraints": {
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswap2
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswap2  
+
+Call the unoswap2 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswap2",
+  "effect": "ALLOW",
+  "constraints": {
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswap3
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswap3  
+
+Call the unoswap3 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| dex3 | decimal | dex3 parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswap3",
+  "effect": "ALLOW",
+  "constraints": {
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex3": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswapTo
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswapTo  
+
+Call the unoswapTo function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswapTo",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswapTo2
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswapTo2  
+
+Call the unoswapTo2 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswapTo2",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unoswapTo3
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unoswapTo3  
+
+Call the unoswapTo3 function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | decimal | to parameter of type Address |
+| token | decimal | token parameter of type Address |
+| amount | decimal | amount parameter of type uint256 |
+| minReturn | decimal | minReturn parameter of type uint256 |
+| dex | decimal | dex parameter of type Address |
+| dex2 | decimal | dex2 parameter of type Address |
+| dex3 | decimal | dex3 parameter of type Address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unoswapTo3",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minReturn": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex2": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dex3": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.routerv6_1inch.unpause
+
+**Chain:** Ethereum  
+**Protocol:** routerv6_1inch  
+**Function:** routerv6_1inch.unpause  
+
+Call the unpause function on routerv6_1inch
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.routerv6_1inch.unpause",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
 ### ethereum.thorchain_router.RUNE
 
 **Chain:** Ethereum  
