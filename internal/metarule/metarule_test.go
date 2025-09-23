@@ -59,12 +59,12 @@ func TestTryFormat_UnsupportedChain(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "bitcoin.send", // Unsupported chain
+		Resource: "unsupported.send", // Actually unsupported chain
 	}
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "got meta format (bitcoin.send) but chain not supported: Bitcoin")
+	assert.Contains(t, err.Error(), "failed to parse chain id")
 }
 
 func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
@@ -188,7 +188,7 @@ func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
 }
 
 func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
@@ -218,7 +218,7 @@ func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `amount`")
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
 }
 
 func TestTryFormat_SolanaUnsupportedProtocol(t *testing.T) {
@@ -422,7 +422,7 @@ func TestHandleEVM_MissingAmount(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `amount`")
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
 }
 
 func TestHandleEVM_MissingRecipient(t *testing.T) {
@@ -454,7 +454,7 @@ func TestHandleEVM_MissingRecipient(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse `recipient`")
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
 }
 
 func TestHandleEVM_InvalidChain(t *testing.T) {
@@ -582,4 +582,185 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
 	assert.Equal(t, expectedResource, result[0].Resource)
 	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result[0].Target.GetMagicConstant())
+}
+
+func TestTryFormat_BitcoinSwap(t *testing.T) {
+	const (
+		fromAddress      = "bc1qw589q7vva3wxju9zxz8gt59pfz2frwsazglsj8"
+		toAddress        = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
+		fromAmount       = "1000000"
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		expectedResource = "bitcoin.btc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 5)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
+	assert.Equal(t, fromAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "output_data_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["output_data_2"].Constraint.Type)
+	regexpValue := paramByName["output_data_2"].Constraint.GetRegexpValue()
+	assert.Equal(t, regexpValue, fmt.Sprintf(
+		`^=:ETH\.USDC:%s:.*`,
+		toAddress,
+	))
+}
+
+func TestTryFormat_BitcoinSend(t *testing.T) {
+	const (
+		changeAddress    = "bc1qchange123456789abcdef1234567890abcdef12"
+		recipientAddress = "bc1qrecipient123456789abcdef1234567890abcd"
+		amount           = "500000"
+		expectedResource = "bitcoin.btc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "change_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 4)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, recipientAddress, paramByName["output_address_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
+	assert.Equal(t, amount, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
+	assert.Equal(t, changeAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
 }
