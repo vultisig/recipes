@@ -1188,6 +1188,163 @@ func TestEvaluate_ErrorCases(t *testing.T) {
 	}
 }
 
+func TestEvaluate_MethodDescriptorValidation(t *testing.T) {
+	const (
+		usdc  = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		dumb1 = "0x1111111111111111111111111111111111111111"
+	)
+
+	testCases := []struct {
+		name          string
+		rule          *types.Rule
+		to            common.Address
+		recipient     common.Address
+		amount        *big.Int
+		customData    []byte
+		shouldError   bool
+		expectedError string
+	}{
+		{
+			name: "Valid method descriptor",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+				},
+			},
+			to:          common.HexToAddress(usdc),
+			recipient:   common.HexToAddress(dumb1),
+			amount:      big.NewInt(1000000000000000000),
+			shouldError: false,
+		},
+		{
+			name: "Invalid method descriptor - wrong first 4 bytes",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+				},
+			},
+			to:            common.HexToAddress(usdc),
+			recipient:     common.HexToAddress(dumb1),
+			amount:        big.NewInt(1000000000000000000),
+			customData:    append([]byte{0x12, 0x34, 0x56, 0x78}, make([]byte, 64)...),
+			shouldError:   true,
+			expectedError: "method descriptor mismatch",
+		},
+		{
+			name: "Calldata too short",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.erc20.transfer",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: usdc,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "recipient",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+				},
+			},
+			to:            common.HexToAddress(usdc),
+			recipient:     common.HexToAddress(dumb1),
+			amount:        big.NewInt(1000000000000000000),
+			customData:    []byte{0x12, 0x34},
+			shouldError:   true,
+			expectedError: "calldata too short",
+		},
+	}
+
+	for _, tc := range testCases {
+		label := "[positive]"
+		if tc.shouldError {
+			label = "[negative]"
+		}
+		t.Run(fmt.Sprintf("%s %s", label, tc.name), func(t *testing.T) {
+			var data []byte
+			if tc.customData != nil {
+				data = tc.customData
+			} else {
+				data = erc20.NewErc20().PackTransfer(tc.recipient, tc.amount)
+			}
+			txBytes := buildUnsignedTx(tc.to, data, big.NewInt(0))
+
+			native, _ := vgcommon.Ethereum.NativeSymbol()
+			evm, err := NewEvm(native)
+			if err != nil {
+				t.Fatalf("Failed to create EVM: %v", err)
+			}
+			err = evm.Evaluate(tc.rule, txBytes)
+
+			if tc.shouldError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tc.shouldError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if tc.shouldError && err != nil && tc.expectedError != "" {
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Errorf("Expected error containing '%s', but got: %v", tc.expectedError, err)
+				}
+			}
+		})
+	}
+}
+
 func TestEvaluate_RegexpConstraints(t *testing.T) {
 	const (
 		usdc  = "0xA0b86a33E6842C040F93B1DE7dd5aEf8E71bcE64"
