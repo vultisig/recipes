@@ -218,6 +218,20 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 	}
 
 	const dataOffset = 4
+	if len(data) < dataOffset {
+		return fmt.Errorf("calldata too short: expected at least %d bytes, got %d", dataOffset, len(data))
+	}
+
+	actualMethodDescriptor := data[:dataOffset]
+	expectedMethodDescriptor := method.ID
+	if !bytes.Equal(actualMethodDescriptor, expectedMethodDescriptor) {
+		return fmt.Errorf(
+			"method descriptor mismatch: expected %x, got %x",
+			expectedMethodDescriptor,
+			actualMethodDescriptor,
+		)
+	}
+
 	args, err := method.Inputs.Unpack(data[dataOffset:])
 	if err != nil {
 		return fmt.Errorf("failed to unpack abi args: %w", err)
