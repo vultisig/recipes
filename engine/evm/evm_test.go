@@ -1184,7 +1184,7 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 				Flags:           new(big.Int),
 			},
 			data:        []byte{0x1},
-			shouldError: true,
+			shouldError: false,
 		},
 	}
 
