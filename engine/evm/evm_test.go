@@ -1369,10 +1369,7 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 					{
 						ParameterName: "executor",
 						Constraint: &types.Constraint{
-							Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
-							Value: &types.Constraint_FixedValue{
-								FixedValue: "500000000000000000",
-							},
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
 							Required: true,
 						},
 					},
