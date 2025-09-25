@@ -1081,6 +1081,17 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 		dumb1         = "0x1111111111111111111111111111111111111111"
 	)
 
+	// Create sample bytes32 values
+	testBytes := make([]byte, 4)
+	testBytes2 := make([]byte, 4)
+	for i := 0; i < 4; i++ {
+		testBytes[i] = byte(i)
+		testBytes2[i] = byte(4 - i)
+	}
+
+	// Base64 encode the bytes32 values
+	testBase64 := base64.StdEncoding.EncodeToString(testBytes)
+
 	testCases := []struct {
 		name        string
 		rule        *types.Rule
@@ -1092,7 +1103,7 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 		shouldError bool
 	}{
 		{
-			name: "tuple in constraint",
+			name: "valid tuple in constraint",
 			rule: &types.Rule{
 				Effect:   types.Effect_EFFECT_ALLOW,
 				Resource: "ethereum.routerV6_1inch.swap",
@@ -1165,6 +1176,62 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 					{
 						ParameterName: "data",
 						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: testBase64,
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:       common.HexToAddress(router1inch),
+			swap:     big.NewInt(1000000000000000000), // 1 ETH
+			executor: common.HexToAddress(uniswapRouter),
+			desc: routerv6_1inch.GenericRouterSwapDescription{
+				SrcToken:        common.HexToAddress(token),
+				DstToken:        common.HexToAddress(weth),
+				SrcReceiver:     common.HexToAddress(dumb1),
+				DstReceiver:     common.HexToAddress(dumb1),
+				Amount:          big.NewInt(1000000000000000000),
+				MinReturnAmount: big.NewInt(1),
+				Flags:           new(big.Int),
+			},
+			data:        testBytes,
+			shouldError: false,
+		},
+		{
+			name: "incomplete tuple in constraints",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.routerV6_1inch.swap",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: router1inch,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "executor",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "500000000000000000",
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.srcToken",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "data",
+						Constraint: &types.Constraint{
 							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
 							Required: true,
 						},
@@ -1183,8 +1250,210 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 				MinReturnAmount: big.NewInt(1),
 				Flags:           new(big.Int),
 			},
-			data:        []byte{0x1},
-			shouldError: false,
+			data:        []byte{},
+			shouldError: true,
+		},
+		{
+			name: "failed dstToken check",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.routerV6_1inch.swap",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: router1inch,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "executor",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "500000000000000000",
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.srcToken",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.dstToken",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: weth,
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.srcReceiver",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.dstReceiver",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.minReturnAmount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.flags",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "data",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: testBase64,
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:       common.HexToAddress(router1inch),
+			swap:     big.NewInt(1000000000000000000), // 1 ETH
+			executor: common.HexToAddress(uniswapRouter),
+			desc: routerv6_1inch.GenericRouterSwapDescription{
+				SrcToken:        common.HexToAddress(weth),
+				DstToken:        common.HexToAddress(token),
+				SrcReceiver:     common.HexToAddress(dumb1),
+				DstReceiver:     common.HexToAddress(dumb1),
+				Amount:          big.NewInt(1000000000000000000),
+				MinReturnAmount: big.NewInt(1),
+				Flags:           new(big.Int),
+			},
+			data:        testBytes,
+			shouldError: true,
+		},
+		{
+			name: "failed data(bytes) check",
+			rule: &types.Rule{
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Resource: "ethereum.routerV6_1inch.swap",
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: router1inch,
+					},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "executor",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: "500000000000000000",
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.srcToken",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.dstToken",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: weth,
+							},
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.srcReceiver",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.dstReceiver",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.amount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.minReturnAmount",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "desc.flags",
+						Constraint: &types.Constraint{
+							Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+							Required: true,
+						},
+					},
+					{
+						ParameterName: "data",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{
+								FixedValue: testBase64,
+							},
+							Required: true,
+						},
+					},
+				},
+			},
+			to:       common.HexToAddress(router1inch),
+			swap:     big.NewInt(1000000000000000000), // 1 ETH
+			executor: common.HexToAddress(uniswapRouter),
+			desc: routerv6_1inch.GenericRouterSwapDescription{
+				SrcToken:        common.HexToAddress(token),
+				DstToken:        common.HexToAddress(weth),
+				SrcReceiver:     common.HexToAddress(dumb1),
+				DstReceiver:     common.HexToAddress(dumb1),
+				Amount:          big.NewInt(1000000000000000000),
+				MinReturnAmount: big.NewInt(1),
+				Flags:           new(big.Int),
+			},
+			data:        testBytes2,
+			shouldError: true,
 		},
 	}
 
@@ -1203,7 +1472,6 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 				t.Fatalf("Failed to create EVM: %v", err)
 			}
 			err = evm.Evaluate(tc.rule, txBytes)
-			t.Log(err)
 
 			if tc.shouldError && err == nil {
 				t.Errorf("Expected error but got none")

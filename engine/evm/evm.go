@@ -348,6 +348,17 @@ func assertArgsByType(chainId, inputName string, arg any, constraints []*types.P
 		if er != nil {
 			return fmt.Errorf("failed to assert: %w", er)
 		}
+	case []byte:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBytes,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
 	case interface{}:
 		if input == nil {
 			return fmt.Errorf("unsopported nil input")
@@ -373,8 +384,6 @@ func assertArgsByType(chainId, inputName string, arg any, constraints []*types.P
 					return fmt.Errorf("failed to assert: %w", err)
 				}
 			}
-		case reflect.Array, reflect.Slice:
-			//TODO: handle that
 		default:
 			return fmt.Errorf("unsupported arg type: %s", input.Type.String())
 		}
