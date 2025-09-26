@@ -159,6 +159,12 @@ func assertArgs(
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
+		case argU16:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint16)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
 		case argU64:
 			er := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
 			if er != nil {
@@ -170,6 +176,14 @@ func assertArgs(
 			if er != nil {
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
+
+		// for struct{}+NewFalsy `AssertArg` would return an error on non-any rule constraint but pass on `any`
+		case argVec:
+			er := decodeAndAssert[struct{}](decoder, constraints, name, compare.NewFalsy)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
 		default:
 			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
 		}

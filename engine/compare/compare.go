@@ -19,6 +19,10 @@ type Compare[expectedT any] interface {
 // Falsy embed to rewrite only required compare methods: for example, min/max for address must be false
 type Falsy[T any] struct{}
 
+func NewFalsy[T any](_ string) (Compare[T], error) {
+	return &Falsy[T]{}, nil
+}
+
 func (f *Falsy[T]) Fixed(_ T) bool {
 	return false
 }

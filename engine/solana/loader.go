@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"unicode/utf8"
 
 	idl_embed "github.com/vultisig/recipes/idl"
 )
@@ -36,10 +37,35 @@ type idlAccount struct {
 
 type argType string
 
+func (t *argType) UnmarshalJSON(data []byte) error {
+	if utf8.Valid(data) {
+		// "u8", "u16", "publicKey", etc
+		*t = argType(data)
+		return nil
+	}
+
+	extra := map[string]interface{}{}
+	err := json.Unmarshal(data, &extra)
+	if err != nil {
+		return fmt.Errorf("`type` field failed to unmarshal to map: %w", err)
+	}
+
+	// always map with 1 key
+	for key := range extra {
+		*t = argType(key)
+		return nil
+	}
+	return fmt.Errorf("`type` field: unexpected empty map: %w", err)
+}
+
 const (
 	argU8        argType = "u8"
+	argU16       argType = "u16"
 	argU64       argType = "u64"
 	argPublicKey argType = "publicKey"
+
+	// nested types
+	argVec argType = "vec"
 )
 
 type idlArgument struct {
