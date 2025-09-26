@@ -340,6 +340,73 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			Constraint:    c.amount,
 		}}
 		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		chain, err := common.FromString(r.GetChainId())
+		if err != nil {
+			return nil, fmt.Errorf("invalid chainID: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
+		out.Target = in.GetTarget()
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "executor",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "desc.srcToken",
+				Constraint:    c.fromAsset,
+			},
+			{
+				ParameterName: "desc.dstToken",
+				Constraint:    c.toAsset,
+			},
+			{
+				ParameterName: "desc.srcReceiver",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "desc.dstReceiver",
+				Constraint:    c.fromAddress,
+			},
+			{
+				ParameterName: "desc.amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "desc.minReturnAmount",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "desc.flags",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "data",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			}}
+		return []*types.Rule{out}, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}

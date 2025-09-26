@@ -584,6 +584,113 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result[0].Target.GetMagicConstant())
 }
 
+func TestTryFormat_EvmSwap(t *testing.T) {
+	const (
+		fromAddress      = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
+		fromAmount       = "1000000"
+		weth             = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" // WETH
+		usdc             = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		routerAddr       = "0x111111125421cA6dc452d289314280a0f8842A65"
+		expectedResource = "ethereum.routerV6_1inch.swap"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "ethereum.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: usdc,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: weth,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: common.Ethereum.String(),
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+		},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: routerAddr,
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_ADDRESS, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 9)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "desc.srcToken")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["desc.srcToken"].Constraint.Type)
+	assert.Equal(t, usdc, paramByName["desc.srcToken"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "desc.dstToken")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["desc.dstToken"].Constraint.Type)
+	assert.Equal(t, weth, paramByName["desc.dstToken"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "desc.srcReceiver")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["desc.srcReceiver"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "desc.dstReceiver")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["desc.dstReceiver"].Constraint.Type)
+	assert.Equal(t, fromAddress, paramByName["desc.dstReceiver"].Constraint.GetFixedValue())
+}
+
 func TestTryFormat_BitcoinSwap(t *testing.T) {
 	const (
 		fromAddress      = "bc1qw589q7vva3wxju9zxz8gt59pfz2frwsazglsj8"
