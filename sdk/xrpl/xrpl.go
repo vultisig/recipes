@@ -1,0 +1,338 @@
+package xrpl
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	ecdsa2 "github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
+	"github.com/vultisig/mobile-tss-lib/tss"
+	xrpgo "github.com/xyield/xrpl-go/binary-codec"
+)
+
+// RPCClient interface for XRPL JSON-RPC calls
+type RPCClient interface {
+	SubmitTransaction(ctx context.Context, txBlob string) error
+}
+
+// HTTPRPCClient implements RPCClient using HTTP JSON-RPC
+type HTTPRPCClient struct {
+	endpoints []string
+	client    *http.Client
+}
+
+// SDK represents the XRP SDK for transaction signing and broadcasting
+type SDK struct {
+	rpcClient RPCClient
+}
+
+// JSONRPC request structure
+type JSONRPCRequest struct {
+	Method string `json:"method"`
+	Params []any  `json:"params"`
+	ID     int    `json:"id"`
+}
+
+// JSONRPC response structure
+type JSONRPCResponse struct {
+	Result json.RawMessage `json:"result"`
+	Error  *JSONRPCError   `json:"error"`
+	ID     int             `json:"id"`
+}
+
+type JSONRPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// Submit request parameters
+type SubmitParams struct {
+	TxBlob      string `json:"tx_blob"`
+	FailHard    bool   `json:"fail_hard"`
+	LedgerIndex string `json:"ledger_index,omitempty"`
+}
+
+// SubmitResponse represents the basic response from transaction submission
+// The SDK only cares about successful submission, detailed tracking is handled by plugins
+type SubmitResponse struct {
+	EngineResult        string `json:"engine_result"`
+	EngineResultCode    int    `json:"engine_result_code"`
+	EngineResultMessage string `json:"engine_result_message"`
+}
+
+// XRPL mainnet endpoints
+var MainnetEndpoints = []string{
+	"https://s1.ripple.com:51234",
+	"https://s2.ripple.com:51234",
+	"https://xrplcluster.com",
+}
+
+// XRPL testnet endpoints
+var TestnetEndpoints = []string{
+	"https://s.altnet.rippletest.net:51234",
+	"https://testnet.xrpl-labs.com",
+}
+
+var stxPrefix = []byte{0x53, 0x54, 0x58, 0x00} // "STX\0"
+
+// NewSDK creates a new XRP SDK instance
+func NewSDK(rpcClient RPCClient) *SDK {
+	return &SDK{
+		rpcClient: rpcClient,
+	}
+}
+
+// NewHTTPRPCClient creates a new HTTP RPC client with the given endpoints
+func NewHTTPRPCClient(endpoints []string) *HTTPRPCClient {
+	return &HTTPRPCClient{
+		endpoints: endpoints,
+		client:    &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// SubmitTransaction submits a signed transaction to the XRPL network
+func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) error {
+	// Clean hex string (remove 0x prefix if present)
+	txBlob = strings.TrimPrefix(strings.ToUpper(txBlob), "0X")
+
+	submitParams := SubmitParams{
+		TxBlob:      txBlob,
+		FailHard:    false,
+		LedgerIndex: "current", // helps when posting to Clio endpoints
+	}
+
+	request := JSONRPCRequest{
+		Method: "submit",
+		Params: []any{submitParams},
+		ID:     1,
+	}
+
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	var lastErr error
+	for _, endpoint := range c.endpoints {
+		resp, err := c.client.Post(endpoint, "application/json", bytes.NewBuffer(requestBody))
+		if err != nil {
+			lastErr = fmt.Errorf("failed to send request to %s: %w", endpoint, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		responseBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("HTTP error from %s: %d, body: %s", endpoint, resp.StatusCode, string(responseBody))
+			continue
+		}
+
+		var jsonrpcResp JSONRPCResponse
+		if err := json.Unmarshal(responseBody, &jsonrpcResp); err != nil {
+			lastErr = fmt.Errorf("failed to parse response from %s: %w", endpoint, err)
+			continue
+		}
+
+		if jsonrpcResp.Error != nil {
+			lastErr = fmt.Errorf("JSONRPC error from %s: %d: %s", endpoint, jsonrpcResp.Error.Code, jsonrpcResp.Error.Message)
+			continue
+		}
+
+		var submitResp SubmitResponse
+		if err := json.Unmarshal(jsonrpcResp.Result, &submitResp); err != nil {
+			lastErr = fmt.Errorf("failed to parse submit response from %s: %w", endpoint, err)
+			continue
+		}
+
+		// Check if transaction was accepted
+		if submitResp.EngineResult != "tesSUCCESS" {
+			lastErr = fmt.Errorf("transaction failed with result %s: %s", submitResp.EngineResult, submitResp.EngineResultMessage)
+			continue
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("all endpoints failed, last error: %w", lastErr)
+}
+
+// Sign applies TSS signatures to an unsigned XRPL transaction
+func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse, pubKey []byte) ([]byte, error) {
+	if len(signatures) == 0 {
+		return nil, fmt.Errorf("no signatures provided")
+	}
+	if len(pubKey) != 33 {
+		return nil, fmt.Errorf("pubkey must be 33 bytes (compressed), got %d", len(pubKey))
+	}
+
+	// Get the first (and typically only) signature for single-signature transactions
+	var sig tss.KeysignResponse
+	var derivedKey string
+	for k, v := range signatures {
+		sig = v
+		derivedKey = k
+		break
+	}
+
+	// Decode R and S from hex strings
+	rBytes, err := hex.DecodeString(strings.TrimPrefix(sig.R, "0x"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode R: %w", err)
+	}
+	sBytes, err := hex.DecodeString(strings.TrimPrefix(sig.S, "0x"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode S: %w", err)
+	}
+	if len(rBytes) != 32 {
+		return nil, fmt.Errorf("r must be 32 bytes, got %d", len(rBytes))
+	}
+	if len(sBytes) != 32 {
+		return nil, fmt.Errorf("s must be 32 bytes, got %d", len(sBytes))
+	}
+
+	// Convert bytes to hex string for binary codec
+	baseHex := hex.EncodeToString(unsignedTxBytes)
+
+	// Decode the unsigned base using the codec
+	m, err := xrpgo.Decode(strings.ToUpper(baseHex))
+	if err != nil {
+		return nil, fmt.Errorf("binary-codec decode (unsigned) failed: %w", err)
+	}
+
+	// Ensure base doesn't already contain SigningPubKey/TxnSignature
+	if _, has := m["SigningPubKey"]; has {
+		return nil, fmt.Errorf("base tx already contains SigningPubKey; pass an unsigned base")
+	}
+	if _, has := m["TxnSignature"]; has {
+		return nil, fmt.Errorf("base tx already contains TxnSignature; pass an unsigned base")
+	}
+
+	// Add SigningPubKey to the transaction map
+	pubHex := strings.ToUpper(hex.EncodeToString(pubKey))
+	m["SigningPubKey"] = pubHex
+
+	// Re-encode with SigningPubKey (but without TxnSignature) to get canonical bytes for signing
+	withPubHex, err := xrpgo.Encode(m)
+	if err != nil {
+		return nil, fmt.Errorf("encode(with SigningPubKey) failed: %w", err)
+	}
+	withPubBytes, err := hex.DecodeString(withPubHex)
+	if err != nil {
+		return nil, fmt.Errorf("decode withPubHex failed: %w", err)
+	}
+
+	// Compute XRPL single-sign digest over canonical bytes
+	preimage := append(append([]byte{}, stxPrefix...), withPubBytes...)
+	digest := sha512Half(preimage)
+
+	// Verify (r,s) locally against that digest
+	ok, err := sdk.verifyRS(digest, rBytes, sBytes, pubKey)
+	if err != nil {
+		return nil, fmt.Errorf("signature verification failed: %w", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("invalid signature: (R,S) do not verify against canonical XRPL digest with provided pubkey (derived key: %s)", derivedKey)
+	}
+
+	// Set TxnSignature (DER) into the map and re-encode canonically for the final tx_blob
+	der := sdk.derEncodeRS(rBytes, sBytes)
+	m["TxnSignature"] = strings.ToUpper(hex.EncodeToString(der))
+
+	finalHex, err := xrpgo.Encode(m)
+	if err != nil {
+		return nil, fmt.Errorf("encode(final with TxnSignature) failed: %w", err)
+	}
+
+	finalBytes, err := hex.DecodeString(finalHex)
+	if err != nil {
+		return nil, fmt.Errorf("decode final hex failed: %w", err)
+	}
+
+	return finalBytes, nil
+}
+
+// Broadcast submits a signed transaction to the XRPL network
+func (sdk *SDK) Broadcast(ctx context.Context, signedTxBytes []byte) error {
+	if sdk.rpcClient == nil {
+		return fmt.Errorf("rpc client not configured")
+	}
+
+	txHex := hex.EncodeToString(signedTxBytes)
+	return sdk.rpcClient.SubmitTransaction(ctx, txHex)
+}
+
+// Send is a convenience method that signs and broadcasts the transaction
+func (sdk *SDK) Send(ctx context.Context, unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse, pubKey []byte) error {
+	// Sign the transaction
+	signedTxBytes, err := sdk.Sign(unsignedTxBytes, signatures, pubKey)
+	if err != nil {
+		return fmt.Errorf("failed to sign transaction: %w", err)
+	}
+
+	// Broadcast the signed transaction
+	return sdk.Broadcast(ctx, signedTxBytes)
+}
+
+// sha512Half computes SHA512 and returns first 32 bytes
+func sha512Half(b []byte) []byte {
+	h := sha512.Sum512(b)
+	return h[:32]
+}
+
+// derEncodeRS encodes R,S as ASN.1 DER format
+func (sdk *SDK) derEncodeRS(r, s []byte) []byte {
+	r = sdk.trimLeftZeros(r)
+	s = sdk.trimLeftZeros(s)
+
+	if len(r) == 0 || (r[0]&0x80) != 0 {
+		r = append([]byte{0x00}, r...)
+	}
+	if len(s) == 0 || (s[0]&0x80) != 0 {
+		s = append([]byte{0x00}, s...)
+	}
+
+	intR := append([]byte{0x02, byte(len(r))}, r...)
+	intS := append([]byte{0x02, byte(len(s))}, s...)
+	content := append(intR, intS...)
+	seq := []byte{0x30, byte(len(content))}
+	return append(seq, content...)
+}
+
+// trimLeftZeros removes leading zeros from byte slice
+func (sdk *SDK) trimLeftZeros(b []byte) []byte {
+	i := 0
+	for i < len(b) && b[i] == 0x00 {
+		i++
+	}
+	return b[i:]
+}
+
+// verifyRS verifies (r,s) signature over digest with compressed pubkey
+func (sdk *SDK) verifyRS(digest, r, s []byte, pub33 []byte) (bool, error) {
+	pk, err := secp256k1.ParsePubKey(pub33)
+	if err != nil {
+		return false, fmt.Errorf("parse pubkey: %w", err)
+	}
+	var rN, sN secp256k1.ModNScalar
+	if rN.SetByteSlice(r) {
+		return false, fmt.Errorf("r overflow/not in field")
+	}
+	if sN.SetByteSlice(s) {
+		return false, fmt.Errorf("s overflow/not in field")
+	}
+	sig := ecdsa2.NewSignature(&rN, &sN)
+	return sig.Verify(digest, pk), nil
+}
