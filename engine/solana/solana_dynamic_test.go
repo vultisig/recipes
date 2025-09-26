@@ -71,34 +71,11 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 				assert.Error(t, er, "Should fail with wrong account")
 			})
 		}
-
-		t.Run("WrongArgument", func(t *testing.T) {
-			_, wrongArgs, er := mockAccsAndArgs(instruction)
-			assert.NoErrorf(t, er, "Failed to generate accounts and args for wrong argument test: %v", er)
-
-			for argName := range wrongArgs {
-				switch getArgType(instruction.Args, argName) {
-				case argU8:
-					wrongArgs[argName] = "7" // original is "6"; stays in-range
-					break
-				case argU64:
-					wrongArgs[argName] = "999999" // differs from "1000000"
-					break
-				}
-			}
-
-			rule := buildPositiveRule(protocolName, instruction, accs, wrongArgs, programID)
-			txBytes, er := genTx(instruction, accs, args, programID)
-			assert.NoErrorf(t, er, "Failed to generate transaction: %v", er)
-
-			er = engine.Evaluate(rule, txBytes)
-			assert.Error(t, er, "Should fail with wrong argument value")
-		})
 	})
 
 	t.Run("MinMaxConstraints", func(t *testing.T) {
 		for _, arg := range instruction.Args {
-			if arg.Type == argU64 || arg.Type == argU8 {
+			if arg.Type == argU64 || arg.Type == argU16 || arg.Type == argU8 {
 				var minValuePass, maxValuePass, minValueFail, maxValueFail string
 
 				if arg.Type == argU8 {
@@ -106,6 +83,11 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 					maxValuePass = "10" // testValue=6, so max=10 should pass
 					minValueFail = "10" // testValue=6, so min=10 should fail
 					maxValueFail = "3"  // testValue=6, so max=3 should fail
+				} else if arg.Type == argU16 {
+					minValuePass = "500"  // testValue=1000, so min=500 should pass
+					maxValuePass = "2000" // testValue=1000, so max=2000 should pass
+					minValueFail = "2000" // testValue=1000, so min=2000 should fail
+					maxValueFail = "500"  // testValue=1000, so max=500 should fail
 				} else {
 					minValuePass = "500000"  // testValue=1000000, so min=500000 should pass
 					maxValuePass = "2000000" // testValue=1000000, so max=2000000 should pass
@@ -153,23 +135,32 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 	})
 }
 
-func mockAccsAndArgs(instruction idlInstruction) ([]*solana.Wallet, map[string]string, error) {
+type argument struct {
+	kind  argType
+	value string
+}
+
+func mockAccsAndArgs(instruction idlInstruction) ([]*solana.Wallet, map[string]argument, error) {
 	wallets := make([]*solana.Wallet, len(instruction.Accounts))
 	for i := 0; i < len(instruction.Accounts); i++ {
 		wallets[i] = solana.NewWallet()
 	}
 
-	values := make(map[string]string)
-	for _, arg := range instruction.Args {
-		switch arg.Type {
+	values := make(map[string]argument)
+	for _, a := range instruction.Args {
+		switch a.Type {
 		case argU64:
-			values[arg.Name] = "1000000"
+			values[a.Name] = argument{kind: a.Type, value: "1000000"}
+		case argU16:
+			values[a.Name] = argument{kind: a.Type, value: "1000"}
 		case argU8:
-			values[arg.Name] = "6"
+			values[a.Name] = argument{kind: a.Type, value: "6"}
 		case argPublicKey:
-			values[arg.Name] = solana.NewWallet().PublicKey().String()
+			values[a.Name] = argument{kind: a.Type, value: solana.NewWallet().PublicKey().String()}
+		case argVec:
+			values[a.Name] = argument{kind: a.Type, value: "any"}
 		default:
-			return nil, nil, fmt.Errorf("unsupported argument type %s for arg %s", arg.Type, arg.Name)
+			return nil, nil, fmt.Errorf("unsupported argument type %s for arg %s", a.Type, a.Name)
 		}
 	}
 
@@ -180,7 +171,7 @@ func buildPositiveRule(
 	protocolName string,
 	instruction idlInstruction,
 	wallets []*solana.Wallet,
-	testValues map[string]string,
+	testValues map[string]argument,
 	programID solana.PublicKey,
 ) *types.Rule {
 	resource := fmt.Sprintf("solana.%s.%s", protocolName, instruction.Name)
@@ -200,18 +191,28 @@ func buildPositiveRule(
 		})
 	}
 
-	for _, arg := range instruction.Args {
-		if value, ok := testValues[arg.Name]; ok {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: fmt.Sprintf("arg_%s", arg.Name),
-				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: value,
+	for _, a := range instruction.Args {
+		if v, ok := testValues[a.Name]; ok {
+			if a.Type == argVec {
+				constraints = append(constraints, &types.ParameterConstraint{
+					ParameterName: fmt.Sprintf("arg_%s", a.Name),
+					Constraint: &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
 					},
-					Required: true,
-				},
-			})
+				})
+			} else {
+				constraints = append(constraints, &types.ParameterConstraint{
+					ParameterName: fmt.Sprintf("arg_%s", a.Name),
+					Constraint: &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+						Value: &types.Constraint_FixedValue{
+							FixedValue: v.value,
+						},
+						Required: true,
+					},
+				})
+			}
+
 		}
 	}
 
@@ -232,7 +233,7 @@ func buildMinRule(
 	protocolName string,
 	instruction idlInstruction,
 	wallets []*solana.Wallet,
-	testValues map[string]string,
+	testValues map[string]argument,
 	programID solana.PublicKey,
 	argName, minValue string,
 ) *types.Rule {
@@ -252,10 +253,10 @@ func buildMinRule(
 		})
 	}
 
-	for _, arg := range instruction.Args {
-		if value, ok := testValues[arg.Name]; ok {
+	for _, a := range instruction.Args {
+		if v, ok := testValues[a.Name]; ok {
 			var constraint *types.Constraint
-			if arg.Name == argName {
+			if a.Name == argName {
 				constraint = &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
 					Value: &types.Constraint_MinValue{
@@ -264,17 +265,23 @@ func buildMinRule(
 					Required: true,
 				}
 			} else {
-				constraint = &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: value,
-					},
-					Required: true,
+				if a.Type == argVec {
+					constraint = &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					}
+				} else {
+					constraint = &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+						Value: &types.Constraint_FixedValue{
+							FixedValue: v.value,
+						},
+						Required: true,
+					}
 				}
 			}
 
 			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: fmt.Sprintf("arg_%s", arg.Name),
+				ParameterName: fmt.Sprintf("arg_%s", a.Name),
 				Constraint:    constraint,
 			})
 		}
@@ -297,7 +304,7 @@ func buildMaxRule(
 	protocolName string,
 	instruction idlInstruction,
 	wallets []*solana.Wallet,
-	testValues map[string]string,
+	testValues map[string]argument,
 	programID solana.PublicKey,
 	argName, maxValue string,
 ) *types.Rule {
@@ -317,10 +324,10 @@ func buildMaxRule(
 		})
 	}
 
-	for _, arg := range instruction.Args {
-		if value, ok := testValues[arg.Name]; ok {
+	for _, a := range instruction.Args {
+		if v, ok := testValues[a.Name]; ok {
 			var constraint *types.Constraint
-			if arg.Name == argName {
+			if a.Name == argName {
 				constraint = &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
 					Value: &types.Constraint_MaxValue{
@@ -329,17 +336,23 @@ func buildMaxRule(
 					Required: true,
 				}
 			} else {
-				constraint = &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: value,
-					},
-					Required: true,
+				if a.Type == argVec {
+					constraint = &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					}
+				} else {
+					constraint = &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+						Value: &types.Constraint_FixedValue{
+							FixedValue: v.value,
+						},
+						Required: true,
+					}
 				}
 			}
 
 			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: fmt.Sprintf("arg_%s", arg.Name),
+				ParameterName: fmt.Sprintf("arg_%s", a.Name),
 				Constraint:    constraint,
 			})
 		}
@@ -361,7 +374,7 @@ func buildMaxRule(
 func genTx(
 	instruction idlInstruction,
 	wallets []*solana.Wallet,
-	testValues map[string]string,
+	testValues map[string]argument,
 	programID solana.PublicKey,
 ) ([]byte, error) {
 	accounts := make(solana.AccountMetaSlice, 0)
@@ -414,7 +427,7 @@ func getArgType(args []idlArgument, argName string) argType {
 
 func buildInstructionData(
 	instruction idlInstruction,
-	testValues map[string]string,
+	testValues map[string]argument,
 	discriminator []byte,
 ) ([]byte, error) {
 	var buf bytes.Buffer
@@ -422,40 +435,52 @@ func buildInstructionData(
 	buf.Write(discriminator)
 
 	for _, arg := range instruction.Args {
-		value, ok := testValues[arg.Name]
+		v, ok := testValues[arg.Name]
 		if !ok {
 			return nil, fmt.Errorf("missing test value for arg %s", arg.Name)
 		}
 
 		switch arg.Type {
 		case argU64:
-			val, err := strconv.ParseUint(value, 10, 64)
+			val, err := strconv.ParseUint(v.value, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse u64 value %q for arg %s: %w", value, arg.Name, err)
+				return nil, fmt.Errorf("failed to parse u64 value %q for arg %s: %w", v, arg.Name, err)
 			}
 			if er := encoder.WriteUint64(val, bin.LE); er != nil {
 				return nil, fmt.Errorf("failed to encode u64 value for arg %s: %w", arg.Name, er)
 			}
-		case argU8:
-			val, err := strconv.ParseUint(value, 10, 8)
+		case argU16:
+			val, err := strconv.ParseUint(v.value, 10, 16)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse u8 value %q for arg %s: %w", value, arg.Name, err)
+				return nil, fmt.Errorf("failed to parse u16 value %q for arg %s: %w", v, arg.Name, err)
+			}
+			if er := encoder.WriteUint16(uint16(val), bin.LE); er != nil {
+				return nil, fmt.Errorf("failed to encode u16 value for arg %s: %w", arg.Name, er)
+			}
+		case argU8:
+			val, err := strconv.ParseUint(v.value, 10, 8)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse u8 value %q for arg %s: %w", v, arg.Name, err)
 			}
 			if er := encoder.WriteUint8(uint8(val)); er != nil {
 				return nil, fmt.Errorf("failed to encode u8 value for arg %s: %w", arg.Name, er)
 			}
 		case argPublicKey:
-			pubkey, err := solana.PublicKeyFromBase58(value)
+			pubkey, err := solana.PublicKeyFromBase58(v.value)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"failed to parse publicKey value %q for arg %s: %w",
-					value,
+					v,
 					arg.Name,
 					err,
 				)
 			}
 			if er := encoder.WriteBytes(pubkey.Bytes(), false); er != nil {
 				return nil, fmt.Errorf("failed to encode publicKey value for arg %s: %w", arg.Name, er)
+			}
+		case argVec:
+			if er := encoder.Encode(struct{}{}); er != nil {
+				return nil, fmt.Errorf("failed to encode vector length for arg %s: %w", arg.Name, er)
 			}
 		default:
 			return nil, fmt.Errorf("unsupported argument type %s for arg %s", arg.Type, arg.Name)

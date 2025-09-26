@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"unicode/utf8"
 
 	idl_embed "github.com/vultisig/recipes/idl"
 )
@@ -38,9 +37,11 @@ type idlAccount struct {
 type argType string
 
 func (t *argType) UnmarshalJSON(data []byte) error {
-	if utf8.Valid(data) {
-		// "u8", "u16", "publicKey", etc
-		*t = argType(data)
+	// Try to unmarshal as a simple string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		// Simple string like "u8", "u16", "publicKey", etc
+		*t = argType(str)
 		return nil
 	}
 

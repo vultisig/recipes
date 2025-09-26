@@ -764,3 +764,239 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 	assert.Contains(t, paramByName, "output_value_1")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
 }
+
+func TestTryFormat_SolanaSwap(t *testing.T) {
+	const (
+		fromAsset           = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC mint
+		fromAddress         = "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+		fromAmount          = "1000000"
+		toChain             = "solana"
+		toAsset             = "So11111111111111111111111111111111111111112" // WSOL
+		toAddress           = "5w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKN"
+		jupiterAddress      = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+		jupiterEvent        = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
+		tokenProgramAddress = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 2) // SPL token approve + Jupiter route
+
+	// First rule should be SPL token approve
+	approveRule := result[0]
+	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, types.Effect_EFFECT_ALLOW, approveRule.Effect)
+	assert.Equal(t, fromAsset, approveRule.Target.GetAddress())
+	require.Len(t, approveRule.ParameterConstraints, 4)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range approveRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "account_source")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_source"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "account_delegate")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_delegate"].Constraint.Type)
+	assert.Equal(t, jupiterAddress, paramByName["account_delegate"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_owner")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_owner"].Constraint.Type)
+	assert.Equal(t, fromAddress, paramByName["account_owner"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "arg_amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_amount"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["arg_amount"].Constraint.GetFixedValue())
+
+	// Second rule should be Jupiter route
+	jupiterRule := result[1]
+	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
+	assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
+	require.Len(t, jupiterRule.ParameterConstraints, 12)
+
+	paramByName = make(map[string]*types.ParameterConstraint)
+	for _, param := range jupiterRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "account_tokenProgram")
+	assert.Equal(t, tokenProgramAddress, paramByName["account_tokenProgram"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_userTransferAuthority")
+	assert.Equal(t, fromAddress, paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "account_userDestinationTokenAccount")
+	assert.Equal(t, toAddress, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_destinationMint")
+	assert.Equal(t, toAsset, paramByName["account_destinationMint"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_eventAuthority")
+	assert.Equal(t, jupiterEvent, paramByName["account_eventAuthority"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_program")
+	assert.Equal(t, jupiterAddress, paramByName["account_program"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "arg_routePlan")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_routePlan"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "arg_inAmount")
+	assert.Equal(t, fromAmount, paramByName["arg_inAmount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "arg_quotedOutAmount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_quotedOutAmount"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "arg_slippageBps")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAX, paramByName["arg_slippageBps"].Constraint.Type)
+	assert.Equal(t, "2500", paramByName["arg_slippageBps"].Constraint.GetMaxValue())
+
+	assert.Contains(t, paramByName, "arg_platformFeeBps")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAX, paramByName["arg_platformFeeBps"].Constraint.Type)
+	assert.Equal(t, "2500", paramByName["arg_platformFeeBps"].Constraint.GetMaxValue())
+}
+
+func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
+	const (
+		fromAsset   = "" // Empty string for native SOL
+		fromAddress = "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+		fromAmount  = "1000000"
+		toChain     = "solana"
+		toAsset     = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC mint
+		toAddress   = "5w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKN"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1) // Only Jupiter route for native asset
+
+	jupiterRule := result[0]
+	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
+}
