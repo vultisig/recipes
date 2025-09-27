@@ -511,7 +511,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value for toChain: %w", err)
 	}
-	if strings.EqualFold(toChainStr, common.Solana.String()) {
+	if !strings.EqualFold(toChainStr, common.Solana.String()) {
 		return nil, fmt.Errorf("only solana->solana allowed for jupiter, got toChain: %q", toChainStr)
 	}
 
