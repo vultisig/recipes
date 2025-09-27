@@ -479,8 +479,10 @@ func buildInstructionData(
 				return nil, fmt.Errorf("failed to encode publicKey value for arg %s: %w", arg.Name, er)
 			}
 		case argVec:
+			// Encode empty vector: write length 0 as u32 little-endian
+			// Then write no elements (since length is 0)
 			if er := encoder.WriteUint32(0, bin.LE); er != nil {
-				return nil, fmt.Errorf("failed to encode empty vector for arg %s: %w", arg.Name, er)
+				return nil, fmt.Errorf("failed to encode vector length for arg %s: %w", arg.Name, er)
 			}
 		default:
 			return nil, fmt.Errorf("unsupported argument type %s for arg %s", arg.Type, arg.Name)

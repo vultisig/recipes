@@ -177,11 +177,23 @@ func assertArgs(
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
-		// for struct{}+NewFalsy `AssertArg` would return an error on non-any rule constraint but pass on `any`
+		// for vector types, decode the length first and then skip the vector elements
 		case argVec:
-			er := decodeAndAssert[struct{}](decoder, constraints, name, compare.NewFalsy)
+			var vecLen uint32
+			er := decoder.Decode(&vecLen)
 			if er != nil {
-				return fmt.Errorf("failed to decode & assert: %w", er)
+				return fmt.Errorf("failed to decode vector length for %s: %w", name, er)
+			}
+
+			er = compare.AssertArg(
+				common.Solana.String(),
+				constraints,
+				name,
+				struct{}{},
+				compare.NewFalsy,
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert vector: %w", er)
 			}
 
 		default:
