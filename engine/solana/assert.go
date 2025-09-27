@@ -159,6 +159,12 @@ func assertArgs(
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
+		case argU16:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint16)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
 		case argU64:
 			er := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
 			if er != nil {
@@ -170,6 +176,28 @@ func assertArgs(
 			if er != nil {
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
+
+		// For vector types, decode the length first and then skip the vector elements
+		// Falsy comparer means assert would pass only on ANY rule-constraint, for example, for FIXED it would fail
+		case argVec:
+			// add correct padding to the decoder offset
+			var vecLen uint32
+			er := decoder.Decode(&vecLen)
+			if er != nil {
+				return fmt.Errorf("failed to decode vector length for %s: %w", name, er)
+			}
+
+			er = compare.AssertArg(
+				common.Solana.String(),
+				constraints,
+				name,
+				struct{}{},
+				compare.NewFalsy,
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert vector: %w", er)
+			}
+
 		default:
 			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
 		}
