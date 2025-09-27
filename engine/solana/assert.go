@@ -180,6 +180,7 @@ func assertArgs(
 		// For vector types, decode the length first and then skip the vector elements
 		// Falsy comparer means assert would pass only on ANY rule-constraint, for example, for FIXED it would fail
 		case argVec:
+			// add correct padding to the decoder offset
 			var vecLen uint32
 			er := decoder.Decode(&vecLen)
 			if er != nil {
