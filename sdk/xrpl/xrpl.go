@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -41,31 +40,11 @@ type JSONRPCRequest struct {
 	ID     int    `json:"id"`
 }
 
-// JSONRPC response structure
-type JSONRPCResponse struct {
-	Result json.RawMessage `json:"result"`
-	Error  *JSONRPCError   `json:"error"`
-	ID     int             `json:"id"`
-}
-
-type JSONRPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
 // Submit request parameters
 type SubmitParams struct {
 	TxBlob      string `json:"tx_blob"`
 	FailHard    bool   `json:"fail_hard"`
 	LedgerIndex string `json:"ledger_index,omitempty"`
-}
-
-// SubmitResponse represents the basic response from transaction submission
-// The SDK only cares about successful submission, detailed tracking is handled by plugins
-type SubmitResponse struct {
-	EngineResult        string `json:"engine_result"`
-	EngineResultCode    int    `json:"engine_result_code"`
-	EngineResultMessage string `json:"engine_result_message"`
 }
 
 // XRPL mainnet endpoints
@@ -129,40 +108,12 @@ func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) er
 		}
 		defer resp.Body.Close()
 
-		responseBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, err)
-			continue
-		}
-
 		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("HTTP error from %s: %d, body: %s", endpoint, resp.StatusCode, string(responseBody))
+			lastErr = fmt.Errorf("HTTP error from %s: %d", endpoint, resp.StatusCode)
 			continue
 		}
 
-		var jsonrpcResp JSONRPCResponse
-		if err := json.Unmarshal(responseBody, &jsonrpcResp); err != nil {
-			lastErr = fmt.Errorf("failed to parse response from %s: %w", endpoint, err)
-			continue
-		}
-
-		if jsonrpcResp.Error != nil {
-			lastErr = fmt.Errorf("JSONRPC error from %s: %d: %s", endpoint, jsonrpcResp.Error.Code, jsonrpcResp.Error.Message)
-			continue
-		}
-
-		var submitResp SubmitResponse
-		if err := json.Unmarshal(jsonrpcResp.Result, &submitResp); err != nil {
-			lastErr = fmt.Errorf("failed to parse submit response from %s: %w", endpoint, err)
-			continue
-		}
-
-		// Check if transaction was accepted
-		if submitResp.EngineResult != "tesSUCCESS" {
-			lastErr = fmt.Errorf("transaction failed with result %s: %s", submitResp.EngineResult, submitResp.EngineResultMessage)
-			continue
-		}
-
+		// Transaction submitted successfully, don't wait for response
 		return nil
 	}
 
