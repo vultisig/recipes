@@ -479,8 +479,8 @@ func buildInstructionData(
 				return nil, fmt.Errorf("failed to encode publicKey value for arg %s: %w", arg.Name, er)
 			}
 		case argVec:
-			if er := encoder.Encode(struct{}{}); er != nil {
-				return nil, fmt.Errorf("failed to encode vector length for arg %s: %w", arg.Name, er)
+			if er := encoder.WriteUint32(0, bin.LE); er != nil {
+				return nil, fmt.Errorf("failed to encode empty vector for arg %s: %w", arg.Name, er)
 			}
 		default:
 			return nil, fmt.Errorf("unsupported argument type %s for arg %s", arg.Type, arg.Name)

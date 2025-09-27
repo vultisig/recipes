@@ -440,6 +440,14 @@ func getFixed(c *types.Constraint) (string, error) {
 }
 
 func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*types.Rule, error) {
+	toChainStr, err := getFixed(c.toChain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toChain: %w", err)
+	}
+	if strings.EqualFold(toChainStr, common.Solana.String()) {
+		return nil, fmt.Errorf("only solana->solana allowed for jupiter, got toChain: %q", toChainStr)
+	}
+
 	const (
 		jupAddr  = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
 		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"

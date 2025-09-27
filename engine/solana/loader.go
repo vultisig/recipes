@@ -2,6 +2,7 @@ package solana
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -56,7 +57,7 @@ func (t *argType) UnmarshalJSON(data []byte) error {
 		*t = argType(key)
 		return nil
 	}
-	return fmt.Errorf("`type` field: unexpected empty map: %w", err)
+	return errors.New("`type` field: unexpected empty map")
 }
 
 const (
