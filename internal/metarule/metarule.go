@@ -259,6 +259,17 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			Constraint:    c.amount,
 		}}
 		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `swap` constraints: %w", err)
+		}
+
+		rules, err := m.createJupiterRule(in, c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create jupiter rules: %w", err)
+		}
+		return rules, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
@@ -485,6 +496,144 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
+}
+
+func getFixed(c *types.Constraint) (string, error) {
+	if c.GetType() != types.ConstraintType_CONSTRAINT_TYPE_FIXED {
+		return "", fmt.Errorf("invalid constraint type: %s", c.GetType())
+	}
+
+	return c.GetFixedValue(), nil
+}
+
+func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*types.Rule, error) {
+	toChainStr, err := getFixed(c.toChain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toChain: %w", err)
+	}
+	if !strings.EqualFold(toChainStr, common.Solana.String()) {
+		return nil, fmt.Errorf("only solana->solana allowed for jupiter, got toChain: %q", toChainStr)
+	}
+
+	const (
+		jupAddr  = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
+	)
+
+	userSourceTokenAccount := anyConstraint()
+
+	var rules []*types.Rule
+
+	fromAssetStr, err := getFixed(c.fromAsset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value: %w", err)
+	}
+	if fromAssetStr != "" {
+		rules = append(rules, &types.Rule{
+			Resource: "solana.spl_token.approve",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_source",
+				Constraint:    userSourceTokenAccount,
+			}, {
+				ParameterName: "account_delegate",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: jupAddr,
+					},
+				},
+			}, {
+				ParameterName: "account_owner",
+				Constraint:    c.fromAddress,
+			}, {
+				ParameterName: "arg_amount",
+				Constraint:    c.fromAmount,
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: fromAssetStr,
+				},
+			},
+		})
+	}
+
+	out := proto.Clone(in).(*types.Rule)
+	out.Resource = "solana.jupiter_aggregatorv6.route"
+	out.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+		Target: &types.Target_Address{
+			Address: jupAddr,
+		},
+	}
+
+	out.ParameterConstraints = []*types.ParameterConstraint{{
+		ParameterName: "account_tokenProgram",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: solana.TokenProgramID.String(),
+			},
+		},
+	}, {
+		ParameterName: "account_userTransferAuthority",
+		Constraint:    c.fromAddress,
+	}, {
+		ParameterName: "account_userSourceTokenAccount",
+		Constraint:    userSourceTokenAccount,
+	}, {
+		ParameterName: "account_userDestinationTokenAccount",
+		Constraint:    c.toAddress,
+	}, {
+		ParameterName: "account_destinationMint",
+		Constraint:    c.toAsset,
+	}, {
+		ParameterName: "account_eventAuthority",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: jupEvent,
+			},
+		},
+	}, {
+		ParameterName: "account_program",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: jupAddr,
+			},
+		},
+	}, {
+		ParameterName: "arg_routePlan",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "arg_inAmount",
+		Constraint:    c.fromAmount,
+	}, {
+		ParameterName: "arg_quotedOutAmount",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "arg_slippageBps",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+			Value: &types.Constraint_MaxValue{
+				MaxValue: "2500", // 25% maximum slippage (memecoins)
+			},
+		},
+	}, {
+		ParameterName: "arg_platformFeeBps",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+			Value: &types.Constraint_MaxValue{
+				MaxValue: "2500", // 25% maximum platform fee
+			},
+		},
+	}}
+
+	rules = append(rules, out)
+
+	return rules, nil
 }
 
 func anyConstraint() *types.Constraint {

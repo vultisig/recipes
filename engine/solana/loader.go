@@ -2,6 +2,7 @@ package solana
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -36,10 +37,37 @@ type idlAccount struct {
 
 type argType string
 
+func (t *argType) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as a simple string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		// Simple string like "u8", "u16", "publicKey", etc
+		*t = argType(str)
+		return nil
+	}
+
+	extra := map[string]interface{}{}
+	err := json.Unmarshal(data, &extra)
+	if err != nil {
+		return fmt.Errorf("`type` field failed to unmarshal to map: %w", err)
+	}
+
+	// always map with 1 key
+	for key := range extra {
+		*t = argType(key)
+		return nil
+	}
+	return errors.New("`type` field: unexpected empty map")
+}
+
 const (
 	argU8        argType = "u8"
+	argU16       argType = "u16"
 	argU64       argType = "u64"
 	argPublicKey argType = "publicKey"
+
+	// nested types
+	argVec argType = "vec"
 )
 
 type idlArgument struct {
