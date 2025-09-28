@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -40,11 +42,30 @@ type JSONRPCRequest struct {
 	ID     int    `json:"id"`
 }
 
+// JSONRPC response structure
+type JSONRPCResponse struct {
+	Result json.RawMessage `json:"result"`
+	Error  *JSONRPCError   `json:"error"`
+	ID     int             `json:"id"`
+}
+
+type JSONRPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 // Submit request parameters
 type SubmitParams struct {
-	TxBlob      string `json:"tx_blob"`
-	FailHard    bool   `json:"fail_hard"`
-	LedgerIndex string `json:"ledger_index,omitempty"`
+	TxBlob   string `json:"tx_blob"`
+	FailHard bool   `json:"fail_hard"`
+}
+
+// SubmitResponse represents the basic response from transaction submission
+// The SDK only cares about successful submission, detailed tracking is handled by plugins
+type SubmitResponse struct {
+	EngineResult        string `json:"engine_result"`
+	EngineResultCode    int    `json:"engine_result_code"`
+	EngineResultMessage string `json:"engine_result_message"`
 }
 
 // XRPL mainnet endpoints
@@ -61,6 +82,8 @@ var TestnetEndpoints = []string{
 }
 
 var stxPrefix = []byte{0x53, 0x54, 0x58, 0x00} // "STX\0"
+var secpN, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+var secpHalfN = new(big.Int).Rsh(new(big.Int).Set(secpN), 1)
 
 // NewSDK creates a new XRP SDK instance
 func NewSDK(rpcClient RPCClient) *SDK {
@@ -83,9 +106,8 @@ func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) er
 	txBlob = strings.TrimPrefix(strings.ToUpper(txBlob), "0X")
 
 	submitParams := SubmitParams{
-		TxBlob:      txBlob,
-		FailHard:    false,
-		LedgerIndex: "current", // helps when posting to Clio endpoints
+		TxBlob:   txBlob,
+		FailHard: false,
 	}
 
 	request := JSONRPCRequest{
@@ -101,19 +123,53 @@ func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) er
 
 	var lastErr error
 	for _, endpoint := range c.endpoints {
-		resp, err := c.client.Post(endpoint, "application/json", bytes.NewBuffer(requestBody))
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(requestBody))
+		if reqErr != nil {
+			lastErr = fmt.Errorf("failed to create request for %s: %w", endpoint, reqErr)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.client.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to send request to %s: %w", endpoint, err)
 			continue
 		}
-		defer resp.Body.Close()
 
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if readErr != nil {
+			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, readErr)
+			continue
+		}
 		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("HTTP error from %s: %d", endpoint, resp.StatusCode)
+			lastErr = fmt.Errorf("HTTP error from %s: %d, body: %s", endpoint, resp.StatusCode, string(body))
 			continue
 		}
 
-		// Transaction submitted successfully, don't wait for response
+		var jr JSONRPCResponse
+		if err := json.Unmarshal(body, &jr); err != nil {
+			lastErr = fmt.Errorf("failed to parse response from %s: %w", endpoint, err)
+			continue
+		}
+
+		var submit struct {
+			Status              string `json:"status"`
+			EngineResult        string `json:"engine_result"`
+			EngineResultCode    int    `json:"engine_result_code"`
+			EngineResultMessage string `json:"engine_result_message"`
+		}
+		if err := json.Unmarshal(jr.Result, &submit); err != nil {
+			lastErr = fmt.Errorf("failed to parse submit result from %s: %w", endpoint, err)
+			continue
+		}
+
+		if strings.ToUpper(submit.EngineResult) != "TESSUCCESS" /* || strings.ToLower(submit.Status) != "success" */ {
+			lastErr = fmt.Errorf("submit failed at %s: %s (%d): %s",
+				endpoint, submit.EngineResult, submit.EngineResultCode, submit.EngineResultMessage)
+			continue
+		}
 		return nil
 	}
 
@@ -131,10 +187,8 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 
 	// Get the first (and typically only) signature for single-signature transactions
 	var sig tss.KeysignResponse
-	var derivedKey string
-	for k, v := range signatures {
+	for _, v := range signatures {
 		sig = v
-		derivedKey = k
 		break
 	}
 
@@ -153,6 +207,12 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	if len(sBytes) != 32 {
 		return nil, fmt.Errorf("s must be 32 bytes, got %d", len(sBytes))
 	}
+
+	sLow, err := normalizeLowS(sBytes)
+	if err != nil {
+		return nil, fmt.Errorf("low-S normalization failed: %w", err)
+	}
+	sBytes = sLow
 
 	// Convert bytes to hex string for binary codec
 	baseHex := hex.EncodeToString(unsignedTxBytes)
@@ -195,7 +255,7 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("invalid signature: (R,S) do not verify against canonical XRPL digest with provided pubkey (derived key: %s)", derivedKey)
+		return nil, fmt.Errorf("invalid signature: (R,S) do not verify against canonical XRPL digest with provided pubkey")
 	}
 
 	// Set TxnSignature (DER) into the map and re-encode canonically for the final tx_blob
@@ -286,4 +346,25 @@ func (sdk *SDK) verifyRS(digest, r, s []byte, pub33 []byte) (bool, error) {
 	}
 	sig := ecdsa2.NewSignature(&rN, &sN)
 	return sig.Verify(digest, pk), nil
+}
+
+func normalizeLowS(s []byte) ([]byte, error) {
+	if len(s) == 0 {
+		return nil, fmt.Errorf("empty s")
+	}
+	var sb big.Int
+	sb.SetBytes(s)
+	if sb.Sign() <= 0 || sb.Cmp(secpN) >= 0 {
+		return nil, fmt.Errorf("s not in [1, N-1]")
+	}
+	if sb.Cmp(secpHalfN) > 0 {
+		sb.Sub(secpN, &sb)
+	}
+	out := sb.Bytes()
+	// left-pad to 32 bytes
+	if len(out) < 32 {
+		pad := make([]byte, 32-len(out))
+		out = append(pad, out...)
+	}
+	return out, nil
 }
