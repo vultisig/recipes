@@ -154,6 +154,11 @@ func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) er
 			continue
 		}
 
+		if jr.Error != nil {
+			lastErr = fmt.Errorf("submit error from %s: %d: %s", endpoint, jr.Error.Code, jr.Error.Message)
+			continue
+		}
+
 		var submit struct {
 			Status              string `json:"status"`
 			EngineResult        string `json:"engine_result"`
@@ -193,11 +198,13 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 
 	// Decode R and S from hex strings
-	rBytes, err := hex.DecodeString(strings.TrimPrefix(sig.R, "0x"))
+	rHex := cleanHex(sig.R)
+	rBytes, err := hex.DecodeString(rHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode R: %w", err)
 	}
-	sBytes, err := hex.DecodeString(strings.TrimPrefix(sig.S, "0x"))
+	sHex := cleanHex(sig.S)
+	sBytes, err := hex.DecodeString(sHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode S: %w", err)
 	}
@@ -367,4 +374,12 @@ func normalizeLowS(s []byte) ([]byte, error) {
 		out = append(pad, out...)
 	}
 	return out, nil
+}
+
+func cleanHex(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		return s[2:]
+	}
+	return s
 }
