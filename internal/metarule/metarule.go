@@ -351,6 +351,38 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("invalid chainID: %w", err)
 		}
 
+		rules := make([]*types.Rule, 0)
+
+		approve := proto.Clone(in).(*types.Rule)
+		approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+		approve.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: c.fromAsset.GetFixedValue(),
+			},
+		}
+		approve.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "spender",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: in.GetTarget().GetAddress(),
+					},
+					Required: true,
+				},
+			},
+		}
+
+		rules = append(rules, approve)
+
 		out := proto.Clone(in).(*types.Rule)
 		out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
 		out.Target = in.GetTarget()
@@ -406,7 +438,8 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 					Required: true,
 				},
 			}}
-		return []*types.Rule{out}, nil
+		rules = append(rules, out)
+		return rules, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
