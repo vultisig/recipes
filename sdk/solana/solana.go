@@ -146,6 +146,15 @@ func (sdk *SDK) Send(ctx context.Context, unsignedTxBytes []byte, signatures map
 	return nil
 }
 
+func (sdk *SDK) MessageHash(tx *solana.Transaction) ([]byte, error) {
+	messageBytes, err := tx.Message.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("marshal message: %w", err)
+	}
+
+	return messageBytes, nil
+}
+
 func (sdk *SDK) deriveKeyFromMessage(messageBytes []byte) string {
 	hash := sha256.Sum256(messageBytes)
 
