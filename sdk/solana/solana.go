@@ -116,10 +116,6 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 }
 
 func (sdk *SDK) Broadcast(ctx context.Context, signedTxBytes []byte) error {
-	if sdk.rpcClient == nil {
-		return fmt.Errorf("rpc client not configured")
-	}
-
 	tx, err := solana.TransactionFromBytes(signedTxBytes)
 	if err != nil {
 		return fmt.Errorf("decode signed transaction: %w", err)
