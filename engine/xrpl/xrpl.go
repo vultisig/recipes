@@ -22,10 +22,9 @@ type XRPL struct{}
 
 // SwapParams represents parsed THORChain swap parameters from a memo
 type SwapParams struct {
-	AssetOut     string // e.g., "BTC.BTC"
-	DestAddress  string // destination address
-	MinAmountOut string // minimum amount out
-	AssetIn      string // inferred from the source chain (e.g., "XRP.XRP" for XRP transactions)
+	AssetOut    string // e.g., "BTC.BTC"
+	DestAddress string // destination address
+	AssetIn     string // inferred from the source chain (e.g., "XRP.XRP" for XRP transactions)
 }
 
 // NewXRPL creates a new XRPL engine instance
@@ -214,6 +213,8 @@ func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Pay
 	// Swap parameters
 	case "from_amount":
 		return x.formatCurrencyAmount(payment.Amount)
+	case "from_address":
+		return string(payment.Account), nil
 	case "to_address":
 		if len(swapParams) == 0 || swapParams[0] == nil {
 			return "", fmt.Errorf("swap parameters required for to_address")
@@ -330,11 +331,6 @@ func (x *XRPL) validateThorchainSwap(constraints []*types.ParameterConstraint, p
 			return fmt.Errorf("failed to extract THORChain parameter %s: %w", paramName, err)
 		}
 
-		// Skip parameters that are validated at target level
-		if value == "" {
-			continue
-		}
-
 		// Validate using the general constraint validator
 		if err := x.validateConstraint(constraint, value, paramName); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
@@ -361,11 +357,6 @@ func ParseSwapMemo(memo string) (*SwapParams, error) {
 		AssetOut:    parts[1],
 		DestAddress: parts[2],
 		// AssetIn will be set by the caller based on the source chain
-	}
-
-	// Min amount out is optional (4th part)
-	if len(parts) > 3 {
-		params.MinAmountOut = parts[3]
 	}
 
 	return params, nil
