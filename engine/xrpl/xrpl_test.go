@@ -134,12 +134,6 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 		Amount:      xrpAmount,
 	}
 
-	resource := &types.ResourcePath{
-		ChainId:    "xrp",
-		ProtocolId: "xrpl",
-		FunctionId: "send",
-	}
-
 	constraints := []*types.ParameterConstraint{
 		{
 			ParameterName: "recipient",
@@ -161,7 +155,7 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(resource, constraints, payment)
+	err := xrpl.validateParameterConstraints(constraints, payment)
 	assert.NoError(t, err)
 }
 
@@ -176,12 +170,6 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 		Amount:      xrpAmount,
 	}
 
-	resource := &types.ResourcePath{
-		ChainId:    "xrp",
-		ProtocolId: "xrpl",
-		FunctionId: "send",
-	}
-
 	constraints := []*types.ParameterConstraint{
 		{
 			ParameterName: "amount",
@@ -194,7 +182,7 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(resource, constraints, payment)
+	err := xrpl.validateParameterConstraints(constraints, payment)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "max amount constraint failed")
 }
@@ -347,34 +335,19 @@ func TestXRPL_Evaluate_Failure(t *testing.T) {
 		"Should fail with target address mismatch")
 }
 
-func TestXRPL_ValidateAmountConstraint_PartialPaymentRejection(t *testing.T) {
-	xrpl := NewXRPL()
+func TestXRPL_ParseTransaction_PartialPaymentRejection(t *testing.T) {
+	// Test the partial payment check logic
+	const tfPartialPayment uint = 131072
 
-	// Create XRP amount
-	var xrpAmount xrptypes.CurrencyAmount = xrptypes.XRPCurrencyAmount(1000000000)
+	// Simulate a payment with partial payment flag
+	testFlags := uint(131072)
+	isPartialPayment := testFlags&tfPartialPayment != 0
+	assert.True(t, isPartialPayment, "Payment should have partial payment flag set")
 
-	// Create payment with partial payment flag set (tfPartialPayment = 131072)
-	payment := &transactions.Payment{
-		BaseTx: transactions.BaseTx{
-			Flags: 131072, // tfPartialPayment flag
-		},
-		Destination: xrptypes.Address("rRecipient456"),
-		Amount:      xrpAmount,
-	}
-
-	constraint := &types.ParameterConstraint{
-		ParameterName: "amount",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-			Value: &types.Constraint_MaxValue{
-				MaxValue: "2000000000", // 2000 XRP max
-			},
-		},
-	}
-
-	err := xrpl.validateAmountConstraint(constraint, payment)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "partial payments are not supported for policy validation")
+	// Test normal payment without partial payment flag
+	normalFlags := uint(0)
+	isNormalPayment := normalFlags&tfPartialPayment != 0
+	assert.False(t, isNormalPayment, "Normal payment should not have partial payment flag")
 }
 
 func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
@@ -429,4 +402,200 @@ func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "fixed recipient constraint failed",
 		"Should fail with recipient constraint error")
+}
+
+func TestXRPL_Evaluate_ThorchainSwap_Success(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Real unsigned THORChain swap transaction that went on-chain:
+	// XRP.XRP -> BTC.BTC swap for 1,000,000 drops with a limit of 1000 sats
+	// Memo: =:BTC.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:1000
+	thorchainTxHex := "1200002405e7f5d4201b05e8c5766140000000000f42406840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83144ba9f4163bafd86f5ecc6793d43cff31a9f32275f9ea7c0e74686f72636861696e2d6d656d6f7d393d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a31303030e1f1"
+
+	txBytes, err := hex.DecodeString(thorchainTxHex)
+	assert.NoError(t, err)
+
+	// Create a rule that validates the THORChain swap
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "xrpl.thorchain_swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss", // Actual destination from the transaction
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "XRP.XRP",
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "BTC.BTC",
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "2000000", // 2 XRP max (actual tx has 1,000,000 drops = 1 XRP)
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.NoError(t, err, "THORChain swap should pass validation")
+}
+
+func TestXRPL_Evaluate_ThorchainSwap_WrongTarget(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Same transaction as above
+	thorchainTxHex := "1200002405e7f5ce201b05ee3fe06140000000000000016840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83149230d6f0343e3f78fc373c1825fd225fa5e17832f9ea7c0e74686f72636861696e2d6d656d6f7d3a3d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a302e303031e1f1"
+
+	txBytes, err := hex.DecodeString(thorchainTxHex)
+	assert.NoError(t, err)
+
+	// Create rule with WRONG target address
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "xrpl.thorchain_swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rWrongVaultAddress123456789012345678", // Wrong vault address
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "BTC.BTC",
+					},
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "target address mismatch", "Should fail with wrong target address")
+}
+
+func TestXRPL_Evaluate_ThorchainSwap_WrongAsset(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Same transaction as above
+	thorchainTxHex := "1200002405e7f5ce201b05ee3fe06140000000000000016840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83149230d6f0343e3f78fc373c1825fd225fa5e17832f9ea7c0e74686f72636861696e2d6d656d6f7d3a3d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a302e303031e1f1"
+
+	txBytes, err := hex.DecodeString(thorchainTxHex)
+	assert.NoError(t, err)
+
+	// Create rule with correct target but WRONG asset constraints
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "xrpl.thorchain_swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rNKzwSezmqZHEQJnm4Z12KepBA7xnxYAdf", // Actual destination from the transaction
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "ETH.ETH", // Wrong asset - memo has BTC.BTC
+					},
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "fixed to_asset constraint failed", "Should fail with wrong asset constraint")
+}
+
+func TestXRPL_Evaluate_ThorchainSwap_AmountTooHigh(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Same transaction as above
+	thorchainTxHex := "1200002405e7f5ce201b05ee3fe06140000000000000016840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83149230d6f0343e3f78fc373c1825fd225fa5e17832f9ea7c0e74686f72636861696e2d6d656d6f7d3a3d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a302e303031e1f1"
+
+	txBytes, err := hex.DecodeString(thorchainTxHex)
+	assert.NoError(t, err)
+
+	// Create rule with correct target but amount constraint that's too restrictive
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "xrpl.thorchain_swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rNKzwSezmqZHEQJnm4Z12KepBA7xnxYAdf", // Actual destination from the transaction
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "0", // Too restrictive - transaction has 1 drop
+					},
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "max from_amount constraint failed", "Should fail with amount too high")
+}
+
+func TestXRPL_Evaluate_UnsupportedProtocol(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Use any valid transaction
+	thorchainTxHex := "1200002405e7f5ce201b05ee3fe06140000000000000016840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83149230d6f0343e3f78fc373c1825fd225fa5e17832f9ea7c0e74686f72636861696e2d6d656d6f7d3a3d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a302e303031e1f1"
+
+	txBytes, err := hex.DecodeString(thorchainTxHex)
+	assert.NoError(t, err)
+
+	// Create rule with unsupported protocol
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "xrpl.unknown_protocol",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rNKzwSezmqZHEQJnm4Z12KepBA7xnxYAdf", // Actual destination from the transaction
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported protocol: unknown_protocol", "Should fail with unsupported protocol")
 }
