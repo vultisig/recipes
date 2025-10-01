@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
+	"regexp"
 
 	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
@@ -19,13 +19,6 @@ import (
 
 // XRPL represents the XRP Ledger engine implementation
 type XRPL struct{}
-
-// SwapParams represents parsed THORChain swap parameters from a memo
-type SwapParams struct {
-	AssetOut    string // e.g., "BTC.BTC"
-	DestAddress string // destination address
-	AssetIn     string // inferred from the source chain (e.g., "XRP.XRP" for XRP transactions)
-}
 
 // NewXRPL creates a new XRPL engine instance
 func NewXRPL() *XRPL {
@@ -67,22 +60,9 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
-	// Branch based on protocol for parameter validation
-	switch r.ProtocolId {
-	case "xrp":
-		// Basic XRP payment validation
-		if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
-			return fmt.Errorf("failed to validate parameter constraints: %w", err)
-		}
-
-	case "thorchain_swap":
-		// THORChain swap validation
-		if err := x.validateThorchainSwap(rule.GetParameterConstraints(), tx); err != nil {
-			return fmt.Errorf("failed to validate thorchain swap: %w", err)
-		}
-
-	default:
-		return fmt.Errorf("unsupported protocol: %s", r.ProtocolId)
+	// Validate parameter constraints for XRP payments
+	if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
+		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
 	return nil
@@ -201,36 +181,15 @@ func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstr
 }
 
 // extractParameterValue extracts the actual value from payment for the given parameter name
-// Handles both send/transfer parameters (amount, recipient) and swap parameters (from_asset, to_asset, from_amount, to_address)
-func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Payment, swapParams ...*SwapParams) (string, error) {
+// Handles basic XRP payment parameters: recipient, amount, memo
+func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Payment) (string, error) {
 	switch paramName {
-	// Send/transfer parameters
 	case "recipient":
 		return string(payment.Destination), nil
 	case "amount":
 		return x.formatCurrencyAmount(payment.Amount)
-
-	// Swap parameters
-	case "from_amount":
-		return x.formatCurrencyAmount(payment.Amount)
-	case "from_address":
-		return string(payment.Account), nil
-	case "to_address":
-		if len(swapParams) == 0 || swapParams[0] == nil {
-			return "", fmt.Errorf("swap parameters required for to_address")
-		}
-		return swapParams[0].DestAddress, nil
-	case "from_asset":
-		if len(swapParams) == 0 || swapParams[0] == nil {
-			return "", fmt.Errorf("swap parameters required for from_asset")
-		}
-		return swapParams[0].AssetIn, nil
-	case "to_asset":
-		if len(swapParams) == 0 || swapParams[0] == nil {
-			return "", fmt.Errorf("swap parameters required for to_asset")
-		}
-		return swapParams[0].AssetOut, nil
-
+	case "memo":
+		return ExtractMemoFromXRPPayment(payment)
 	default:
 		return "", fmt.Errorf("unsupported parameter: %s", paramName)
 	}
@@ -297,69 +256,22 @@ func (x *XRPL) validateConstraint(constraint *types.ParameterConstraint, value s
 				paramName, resolvedAddr, value)
 		}
 
+	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
+		regexpValue := constraint.GetConstraint().GetRegexpValue()
+		matched, err := regexp.MatchString(regexpValue, value)
+		if err != nil {
+			return fmt.Errorf("invalid regexp pattern for %s: %s, error: %w", paramName, regexpValue, err)
+		}
+		if !matched {
+			return fmt.Errorf("regexp value constraint failed: expected=%s, actual=%s",
+				regexpValue, value)
+		}
+
 	default:
 		return fmt.Errorf("unsupported constraint type for %s: %s", paramName, constraintType)
 	}
 
 	return nil
-}
-
-// validateThorchainSwap validates THORChain swap transactions
-func (x *XRPL) validateThorchainSwap(constraints []*types.ParameterConstraint, payment *transactions.Payment) error {
-	// Extract memo from payment transaction
-	memo, err := ExtractMemoFromXRPPayment(payment)
-	if err != nil {
-		return fmt.Errorf("failed to extract memo: %w", err)
-	}
-
-	// Parse THORChain swap parameters from memo
-	swapParams, err := ParseSwapMemo(memo)
-	if err != nil {
-		return fmt.Errorf("failed to parse THORChain memo: %w", err)
-	}
-
-	// Set AssetIn for XRP transactions
-	swapParams.AssetIn = "XRP.XRP"
-
-	// Validate each parameter constraint
-	for _, constraint := range constraints {
-		paramName := constraint.GetParameterName()
-
-		// Extract the actual value based on parameter name
-		value, err := x.extractParameterValue(paramName, payment, swapParams)
-		if err != nil {
-			return fmt.Errorf("failed to extract THORChain parameter %s: %w", paramName, err)
-		}
-
-		// Validate using the general constraint validator
-		if err := x.validateConstraint(constraint, value, paramName); err != nil {
-			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
-		}
-	}
-
-	return nil
-}
-
-// ParseSwapMemo parses THORChain swap memo format
-// Format: SWAP:ASSET_OUT:DEST_ADDRESS:MIN_AMOUNT_OUT
-// Example: SWAP:BTC.BTC:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh:100000
-func ParseSwapMemo(memo string) (*SwapParams, error) {
-	parts := strings.Split(memo, ":")
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("invalid THORChain memo format, expected at least 3 parts, got %d", len(parts))
-	}
-
-	if parts[0] != "SWAP" && parts[0] != "=" {
-		return nil, fmt.Errorf("not a THORChain swap memo, expected SWAP or = prefix, got: %s", parts[0])
-	}
-
-	params := &SwapParams{
-		AssetOut:    parts[1],
-		DestAddress: parts[2],
-		// AssetIn will be set by the caller based on the source chain
-	}
-
-	return params, nil
 }
 
 // ExtractMemoFromXRPPayment extracts memo data from XRPL Payment transaction
