@@ -64,7 +64,10 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 
 	if tx.Message.Header.NumRequiredSignatures == 0 {
-		return nil, fmt.Errorf("transaction requires no signatures")
+		return nil, fmt.Errorf("unexpected no signatures")
+	}
+	if tx.Message.Header.NumRequiredSignatures > 1 {
+		return nil, fmt.Errorf("multi-signature transactions are not supported")
 	}
 
 	messageBytes, err := tx.Message.MarshalBinary()
