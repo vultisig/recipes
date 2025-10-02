@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"regexp"
 
-	"github.com/vultisig/recipes/engine/compare"
+	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
@@ -43,10 +42,6 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
-	// Basic resource checks
-	if r.ChainId != "xrp" {
-		return fmt.Errorf("unsupported chain in resource: %s", r.ChainId)
-	}
 
 	// Parse XRPL transaction from txBytes using binary codec
 	tx, err := x.parseTransaction(txBytes)
@@ -64,8 +59,8 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
-	// Validate parameter constraints
-	if err := x.validateParameterConstraints(r, rule.GetParameterConstraints(), tx); err != nil {
+	// Validate parameter constraints for XRP payments
+	if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
@@ -98,9 +93,6 @@ func (x *XRPL) parseTransaction(txBytes []byte) (*transactions.Payment, error) {
 	// Validate required fields for Payment transactions
 	if string(payment.Account) == "" {
 		return nil, fmt.Errorf("account field is required")
-	}
-	if payment.TransactionType != transactions.PaymentTx {
-		return nil, fmt.Errorf("expected Payment transaction, got: %s", payment.TransactionType)
 	}
 	if string(payment.Destination) == "" {
 		return nil, fmt.Errorf("destination field is required")
@@ -169,185 +161,106 @@ func (x *XRPL) validateTarget(resource *types.ResourcePath, target *types.Target
 }
 
 // validateParameterConstraints validates all parameter constraints
-func (x *XRPL) validateParameterConstraints(resource *types.ResourcePath, constraints []*types.ParameterConstraint, payment *transactions.Payment) error {
-	chain := resource.ChainId
+func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstraint, payment *transactions.Payment) error {
 	for _, constraint := range constraints {
 		paramName := constraint.GetParameterName()
 
-		var err error
-		switch paramName {
-		case "recipient":
-			err = x.validateRecipientConstraint(chain, constraint, string(payment.Destination))
-		case "amount":
-			err = x.validateAmountConstraint(constraint, payment)
-		default:
-			err = fmt.Errorf("unsupported parameter: %s", paramName)
+		// Extract the actual value from the payment based on parameter name
+		value, err := x.extractParameterValue(paramName, payment)
+		if err != nil {
+			return fmt.Errorf("failed to extract parameter %s: %w", paramName, err)
 		}
 
-		if err != nil {
+		// Use type-based constraint validation
+		if err := x.assertArgsByType("xrp", paramName, value, constraints); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
 		}
 	}
 	return nil
 }
 
-// validateRecipientConstraint validates recipient address constraints
-func (x *XRPL) validateRecipientConstraint(chain string, constraint *types.ParameterConstraint, recipient string) error {
-	constraintType := constraint.GetConstraint().GetType()
-
-	switch constraintType {
-	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
-		return nil
-
-	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-		expectedValue := constraint.GetConstraint().GetFixedValue()
-
-		if recipient != expectedValue {
-			return fmt.Errorf("fixed recipient constraint failed: expected=%s, actual=%s",
-				expectedValue, recipient)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
-		pattern := constraint.GetConstraint().GetRegexpValue()
-		if pattern == "" {
-			return fmt.Errorf("regexp pattern cannot be empty")
-		}
-		matched, err := regexp.MatchString(pattern, recipient)
-		if err != nil {
-			return fmt.Errorf("invalid regexp pattern: %w", err)
-		}
-		if !matched {
-			return fmt.Errorf("regexp constraint failed: pattern=%s, value=%s", pattern, recipient)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-		magicConstant := constraint.GetConstraint().GetMagicConstantValue()
-		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(magicConstant)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to get resolver: magic_const=%s",
-				magicConstant.String(),
-			)
-		}
-
-		resolvedAddr, _, err := resolve.Resolve(
-			magicConstant,
-			chain,
-			"",
-		)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to resolve magic const: value=%s, error=%w",
-				magicConstant.String(),
-				err,
-			)
-		}
-		if recipient != resolvedAddr {
-			return fmt.Errorf(
-				"tx target is wrong: tx_to=%s, rule_magic_const_resolved=%s",
-				recipient,
-				resolvedAddr,
-			)
-		}
+// extractParameterValue extracts the actual value from payment for the given parameter name
+// Returns appropriate Go types: *big.Int for amounts, string for others
+func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Payment) (interface{}, error) {
+	switch paramName {
+	case "recipient":
+		return string(payment.Destination), nil
+	case "amount":
+		// Return amount as *big.Int for numeric comparisons
+		return x.extractCurrencyAmountAsBigInt(payment.Amount)
+	case "memo":
+		return ExtractMemoFromXRPPayment(payment)
 	default:
-		return fmt.Errorf("unsupported constraint type for recipient: %s", constraintType)
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}
-
-	return nil
 }
 
-// validateAmountConstraint validates amount constraints (XRP only)
-func (x *XRPL) validateAmountConstraint(constraint *types.ParameterConstraint, payment *transactions.Payment) error {
-	// Check for partial payment flag (tfPartialPayment = 131072)
-	const tfPartialPayment uint = 131072
-	if payment.Flags&tfPartialPayment != 0 {
-		// For now, reject partial payments as they could bypass amount constraints
-		// The actual delivered amount could be less than payment.Amount
-		return fmt.Errorf("partial payments are not supported for policy validation")
+// ExtractMemoFromXRPPayment extracts memo data from XRPL Payment transaction
+func ExtractMemoFromXRPPayment(payment *transactions.Payment) (string, error) {
+	if len(payment.Memos) == 0 {
+		return "", fmt.Errorf("no memo found in payment transaction")
 	}
-	// Convert amount to string for comparison
-	amountStr, err := x.formatCurrencyAmount(payment.Amount)
+
+	// XRPL memos are typically hex-encoded, need to decode
+	memo := payment.Memos[0]
+	if memo.Memo.MemoData == "" {
+		return "", fmt.Errorf("empty memo data")
+	}
+
+	// Decode hex to string (THORChain memos are text)
+	memoBytes, err := hex.DecodeString(memo.Memo.MemoData)
 	if err != nil {
-		return fmt.Errorf("failed to format currency amount: %w", err)
+		// If not hex, treat as plain string
+		return memo.Memo.MemoData, nil
 	}
 
-	// Convert to big.Int for numeric comparisons
-	amountBigInt := new(big.Int)
-	if _, ok := amountBigInt.SetString(amountStr, 10); !ok {
-		return fmt.Errorf("invalid XRP amount format: %s", amountStr)
-	}
-
-	constraintType := constraint.GetConstraint().GetType()
-
-	switch constraintType {
-	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
-		return nil
-
-	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-		expectedAmount := constraint.GetConstraint().GetFixedValue()
-		comparator, err := compare.NewBigInt(expectedAmount)
-		if err != nil {
-			return fmt.Errorf("invalid fixed constraint value: %s", expectedAmount)
-		}
-		if !comparator.Fixed(amountBigInt) {
-			return fmt.Errorf("fixed amount constraint failed: expected=%s, actual=%s",
-				expectedAmount, amountStr)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MIN:
-		minValue := constraint.GetConstraint().GetMinValue()
-		comparator, err := compare.NewBigInt(minValue)
-		if err != nil {
-			return fmt.Errorf("invalid min constraint value: %s", minValue)
-		}
-		if !comparator.Min(amountBigInt) {
-			return fmt.Errorf("min amount constraint failed: expected>=%s, actual=%s",
-				minValue, amountStr)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAX:
-		maxValue := constraint.GetConstraint().GetMaxValue()
-		comparator, err := compare.NewBigInt(maxValue)
-		if err != nil {
-			return fmt.Errorf("invalid max constraint value: %s", maxValue)
-		}
-		if !comparator.Max(amountBigInt) {
-			return fmt.Errorf("max amount constraint failed: expected<=%s, actual=%s",
-				maxValue, amountStr)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
-		pattern := constraint.GetConstraint().GetRegexpValue()
-		if pattern == "" {
-			return fmt.Errorf("regexp pattern cannot be empty")
-		}
-		matched, err := regexp.MatchString(pattern, amountStr)
-		if err != nil {
-			return fmt.Errorf("invalid regexp pattern: %w", err)
-		}
-		if !matched {
-			return fmt.Errorf("regexp constraint failed: pattern=%s, value=%s", pattern, amountStr)
-		}
-
-	default:
-		return fmt.Errorf("unsupported constraint type for amount: %s", constraintType)
-	}
-
-	return nil
+	return string(memoBytes), nil
 }
 
-// formatCurrencyAmount converts a CurrencyAmount to string for comparison
+// extractCurrencyAmountAsBigInt converts a CurrencyAmount to *big.Int for numeric comparisons
 // For now, only XRP native tokens are supported
-func (x *XRPL) formatCurrencyAmount(amount xrptypes.CurrencyAmount) (string, error) {
+func (x *XRPL) extractCurrencyAmountAsBigInt(amount xrptypes.CurrencyAmount) (*big.Int, error) {
 	if amount == nil {
-		return "", fmt.Errorf("amount is nil")
+		return nil, fmt.Errorf("amount is nil")
 	}
 
 	xrpAmount, ok := amount.(xrptypes.XRPCurrencyAmount)
 	if !ok {
-		return "", fmt.Errorf("only XRP amounts are supported, got: %T", amount)
+		return nil, fmt.Errorf("only XRP amounts are supported, got: %T", amount)
 	}
 
-	// Convert XRP amount (drops) to string
-	return fmt.Sprintf("%d", uint64(xrpAmount)), nil
+	return big.NewInt(int64(xrpAmount)), nil
+}
+
+// assertArgsByType validates constraints using the appropriate comparator based on Go type
+func (x *XRPL) assertArgsByType(chainId, inputName string, arg interface{}, constraints []*types.ParameterConstraint) error {
+	switch actual := arg.(type) {
+	case string:
+		err := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewString,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to assert string parameter: %w", err)
+		}
+
+	case *big.Int:
+		err := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBigInt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to assert big.Int parameter: %w", err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported parameter type: %T", actual)
+	}
+	return nil
 }
