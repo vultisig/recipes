@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"regexp"
 
-	"github.com/vultisig/recipes/engine/compare"
+	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
@@ -172,8 +171,8 @@ func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstr
 			return fmt.Errorf("failed to extract parameter %s: %w", paramName, err)
 		}
 
-		// Validate using the general constraint validator
-		if err := x.validateConstraint(constraint, value, paramName); err != nil {
+		// Use type-based constraint validation
+		if err := x.assertArgsByType("xrp", paramName, value, constraints); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
 		}
 	}
@@ -181,97 +180,19 @@ func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstr
 }
 
 // extractParameterValue extracts the actual value from payment for the given parameter name
-// Handles basic XRP payment parameters: recipient, amount, memo
-func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Payment) (string, error) {
+// Returns appropriate Go types: *big.Int for amounts, string for others
+func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Payment) (interface{}, error) {
 	switch paramName {
 	case "recipient":
 		return string(payment.Destination), nil
 	case "amount":
-		return x.formatCurrencyAmount(payment.Amount)
+		// Return amount as *big.Int for numeric comparisons
+		return x.extractCurrencyAmountAsBigInt(payment.Amount)
 	case "memo":
 		return ExtractMemoFromXRPPayment(payment)
 	default:
-		return "", fmt.Errorf("unsupported parameter: %s", paramName)
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}
-}
-
-// validateConstraint validates any constraint against a string value
-func (x *XRPL) validateConstraint(constraint *types.ParameterConstraint, value string, paramName string) error {
-	constraintType := constraint.GetConstraint().GetType()
-
-	switch constraintType {
-	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
-		return nil
-
-	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-		expectedValue := constraint.GetConstraint().GetFixedValue()
-		if value != expectedValue {
-			return fmt.Errorf("fixed %s constraint failed: expected=%s, actual=%s",
-				paramName, expectedValue, value)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MIN:
-		comparator, err := compare.NewBigInt(constraint.GetConstraint().GetMinValue())
-		if err != nil {
-			return fmt.Errorf("invalid min constraint value: %s", constraint.GetConstraint().GetMinValue())
-		}
-		valueBigInt := new(big.Int)
-		if _, ok := valueBigInt.SetString(value, 10); !ok {
-			return fmt.Errorf("invalid %s format for numeric comparison: %s", paramName, value)
-		}
-		if !comparator.Min(valueBigInt) {
-			return fmt.Errorf("min %s constraint failed: expected>=%s, actual=%s",
-				paramName, constraint.GetConstraint().GetMinValue(), value)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAX:
-		comparator, err := compare.NewBigInt(constraint.GetConstraint().GetMaxValue())
-		if err != nil {
-			return fmt.Errorf("invalid max constraint value: %s", constraint.GetConstraint().GetMaxValue())
-		}
-		valueBigInt := new(big.Int)
-		if _, ok := valueBigInt.SetString(value, 10); !ok {
-			return fmt.Errorf("invalid %s format for numeric comparison: %s", paramName, value)
-		}
-		if !comparator.Max(valueBigInt) {
-			return fmt.Errorf("max %s constraint failed: expected<=%s, actual=%s",
-				paramName, constraint.GetConstraint().GetMaxValue(), value)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-		magicConstant := constraint.GetConstraint().GetMagicConstantValue()
-		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(magicConstant)
-		if err != nil {
-			return fmt.Errorf("failed to get resolver for %s: magic_const=%s",
-				paramName, magicConstant.String())
-		}
-
-		resolvedAddr, _, err := resolve.Resolve(magicConstant, "xrp", "")
-		if err != nil {
-			return fmt.Errorf("failed to resolve magic const for %s: value=%s, error=%w",
-				paramName, magicConstant.String(), err)
-		}
-		if value != resolvedAddr {
-			return fmt.Errorf("%s magic constant constraint failed: expected=%s, actual=%s",
-				paramName, resolvedAddr, value)
-		}
-
-	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
-		regexpValue := constraint.GetConstraint().GetRegexpValue()
-		matched, err := regexp.MatchString(regexpValue, value)
-		if err != nil {
-			return fmt.Errorf("invalid regexp pattern for %s: %s, error: %w", paramName, regexpValue, err)
-		}
-		if !matched {
-			return fmt.Errorf("regexp value constraint failed: expected=%s, actual=%s",
-				regexpValue, value)
-		}
-
-	default:
-		return fmt.Errorf("unsupported constraint type for %s: %s", paramName, constraintType)
-	}
-
-	return nil
 }
 
 // ExtractMemoFromXRPPayment extracts memo data from XRPL Payment transaction
@@ -296,18 +217,50 @@ func ExtractMemoFromXRPPayment(payment *transactions.Payment) (string, error) {
 	return string(memoBytes), nil
 }
 
-// formatCurrencyAmount converts a CurrencyAmount to string for comparison
+// extractCurrencyAmountAsBigInt converts a CurrencyAmount to *big.Int for numeric comparisons
 // For now, only XRP native tokens are supported
-func (x *XRPL) formatCurrencyAmount(amount xrptypes.CurrencyAmount) (string, error) {
+func (x *XRPL) extractCurrencyAmountAsBigInt(amount xrptypes.CurrencyAmount) (*big.Int, error) {
 	if amount == nil {
-		return "", fmt.Errorf("amount is nil")
+		return nil, fmt.Errorf("amount is nil")
 	}
 
 	xrpAmount, ok := amount.(xrptypes.XRPCurrencyAmount)
 	if !ok {
-		return "", fmt.Errorf("only XRP amounts are supported, got: %T", amount)
+		return nil, fmt.Errorf("only XRP amounts are supported, got: %T", amount)
 	}
 
-	// Convert XRP amount (drops) to string
-	return fmt.Sprintf("%d", uint64(xrpAmount)), nil
+	return big.NewInt(int64(xrpAmount)), nil
+}
+
+// assertArgsByType validates constraints using the appropriate comparator based on Go type
+func (x *XRPL) assertArgsByType(chainId, inputName string, arg interface{}, constraints []*types.ParameterConstraint) error {
+	switch actual := arg.(type) {
+	case string:
+		err := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewString,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to assert string parameter: %w", err)
+		}
+
+	case *big.Int:
+		err := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBigInt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to assert big.Int parameter: %w", err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported parameter type: %T", actual)
+	}
+	return nil
 }

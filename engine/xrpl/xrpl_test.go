@@ -184,7 +184,7 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 
 	err := xrpl.validateParameterConstraints(constraints, payment)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "max amount constraint failed")
+	assert.Contains(t, err.Error(), "failed to compare max values")
 }
 
 func TestXRPL_Evaluate_Success(t *testing.T) {
@@ -400,7 +400,7 @@ func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
 
 	// Should fail due to recipient constraint failure (checked first in parameter validation)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "fixed recipient constraint failed",
+	assert.Contains(t, err.Error(), "failed to compare fixed values",
 		"Should fail with recipient constraint error")
 }
 
@@ -571,6 +571,6 @@ func TestXRPL_Evaluate_ThorchainSwap_AmountTooHigh(t *testing.T) {
 
 	err = xrpl.Evaluate(rule, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "max amount constraint failed", "Should fail with amount too high")
+	assert.Contains(t, err.Error(), "failed to compare max values", "Should fail with amount too high")
 }
 
