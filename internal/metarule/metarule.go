@@ -537,7 +537,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "xrp.thorchain_swap.swap"
+		out.Resource = "xrp.swap"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 			Target: &types.Target_MagicConstant{
@@ -545,7 +545,6 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			},
 		}
 
-		// Build THORChain memo regexp like Bitcoin does with OP_RETURN data
 		chainInt, err := common.FromString(c.toChain.GetFixedValue())
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse chain id: %w", err)
