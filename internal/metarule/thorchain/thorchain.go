@@ -68,6 +68,7 @@ const (
 	bsc  network = "BSC"
 	base network = "BASE"
 	avax network = "AVAX"
+	xrp  network = "XRP"
 )
 
 func parseNetwork(c common.Chain) (network, error) {
@@ -82,6 +83,8 @@ func parseNetwork(c common.Chain) (network, error) {
 		return base, nil
 	case common.Avalanche:
 		return avax, nil
+	case common.XRP:
+		return xrp, nil
 	default:
 		return "", errors.New("unknown chain")
 	}
@@ -121,6 +124,10 @@ func MakeAsset(chain common.Chain, asset string) (string, error) {
 		// Check if the second part contains a dash (indicating token with address)
 		tokenPart := parts[1]
 		if !strings.Contains(tokenPart, "-") {
+			// If it doesnt have a dash, try to match as native asset
+			if strings.EqualFold(tokenPart, targetAsset) {
+				return pp.asset, nil
+			}
 			continue
 		}
 

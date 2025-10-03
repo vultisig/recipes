@@ -1125,3 +1125,332 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 	jupiterRule := result[0]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
 }
+
+const testXRPAddress = "rw2ciyaNshpHe7bCHo4bRWq6pqqynnWKQg"
+const testXRPVaultAddress = "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss"
+
+func TestTryFormat_XRPSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testXRPAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000", // 1 XRP in drops
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "xrp.xrp.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, testXRPAddress, paramByName["recipient"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, "1000000", paramByName["amount"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_XRPSwap(t *testing.T) {
+	const (
+		fromAddress      = testXRPAddress
+		fromAmount       = "2000000" // 2 XRP in drops
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "xrp.swap"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Empty for native XRP
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_MAGIC_CONSTANT, result[0].Target.TargetType)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, result[0].Target.GetMagicConstant())
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["recipient"].Constraint.GetMagicConstantValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "memo")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
+	regexpValue := paramByName["memo"].Constraint.GetRegexpValue()
+	assert.Equal(t, fmt.Sprintf("^=:ETH\\.USDC:%s:.*", toAddress), regexpValue)
+}
+
+func TestTryFormat_XRPSend_MissingRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+}
+
+func TestTryFormat_XRPSend_MissingAmount(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testXRPAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
+}
+
+func TestTryFormat_XRPSwap_MissingFromAsset(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testXRPAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: from_asset")
+}
+
+func TestTryFormat_XRPSend_MagicConstantRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_VULTISIG_TREASURY,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "xrp.xrp.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, paramByName["recipient"].Constraint.GetMagicConstantValue())
+}
+
+func TestTryFormat_XRP_NonMetaRule(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	// Test with a complete XRP rule that has function ID (not a meta-rule)
+	rule := &types.Rule{
+		Resource: "xrp.thorchain_swap.swap", // Already has function ID
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: testXRPVaultAddress,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testXRPVaultAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "2000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, rule, result[0]) // Should return unchanged
+}
+
+func TestTryFormat_XRP_UnsupportedProtocol(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "xrp.stake", // Unsupported protocol
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testXRPAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported protocol id for XRP: stake")
+}
