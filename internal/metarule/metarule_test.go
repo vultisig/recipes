@@ -1133,7 +1133,7 @@ func TestTryFormat_XRPSend(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -1160,7 +1160,7 @@ func TestTryFormat_XRPSend(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 
-	assert.Equal(t, "xrp.xrp.transfer", result[0].Resource)
+	assert.Equal(t, "ripple.xrp.transfer", result[0].Resource)
 	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
 	require.Len(t, result[0].ParameterConstraints, 2)
 
@@ -1185,13 +1185,13 @@ func TestTryFormat_XRPSwap(t *testing.T) {
 		toChain          = "ethereum"
 		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
 		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
-		expectedResource = "xrp.swap"
+		expectedResource = "ripple.swap"
 	)
 
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "from_asset",
@@ -1282,7 +1282,7 @@ func TestTryFormat_XRPSend_MissingRecipient(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "amount",
@@ -1305,7 +1305,7 @@ func TestTryFormat_XRPSend_MissingAmount(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -1328,7 +1328,7 @@ func TestTryFormat_XRPSwap_MissingFromAsset(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "from_address",
@@ -1351,7 +1351,7 @@ func TestTryFormat_XRPSend_MagicConstantRecipient(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -1378,7 +1378,7 @@ func TestTryFormat_XRPSend_MagicConstantRecipient(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 
-	assert.Equal(t, "xrp.xrp.transfer", result[0].Resource)
+	assert.Equal(t, "ripple.xrp.transfer", result[0].Resource)
 	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
 	require.Len(t, result[0].ParameterConstraints, 2)
 
@@ -1397,7 +1397,7 @@ func TestTryFormat_XRP_NonMetaRule(t *testing.T) {
 
 	// Test with a complete XRP rule that has function ID (not a meta-rule)
 	rule := &types.Rule{
-		Resource: "xrp.thorchain_swap.swap", // Already has function ID
+		Resource: "ripple.thorchain_swap.swap", // Already has function ID
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -1436,7 +1436,7 @@ func TestTryFormat_XRP_UnsupportedProtocol(t *testing.T) {
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "xrp.stake", // Unsupported protocol
+		Resource: "ripple.stake", // Unsupported protocol
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",

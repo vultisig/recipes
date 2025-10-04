@@ -546,7 +546,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "xrp.xrp.transfer"
+		out.Resource = "ripple.xrp.transfer"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}
@@ -570,7 +570,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "xrp.swap"
+		out.Resource = "ripple.swap"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 			Target: &types.Target_MagicConstant{
