@@ -14,7 +14,7 @@ require (
 	github.com/kaptinlin/jsonschema v0.4.6
 	github.com/stretchr/testify v1.10.0
 	github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74
-	github.com/vultisig/vultisig-go v0.0.0-20250818095937-af97443fcbbe
+	github.com/vultisig/vultisig-go v0.0.0-20251004125942-60b3b1898d15
 	github.com/xyield/xrpl-go v0.0.0-20230914223425-9abe75c05830
 	golang.org/x/sync v0.14.0
 	google.golang.org/protobuf v1.36.6
