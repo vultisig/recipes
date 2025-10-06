@@ -230,17 +230,17 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("binary-codec decode (unsigned) failed: %w", err)
 	}
 
-	// Ensure base doesn't already contain SigningPubKey/TxnSignature
-	if _, has := m["SigningPubKey"]; has {
-		return nil, fmt.Errorf("base tx already contains SigningPubKey; pass an unsigned base")
-	}
+	// Ensure base doesn't already contain TxnSignature
 	if _, has := m["TxnSignature"]; has {
 		return nil, fmt.Errorf("base tx already contains TxnSignature; pass an unsigned base")
 	}
 
-	// Add SigningPubKey to the transaction map
-	pubHex := strings.ToUpper(hex.EncodeToString(pubKey))
-	m["SigningPubKey"] = pubHex
+	// SigningPubKey should already be present from the build script
+	// If it's not present, add it as a fallback
+	if _, has := m["SigningPubKey"]; !has {
+		pubHex := strings.ToUpper(hex.EncodeToString(pubKey))
+		m["SigningPubKey"] = pubHex
+	}
 
 	// Re-encode with SigningPubKey (but without TxnSignature) to get canonical bytes for signing
 	withPubHex, err := xrpgo.Encode(m)
