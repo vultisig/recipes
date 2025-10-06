@@ -42,7 +42,7 @@ func TestXRPL_Evaluate_WrongProtocol(t *testing.T) {
 	xrpl := NewXRPL()
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 	}
 
 	err := xrpl.Evaluate(rule, []byte("any-data"))
@@ -55,7 +55,7 @@ func TestXRPL_Evaluate_UnsupportedFunction(t *testing.T) {
 	xrpl := NewXRPL()
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 	}
 
 	err := xrpl.Evaluate(rule, []byte("any-data"))
@@ -68,7 +68,7 @@ func TestXRPL_Evaluate_InvalidTransactionData(t *testing.T) {
 	xrpl := NewXRPL()
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 	}
 
 	err := xrpl.Evaluate(rule, []byte("invalid-tx-data"))
@@ -202,7 +202,7 @@ func TestXRPL_Evaluate_Success(t *testing.T) {
 	// Create a rule with parameter constraints matching the example policy structure
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -254,7 +254,7 @@ func TestXRPL_MagicConstant_THORChainVault(t *testing.T) {
 	// won't match THORChain's vault address, but it tests the resolution mechanism)
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 			Target: &types.Target_MagicConstant{
@@ -296,7 +296,7 @@ func TestXRPL_Evaluate_Failure(t *testing.T) {
 	// Create a rule with WRONG recipient and WRONG amount constraints
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -364,7 +364,7 @@ func TestXRPL_Evaluate_Failure_ParameterConstraints(t *testing.T) {
 	// Create a rule with correct target but wrong parameter constraints
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.send",
+		Resource: "ripple.send",
 		// Correct target so we get to parameter validation
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
@@ -418,7 +418,7 @@ func TestXRPL_Evaluate_Swap_Success(t *testing.T) {
 	// Create a rule that validates the swap
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -475,7 +475,7 @@ func TestXRPL_Evaluate_Swap_WrongTarget(t *testing.T) {
 	// Create rule with WRONG target address
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -512,7 +512,7 @@ func TestXRPL_Evaluate_Swap_WrongAsset(t *testing.T) {
 	// Create rule with correct target but WRONG asset constraints
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -549,7 +549,7 @@ func TestXRPL_Evaluate_Swap_AmountTooHigh(t *testing.T) {
 	// Create rule with correct target but amount constraint that's too restrictive
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "xrp.swap",
+		Resource: "ripple.swap",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
