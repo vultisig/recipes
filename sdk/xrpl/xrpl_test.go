@@ -3,6 +3,7 @@ package xrpl
 import (
 	"context"
 	"encoding/hex"
+	"slices"
 	"strings"
 	"testing"
 
@@ -220,17 +221,18 @@ func TestSDK_Sign_InvalidRSLength(t *testing.T) {
 func TestSDK_Sign_AlreadySigned(t *testing.T) {
 	sdk := &SDK{}
 
-	// Create unsigned transaction and manually add signing fields to test error handling
+	// Create unsigned transaction and manually add TxnSignature to test error handling
 	unsignedTx := createTestUnsignedTransaction(t)
 	txHex := hex.EncodeToString(unsignedTx)
 
-	// Decode, add SigningPubKey, and re-encode to simulate already-signed tx
+	// Decode, add both SigningPubKey and TxnSignature to simulate fully-signed tx
 	decoded, err := xrpgo.Decode(strings.ToUpper(txHex))
 	if err != nil {
 		t.Fatalf("Failed to decode test transaction: %v", err)
 	}
 
 	decoded["SigningPubKey"] = testPubKeyHex
+	decoded["TxnSignature"] = "3045022100ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF123456789002200123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
 	signedHex, err := xrpgo.Encode(decoded)
 	if err != nil {
 		t.Fatalf("Failed to encode test transaction: %v", err)
@@ -250,7 +252,7 @@ func TestSDK_Sign_AlreadySigned(t *testing.T) {
 		t.Error("Expected error for already signed transaction")
 	}
 
-	if !strings.Contains(err.Error(), "already contains SigningPubKey") {
+	if !strings.Contains(err.Error(), "already contains TxnSignature") {
 		t.Errorf("Expected 'already signed' error, got: %v", err)
 	}
 }
@@ -324,14 +326,7 @@ func TestSDK_derEncodeRS(t *testing.T) {
 	}
 
 	// Should contain 0x02 markers for INTEGERs
-	found := false
-	for _, b := range der {
-		if b == 0x02 {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(der, 0x02) {
 		t.Error("DER encoding should contain INTEGER markers (0x02)")
 	}
 }
