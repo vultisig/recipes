@@ -60,7 +60,7 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	// Validate parameter constraints for XRP payments
-	if err := x.validateParameterConstraints(rule.GetParameterConstraints(), tx); err != nil {
+	if err := x.validateParameterConstraints(r, rule.GetParameterConstraints(), tx); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
@@ -161,7 +161,7 @@ func (x *XRPL) validateTarget(resource *types.ResourcePath, target *types.Target
 }
 
 // validateParameterConstraints validates all parameter constraints
-func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstraint, payment *transactions.Payment) error {
+func (x *XRPL) validateParameterConstraints(resource *types.ResourcePath, constraints []*types.ParameterConstraint, payment *transactions.Payment) error {
 	for _, constraint := range constraints {
 		paramName := constraint.GetParameterName()
 
@@ -172,7 +172,7 @@ func (x *XRPL) validateParameterConstraints(constraints []*types.ParameterConstr
 		}
 
 		// Use type-based constraint validation
-		if err := x.assertArgsByType("xrp", paramName, value, constraints); err != nil {
+		if err := x.assertArgsByType(resource.ChainId, paramName, value, constraints); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
 		}
 	}

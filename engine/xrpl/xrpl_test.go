@@ -134,6 +134,12 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 		Amount:      xrpAmount,
 	}
 
+	resource := &types.ResourcePath{
+		ChainId:    "ripple",
+		ProtocolId: "xrp",
+		FunctionId: "transfer",
+	}
+
 	constraints := []*types.ParameterConstraint{
 		{
 			ParameterName: "recipient",
@@ -155,7 +161,7 @@ func TestXRPL_ValidateParameterConstraints_Success(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(constraints, payment)
+	err := xrpl.validateParameterConstraints(resource, constraints, payment)
 	assert.NoError(t, err)
 }
 
@@ -170,6 +176,12 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 		Amount:      xrpAmount,
 	}
 
+	resource := &types.ResourcePath{
+		ChainId:    "ripple",
+		ProtocolId: "xrp",
+		FunctionId: "transfer",
+	}
+
 	constraints := []*types.ParameterConstraint{
 		{
 			ParameterName: "amount",
@@ -182,7 +194,7 @@ func TestXRPL_ValidateParameterConstraints_Failure(t *testing.T) {
 		},
 	}
 
-	err := xrpl.validateParameterConstraints(constraints, payment)
+	err := xrpl.validateParameterConstraints(resource, constraints, payment)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to compare max values")
 }
