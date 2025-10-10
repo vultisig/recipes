@@ -233,7 +233,7 @@ func (x *XRPL) extractCurrencyAmountAsBigInt(amount xrptypes.CurrencyAmount) (*b
 }
 
 // assertArgsByType validates constraints using the appropriate comparator based on Go type
-func (x *XRPL) assertArgsByType(chainId, inputName string, arg any, constraints []*types.ParameterConstraint) error {
+func (x *XRPL) assertArgsByType(chainId, inputName string, arg interface{}, constraints []*types.ParameterConstraint) error {
 	switch actual := arg.(type) {
 	case string:
 		err := stdcompare.AssertArg(
