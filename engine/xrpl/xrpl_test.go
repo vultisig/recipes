@@ -463,7 +463,7 @@ func TestXRPL_Evaluate_Swap_Success(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
 					Value: &types.Constraint_RegexpValue{
-						RegexpValue: "^=:BTC\\.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:.*",
+						RegexpValue: "^=:(BTC\\.BTC|b):bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:.*",
 					},
 					Required: true,
 				},
@@ -586,3 +586,60 @@ func TestXRPL_Evaluate_Swap_AmountTooHigh(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to compare max values", "Should fail with amount too high")
 }
 
+func TestXRPL_Evaluate_Swap_ShortformAsset_Success(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Use the same existing valid swap transaction but test different regex pattern
+	// This transaction has memo: =:BTC.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:1000
+	swapTxHex := "1200002405e7f5d4201b05e8c5766140000000000f42406840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83144ba9f4163bafd86f5ecc6793d43cff31a9f32275f9ea7c0e74686f72636861696e2d6d656d6f7d393d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a31303030e1f1"
+
+	txBytes, err := hex.DecodeString(swapTxHex)
+	assert.NoError(t, err)
+
+	// Create a rule that validates the swap with a pattern that accepts both full form and shortform
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "ripple.swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss", // Actual destination from the transaction
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss",
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{
+						MaxValue: "2000000", // 2 XRP max (actual tx has 1,000,000 drops = 1 XRP)
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						RegexpValue: "^=:(BTC\\.BTC|b):bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:.*", // Accepts both full and shortform
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.NoError(t, err, "Swap should pass validation with flexible asset pattern that accepts both BTC.BTC and b")
+}
