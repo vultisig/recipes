@@ -146,3 +146,37 @@ func MakeAsset(chain common.Chain, asset string) (string, error) {
 
 	return "", fmt.Errorf("asset not found in THORChain pools for chain %s and asset %s", thorNet, asset)
 }
+
+// ShortCode returns the short code for the asset.
+func ShortCode(asset string) string {
+	switch asset {
+	case "THOR.RUNE":
+		return "r"
+	case "BTC.BTC":
+		return "b"
+	case "ETH.ETH":
+		return "e"
+	case "GAIA.ATOM":
+		return "g"
+	case "DOGE.DOGE":
+		return "d"
+	case "LTC.LTC":
+		return "l"
+	case "BCH.BCH":
+		return "c"
+	case "AVAX.AVAX":
+		return "a"
+	case "BSC.BNB":
+		return "s"
+	case "BASE.ETH":
+		return "f"
+	case "TRON.TRX":
+		return "tr"
+	case "XRP.XRP":
+		return "x"
+	case "SOL.SOL":
+		return "o"
+	default:
+		return ""
+	}
+}

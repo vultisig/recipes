@@ -501,6 +501,19 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			return nil, fmt.Errorf("failed to make thor asset: %w", err)
 		}
 
+		// Create asset pattern that accepts both full form and shortform
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			// Accept both full form and shortform: (BTC\.BTC|b)
+			assetPattern = fmt.Sprintf("(%s|%s)", 
+				regexp.QuoteMeta(thorAsset), 
+				regexp.QuoteMeta(shortCode))
+		} else {
+			// Fallback to full asset name only
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "output_address_0",
 			Constraint: &types.Constraint{
@@ -525,7 +538,7 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 				Value: &types.Constraint_RegexpValue{
 					RegexpValue: fmt.Sprintf(
 						"^=:%s:%s:.*", // swap_command:asset:address:any(streaming options, min amount out, etc.)
-						regexp.QuoteMeta(thorAsset),
+						assetPattern,
 						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
 					),
 				},
@@ -588,6 +601,19 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("failed to make thor asset: %w", err)
 		}
 
+		// Create asset pattern that accepts both full form and shortform
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			// Accept both full form and shortform: (BTC\.BTC|b)
+			assetPattern = fmt.Sprintf("(%s|%s)", 
+				regexp.QuoteMeta(thorAsset), 
+				regexp.QuoteMeta(shortCode))
+		} else {
+			// Fallback to full asset name only
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -609,7 +635,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 					Value: &types.Constraint_RegexpValue{
 						RegexpValue: fmt.Sprintf(
 							"^=:%s:%s:.*", // swap_command:asset:address:any(streaming options, min amount out, etc.)
-							regexp.QuoteMeta(thorAsset),
+							assetPattern,
 							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
 						),
 					},
