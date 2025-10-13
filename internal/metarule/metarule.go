@@ -727,10 +727,10 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		}
 		ataCreate.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "account_payer",
-			Constraint:    anyConstraint(),
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "account_associatedTokenAccount",
-			Constraint:    c.toAddress,
+			Constraint:    anyConstraint(),
 		}, {
 			ParameterName: "account_owner",
 			Constraint:    c.toAddress,
