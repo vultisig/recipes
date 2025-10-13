@@ -506,8 +506,8 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 		var assetPattern string
 		if shortCode != "" {
 			// Accept both full form and shortform: (BTC\.BTC|b)
-			assetPattern = fmt.Sprintf("(%s|%s)", 
-				regexp.QuoteMeta(thorAsset), 
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
 				regexp.QuoteMeta(shortCode))
 		} else {
 			// Fallback to full asset name only
@@ -606,8 +606,8 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		var assetPattern string
 		if shortCode != "" {
 			// Accept both full form and shortform: (BTC\.BTC|b)
-			assetPattern = fmt.Sprintf("(%s|%s)", 
-				regexp.QuoteMeta(thorAsset), 
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
 				regexp.QuoteMeta(shortCode))
 		} else {
 			// Fallback to full asset name only
@@ -710,6 +710,54 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		})
 	}
 
+	toAssetStr, err := getFixed(c.toAsset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
+	}
+
+	if toAssetStr != "" {
+		ataCreate := proto.Clone(in).(*types.Rule)
+		ataCreate.Resource = "solana.associated_token_account.create"
+		ataCreate.Effect = types.Effect_EFFECT_ALLOW
+		ataCreate.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+			},
+		}
+		ataCreate.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "account_payer",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_associatedTokenAccount",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "account_mint",
+			Constraint:    c.toAsset,
+		}, {
+			ParameterName: "account_systemProgram",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: solana.SystemProgramID.String(),
+				},
+			},
+		}, {
+			ParameterName: "account_tokenProgram",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: solana.TokenProgramID.String(),
+				},
+			},
+		}}
+
+		rules = append(rules, ataCreate)
+	}
+
 	out := proto.Clone(in).(*types.Rule)
 	out.Resource = "solana.jupiter_aggregatorv6.route"
 	out.Target = &types.Target{
@@ -769,7 +817,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		Constraint: &types.Constraint{
 			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
 			Value: &types.Constraint_MaxValue{
-				MaxValue: "2500", // 25% maximum slippage (memecoins)
+				MaxValue: "2500",
 			},
 		},
 	}, {
@@ -777,7 +825,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		Constraint: &types.Constraint{
 			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
 			Value: &types.Constraint_MaxValue{
-				MaxValue: "2500", // 25% maximum platform fee
+				MaxValue: "2500",
 			},
 		},
 	}}

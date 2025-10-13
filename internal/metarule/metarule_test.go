@@ -967,7 +967,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 2) // SPL token approve + Jupiter route
+	require.Len(t, result, 3) // SPL token approve + ATA create + Jupiter route
 
 	// First rule should be SPL token approve
 	approveRule := result[0]
@@ -996,8 +996,41 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_amount"].Constraint.Type)
 	assert.Equal(t, fromAmount, paramByName["arg_amount"].Constraint.GetFixedValue())
 
-	// Second rule should be Jupiter route
-	jupiterRule := result[1]
+	// Second rule should be ATA create
+	ataCreateRule := result[1]
+	assert.Equal(t, "solana.associated_token_account.create", ataCreateRule.Resource)
+	assert.Equal(t, types.Effect_EFFECT_ALLOW, ataCreateRule.Effect)
+	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", ataCreateRule.Target.GetAddress())
+	require.Len(t, ataCreateRule.ParameterConstraints, 6)
+
+	paramByName = make(map[string]*types.ParameterConstraint)
+	for _, param := range ataCreateRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "account_payer")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_payer"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "account_associatedTokenAccount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_associatedTokenAccount"].Constraint.Type)
+	assert.Equal(t, toAddress, paramByName["account_associatedTokenAccount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_owner")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_owner"].Constraint.Type)
+	assert.Equal(t, toAddress, paramByName["account_owner"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_mint")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_mint"].Constraint.Type)
+	assert.Equal(t, toAsset, paramByName["account_mint"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "account_systemProgram")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_systemProgram"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "account_tokenProgram")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_tokenProgram"].Constraint.Type)
+
+	// Third rule should be Jupiter route
+	jupiterRule := result[2]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
 	require.Len(t, jupiterRule.ParameterConstraints, 12)
@@ -1120,9 +1153,13 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 1) // Only Jupiter route for native asset
+	require.Len(t, result, 2) // ATA create + Jupiter route for native SOL to SPL token
 
-	jupiterRule := result[0]
+	ataCreateRule := result[0]
+	assert.Equal(t, "solana.associated_token_account.create", ataCreateRule.Resource)
+	assert.Equal(t, types.Effect_EFFECT_ALLOW, ataCreateRule.Effect)
+
+	jupiterRule := result[1]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
 }
 
