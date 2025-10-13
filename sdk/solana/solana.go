@@ -54,8 +54,8 @@ func (c *HTTPRPCClient) SendTransaction(ctx context.Context, tx *solana.Transact
 }
 
 func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
-	if len(signatures) == 0 {
-		return nil, fmt.Errorf("no signatures provided")
+	if len(signatures) != 0 {
+		return nil, fmt.Errorf("must be 1 signature, got %d", len(signatures))
 	}
 
 	tx, err := solana.TransactionFromBytes(unsignedTxBytes)
@@ -70,16 +70,10 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("multi-signature transactions are not supported")
 	}
 
-	messageBytes, err := tx.Message.MarshalBinary()
-	if err != nil {
-		return nil, fmt.Errorf("marshal message: %w", err)
-	}
-
-	derivedKey := sdk.deriveKeyFromMessage(messageBytes)
-
-	sigResponse, exists := signatures[derivedKey]
-	if !exists {
-		return nil, fmt.Errorf("missing signature for derived key: %s", derivedKey)
+	var sigResponse tss.KeysignResponse
+	for _, v := range signatures {
+		sigResponse = v
+		break
 	}
 
 	rHex := cleanHex(sigResponse.R)
