@@ -54,7 +54,7 @@ func (c *HTTPRPCClient) SendTransaction(ctx context.Context, tx *solana.Transact
 }
 
 func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
-	if len(signatures) != 0 {
+	if len(signatures) != 1 {
 		return nil, fmt.Errorf("must be 1 signature, got %d", len(signatures))
 	}
 
