@@ -105,11 +105,14 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 	const constraintPrefix = "account_"
 
 	inst := msg.Instructions[0]
-	if len(accs) != len(inst.Accounts) {
+	idlAccountCount := len(accs)
+	actualAccountCount := len(inst.Accounts)
+
+	if actualAccountCount < idlAccountCount {
 		return fmt.Errorf(
-			"account count mismatch: IDL has %d accounts, tx has %d accounts",
-			len(accs),
-			len(inst.Accounts),
+			"not enough accounts: IDL requires %d accounts, tx has %d accounts",
+			idlAccountCount,
+			actualAccountCount,
 		)
 	}
 
@@ -132,6 +135,7 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 			return fmt.Errorf("failed to assert: name=%s: %w", name, err)
 		}
 	}
+
 	return nil
 }
 
