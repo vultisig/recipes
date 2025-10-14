@@ -1079,7 +1079,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, tokenProgramAddress, paramByName["account_tokenProgram"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userTransferAuthority")
-	assert.Equal(t, fromAddress, paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)

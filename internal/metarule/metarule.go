@@ -876,7 +876,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			},
 		}, {
 			ParameterName: "account_userTransferAuthority",
-			Constraint:    c.fromAddress,
+			Constraint:    anyConstraint(),
 		}}
 
 		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
