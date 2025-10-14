@@ -732,12 +732,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			},
 		}
 	} else {
-		userSourceTokenAccount = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: wsolAta,
-			},
-		}
+		userSourceTokenAccount = c.fromAddress
 	}
 	if fromAssetStr != "" {
 		rules = append(rules, &types.Rule{
