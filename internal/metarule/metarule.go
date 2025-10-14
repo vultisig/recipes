@@ -657,6 +657,33 @@ func getFixed(c *types.Constraint) (string, error) {
 	return c.GetFixedValue(), nil
 }
 
+// deriveATA derives the Associated Token Account address for a given owner and mint
+func deriveATA(ownerStr, mintStr string) (string, error) {
+	owner, err := solana.PublicKeyFromBase58(ownerStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid owner address: %w", err)
+	}
+
+	mint, err := solana.PublicKeyFromBase58(mintStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid mint address: %w", err)
+	}
+
+	ataAddr, _, err := solana.FindProgramAddress(
+		[][]byte{
+			owner.Bytes(),
+			solana.TokenProgramID.Bytes(),
+			mint.Bytes(),
+		},
+		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to derive ATA: %w", err)
+	}
+
+	return ataAddr.String(), nil
+}
+
 func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*types.Rule, error) {
 	toChainStr, err := getFixed(c.toChain)
 	if err != nil {
@@ -671,13 +698,46 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
 	)
 
-	userSourceTokenAccount := anyConstraint()
-
 	var rules []*types.Rule
 
 	fromAssetStr, err := getFixed(c.fromAsset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value: %w", err)
+	}
+	fromAddressStr, err := getFixed(c.fromAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for fromAddress: %w", err)
+	}
+
+	toAddressStr, err := getFixed(c.toAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
+	}
+
+	wsolAta, err := deriveATA(toAddressStr, solana.TokenProgramID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive wsol ATA: %w", err)
+	}
+
+	var userSourceTokenAccount *types.Constraint
+	if fromAssetStr != "" {
+		sourceATA, err := deriveATA(fromAddressStr, fromAssetStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive source ATA: %w", err)
+		}
+		userSourceTokenAccount = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: sourceATA,
+			},
+		}
+	} else {
+		userSourceTokenAccount = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: wsolAta,
+			},
+		}
 	}
 	if fromAssetStr != "" {
 		rules = append(rules, &types.Rule{
@@ -715,7 +775,19 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
 	}
 
+	var userDestinationTokenAccount *types.Constraint
 	if toAssetStr != "" {
+		destATA, err := deriveATA(toAddressStr, toAssetStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive destination ATA: %w", err)
+		}
+		userDestinationTokenAccount = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: destATA,
+			},
+		}
+
 		ataCreate := proto.Clone(in).(*types.Rule)
 		ataCreate.Resource = "solana.associated_token_account.create"
 		ataCreate.Effect = types.Effect_EFFECT_ALLOW
@@ -730,7 +802,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "account_associatedTokenAccount",
-			Constraint:    anyConstraint(),
+			Constraint:    userDestinationTokenAccount,
 		}, {
 			ParameterName: "account_owner",
 			Constraint:    c.toAddress,
@@ -756,81 +828,170 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		}}
 
 		rules = append(rules, ataCreate)
+	} else {
+		userDestinationTokenAccount = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: wsolAta,
+			},
+		}
 	}
 
-	out := proto.Clone(in).(*types.Rule)
-	out.Resource = "solana.jupiter_aggregatorv6.route"
-	out.Target = &types.Target{
-		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-		Target: &types.Target_Address{
-			Address: jupAddr,
-		},
-	}
-
-	out.ParameterConstraints = []*types.ParameterConstraint{{
-		ParameterName: "account_tokenProgram",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: solana.TokenProgramID.String(),
-			},
-		},
-	}, {
-		ParameterName: "account_userTransferAuthority",
-		Constraint:    c.fromAddress,
-	}, {
-		ParameterName: "account_userSourceTokenAccount",
-		Constraint:    userSourceTokenAccount,
-	}, {
-		ParameterName: "account_userDestinationTokenAccount",
-		Constraint:    c.toAddress,
-	}, {
-		ParameterName: "account_destinationMint",
-		Constraint:    c.toAsset,
-	}, {
-		ParameterName: "account_eventAuthority",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: jupEvent,
-			},
-		},
-	}, {
-		ParameterName: "account_program",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: jupAddr,
-			},
-		},
-	}, {
+	baseConstraints := []*types.ParameterConstraint{{
 		ParameterName: "arg_routePlan",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_inAmount",
-		Constraint:    c.fromAmount,
-	}, {
-		ParameterName: "arg_quotedOutAmount",
+		ParameterName: "arg_slippageBps",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_slippageBps",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-			Value: &types.Constraint_MaxValue{
-				MaxValue: "2500",
-			},
-		},
-	}, {
 		ParameterName: "arg_platformFeeBps",
-		Constraint: &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-			Value: &types.Constraint_MaxValue{
-				MaxValue: "2500",
-			},
-		},
+		Constraint:    anyConstraint(),
 	}}
 
-	rules = append(rules, out)
+	jupiterInstructions := []string{
+		"route",
+		"routeWithTokenLedger",
+		"sharedAccountsRoute",
+		"sharedAccountsRouteWithTokenLedger",
+		"exactOutRoute",
+	}
+
+	for _, instruction := range jupiterInstructions {
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "solana.jupiter_aggregatorv6." + instruction
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: jupAddr,
+			},
+		}
+
+		constraints := []*types.ParameterConstraint{{
+			ParameterName: "account_tokenProgram",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: solana.TokenProgramID.String(),
+				},
+			},
+		}, {
+			ParameterName: "account_userTransferAuthority",
+			Constraint:    c.fromAddress,
+		}}
+
+		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_programAuthority",
+				Constraint:    anyConstraint(),
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_sourceTokenAccount",
+				Constraint:    userSourceTokenAccount,
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_programSourceTokenAccount",
+				Constraint:    anyConstraint(),
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_programDestinationTokenAccount",
+				Constraint:    anyConstraint(),
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_destinationTokenAccount",
+				Constraint:    userDestinationTokenAccount,
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_sourceMint",
+				Constraint:    c.fromAsset,
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_destinationMint",
+				Constraint:    c.toAsset,
+			})
+		} else {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_userSourceTokenAccount",
+				Constraint:    userSourceTokenAccount,
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_userDestinationTokenAccount",
+				Constraint:    userDestinationTokenAccount,
+			})
+			if instruction == "exactOutRoute" {
+				constraints = append(constraints, &types.ParameterConstraint{
+					ParameterName: "account_sourceMint",
+					Constraint:    c.fromAsset,
+				})
+			}
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_destinationMint",
+				Constraint:    c.toAsset,
+			})
+		}
+
+		if instruction == "routeWithTokenLedger" || instruction == "sharedAccountsRouteWithTokenLedger" {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_tokenLedger",
+				Constraint:    anyConstraint(),
+			})
+		}
+
+		constraints = append(constraints, &types.ParameterConstraint{
+			ParameterName: "account_eventAuthority",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: jupEvent,
+				},
+			},
+		})
+		constraints = append(constraints, &types.ParameterConstraint{
+			ParameterName: "account_program",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: jupAddr,
+				},
+			},
+		})
+
+		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_id",
+				Constraint:    anyConstraint(),
+			})
+		}
+
+		constraints = append(constraints, baseConstraints...)
+
+		if instruction == "route" || instruction == "sharedAccountsRoute" {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_inAmount",
+				Constraint:    c.fromAmount,
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_quotedOutAmount",
+				Constraint:    anyConstraint(),
+			})
+		} else if instruction == "exactOutRoute" {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_outAmount",
+				Constraint:    anyConstraint(),
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_quotedInAmount",
+				Constraint:    anyConstraint(),
+			})
+		} else {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "arg_quotedOutAmount",
+				Constraint:    anyConstraint(),
+			})
+		}
+
+		out.ParameterConstraints = constraints
+		rules = append(rules, out)
+	}
 
 	return rules, nil
 }

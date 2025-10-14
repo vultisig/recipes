@@ -967,7 +967,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 3) // SPL token approve + ATA create + Jupiter route
+	require.Len(t, result, 7) // SPL token approve + ATA create + 5 Jupiter route variants
 
 	// First rule should be SPL token approve
 	approveRule := result[0]
@@ -981,8 +981,19 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 		paramByName[param.ParameterName] = param
 	}
 
+	sourceATA, _, err := solana.FindProgramAddress(
+		[][]byte{
+			solana.MustPublicKeyFromBase58(fromAddress).Bytes(),
+			solana.TokenProgramID.Bytes(),
+			solana.MustPublicKeyFromBase58(fromAsset).Bytes(),
+		},
+		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+	)
+	require.NoError(t, err)
+
 	assert.Contains(t, paramByName, "account_source")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_source"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_source"].Constraint.Type)
+	assert.Equal(t, sourceATA.String(), paramByName["account_source"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_delegate")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_delegate"].Constraint.Type)
@@ -1012,8 +1023,19 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_payer"].Constraint.Type)
 	assert.Equal(t, fromAddress, paramByName["account_payer"].Constraint.GetFixedValue())
 
+	destATA, _, err := solana.FindProgramAddress(
+		[][]byte{
+			solana.MustPublicKeyFromBase58(toAddress).Bytes(),
+			solana.TokenProgramID.Bytes(),
+			solana.MustPublicKeyFromBase58(toAsset).Bytes(),
+		},
+		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+	)
+	require.NoError(t, err)
+
 	assert.Contains(t, paramByName, "account_associatedTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_associatedTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_associatedTokenAccount"].Constraint.Type)
+	assert.Equal(t, destATA.String(), paramByName["account_associatedTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_owner")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_owner"].Constraint.Type)
@@ -1029,9 +1051,22 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Contains(t, paramByName, "account_tokenProgram")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_tokenProgram"].Constraint.Type)
 
-	// Third rule should be Jupiter route
+	// Remaining 5 rules should be Jupiter route variants
+	jupiterInstructions := []string{
+		"route",
+		"routeWithTokenLedger",
+		"sharedAccountsRoute",
+		"sharedAccountsRouteWithTokenLedger",
+		"exactOutRoute",
+	}
+	for i, instruction := range jupiterInstructions {
+		jupiterRule := result[2+i]
+		assert.Equal(t, "solana.jupiter_aggregatorv6."+instruction, jupiterRule.Resource)
+		assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
+	}
+
+	// Verify first Jupiter route (route) has expected constraints
 	jupiterRule := result[2]
-	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
 	require.Len(t, jupiterRule.ParameterConstraints, 12)
 
@@ -1047,10 +1082,12 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, fromAddress, paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	assert.Equal(t, sourceATA.String(), paramByName["account_userSourceTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userDestinationTokenAccount")
-	assert.Equal(t, toAddress, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userDestinationTokenAccount"].Constraint.Type)
+	assert.Equal(t, destATA.String(), paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_destinationMint")
 	assert.Equal(t, toAsset, paramByName["account_destinationMint"].Constraint.GetFixedValue())
@@ -1071,12 +1108,10 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_quotedOutAmount"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "arg_slippageBps")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAX, paramByName["arg_slippageBps"].Constraint.Type)
-	assert.Equal(t, "2500", paramByName["arg_slippageBps"].Constraint.GetMaxValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_slippageBps"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "arg_platformFeeBps")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAX, paramByName["arg_platformFeeBps"].Constraint.Type)
-	assert.Equal(t, "2500", paramByName["arg_platformFeeBps"].Constraint.GetMaxValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_platformFeeBps"].Constraint.Type)
 }
 
 func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
@@ -1153,14 +1188,24 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 2) // ATA create + Jupiter route for native SOL to SPL token
+	require.Len(t, result, 6) // ATA create + 5 Jupiter route variants for native SOL to SPL token
 
 	ataCreateRule := result[0]
 	assert.Equal(t, "solana.associated_token_account.create", ataCreateRule.Resource)
 	assert.Equal(t, types.Effect_EFFECT_ALLOW, ataCreateRule.Effect)
 
-	jupiterRule := result[1]
-	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRule.Resource)
+	// Verify all 5 Jupiter instruction variants are present
+	jupiterInstructions := []string{
+		"route",
+		"routeWithTokenLedger",
+		"sharedAccountsRoute",
+		"sharedAccountsRouteWithTokenLedger",
+		"exactOutRoute",
+	}
+	for i, instruction := range jupiterInstructions {
+		jupiterRule := result[1+i]
+		assert.Equal(t, "solana.jupiter_aggregatorv6."+instruction, jupiterRule.Resource)
+	}
 }
 
 const testXRPAddress = "rw2ciyaNshpHe7bCHo4bRWq6pqqynnWKQg"
