@@ -714,11 +714,6 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
 	}
 
-	wsolAta, err := deriveATA(toAddressStr, solana.TokenProgramID.String())
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive wsol ATA: %w", err)
-	}
-
 	var userSourceTokenAccount *types.Constraint
 	if fromAssetStr != "" {
 		sourceATA, err := deriveATA(fromAddressStr, fromAssetStr)
@@ -824,12 +819,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 
 		rules = append(rules, ataCreate)
 	} else {
-		userDestinationTokenAccount = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: wsolAta,
-			},
-		}
+		userDestinationTokenAccount = c.toAddress
 	}
 
 	baseConstraints := []*types.ParameterConstraint{{
