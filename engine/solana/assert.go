@@ -82,7 +82,7 @@ func assertTarget(
 
 func assertFuncSelector(expected []byte, data solana.Base58) error {
 	if len(expected) == 0 {
-		return fmt.Errorf("discriminator cannot be empty")
+		return nil
 	}
 
 	if len(data) < len(expected) {
