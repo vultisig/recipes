@@ -292,14 +292,14 @@
       "returns": "u64",
       "metadata": {
         "discriminator": [
-          87,
-          3,
-          254,
-          184,
-          231,
-          87,
-          57,
-          9
+          193,
+          32,
+          155,
+          51,
+          65,
+          214,
+          156,
+          129
         ]
       }
     },
@@ -916,6 +916,21 @@
           },
           {
             "name": "HeliumTreasuryManagementRedeemV1"
+          },
+          {
+            "name": "SolayerDelegateNoInit"
+          },
+          {
+            "name": "SolayerUndelegateNoInit"
+          },
+          {
+            "name": "ZeroFi"
+          },
+          {
+            "name": "StakeDexWithdrawWrappedSol"
+          },
+          {
+            "name": "VirtualsBuy"
           }
         ]
       }

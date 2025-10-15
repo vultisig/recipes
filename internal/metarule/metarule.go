@@ -696,7 +696,6 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	const (
 		jupAddr  = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
 		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
-		wsolMint = "So11111111111111111111111111111111111111112"
 	)
 
 	var rules []*types.Rule
@@ -713,22 +712,12 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 
 	sourceMintConstraint := c.fromAsset
 	if fromAssetStr == "" {
-		sourceMintConstraint = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: wsolMint,
-			},
-		}
+		sourceMintConstraint = fixed(solana.SolMint.String())
 	}
 
 	destinationMintConstraint := c.toAsset
 	if toAssetStr == "" {
-		destinationMintConstraint = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: wsolMint,
-			},
-		}
+		destinationMintConstraint = fixed(solana.SolMint.String())
 	}
 
 	userSourceTokenAccount := anyConstraint()
@@ -795,12 +784,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 
 		constraints := []*types.ParameterConstraint{{
 			ParameterName: "account_tokenProgram",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-				Value: &types.Constraint_FixedValue{
-					FixedValue: solana.TokenProgramID.String(),
-				},
-			},
+			Constraint:    fixed(solana.TokenProgramID.String()),
 		}, {
 			ParameterName: "account_userTransferAuthority",
 			Constraint:    anyConstraint(),
@@ -835,6 +819,14 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_destinationMint",
 				Constraint:    destinationMintConstraint,
 			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_platformFeeAccount",
+				Constraint:    anyConstraint(),
+			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_token2022Program",
+				Constraint:    fixed(solana.Token2022ProgramID.String()),
+			})
 		} else {
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_userSourceTokenAccount",
@@ -865,21 +857,11 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 
 		constraints = append(constraints, &types.ParameterConstraint{
 			ParameterName: "account_eventAuthority",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-				Value: &types.Constraint_FixedValue{
-					FixedValue: jupEvent,
-				},
-			},
+			Constraint:    fixed(jupEvent),
 		})
 		constraints = append(constraints, &types.ParameterConstraint{
 			ParameterName: "account_program",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-				Value: &types.Constraint_FixedValue{
-					FixedValue: jupAddr,
-				},
-			},
+			Constraint:    fixed(jupAddr),
 		})
 
 		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
@@ -921,6 +903,15 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 
 	return rules, nil
+}
+
+func fixed(in string) *types.Constraint {
+	return &types.Constraint{
+		Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+		Value: &types.Constraint_FixedValue{
+			FixedValue: in,
+		},
+	}
 }
 
 func anyConstraint() *types.Constraint {
