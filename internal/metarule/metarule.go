@@ -704,31 +704,31 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value: %w", err)
 	}
-	fromAddressStr, err := getFixed(c.fromAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fixed value for fromAddress: %w", err)
-	}
+	//fromAddressStr, err := getFixed(c.fromAddress)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get fixed value for fromAddress: %w", err)
+	//}
 
 	//toAddressStr, err := getFixed(c.toAddress)
 	//if err != nil {
 	//	return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
 	//}
 
-	var userSourceTokenAccount *types.Constraint
-	if fromAssetStr != "" {
-		sourceATA, err := deriveATA(fromAddressStr, fromAssetStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive source ATA: %w", err)
-		}
-		userSourceTokenAccount = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: sourceATA,
-			},
-		}
-	} else {
-		userSourceTokenAccount = c.fromAddress
-	}
+	userSourceTokenAccount := anyConstraint()
+	//if fromAssetStr != "" {
+	//	sourceATA, err := deriveATA(fromAddressStr, fromAssetStr)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("failed to derive source ATA: %w", err)
+	//	}
+	//	userSourceTokenAccount = &types.Constraint{
+	//		Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+	//		Value: &types.Constraint_FixedValue{
+	//			FixedValue: sourceATA,
+	//		},
+	//	}
+	//} else {
+	//	userSourceTokenAccount = c.fromAddress
+	//}
 	if fromAssetStr != "" {
 		rules = append(rules, &types.Rule{
 			Resource: "solana.spl_token.approve",
