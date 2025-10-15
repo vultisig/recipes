@@ -790,11 +790,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		}
 		sourceTokenAccountConstraint = fixed(sourceATA)
 	} else {
-		sourceATA, err := DeriveATA(fromAddressStr, solana.SolMint.String())
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive source ATA for owner %s and WSOL mint: %w", fromAddressStr, err)
-		}
-		sourceTokenAccountConstraint = fixed(sourceATA)
+		sourceTokenAccountConstraint = c.fromAddress
 	}
 
 	var destinationTokenAccountConstraint *types.Constraint
@@ -805,11 +801,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		}
 		destinationTokenAccountConstraint = fixed(destATA)
 	} else {
-		destATA, err := DeriveATA(toAddressStr, solana.SolMint.String())
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive destination ATA for owner %s and WSOL mint: %w", toAddressStr, err)
-		}
-		destinationTokenAccountConstraint = fixed(destATA)
+		destinationTokenAccountConstraint = c.toAddress
 	}
 
 	for _, instruction := range jupiterInstructions {
