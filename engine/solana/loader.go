@@ -67,12 +67,74 @@ const (
 	argPublicKey argType = "publicKey"
 
 	// nested types
-	argVec argType = "vec"
+	argVec     argType = "vec"
+	argDefined argType = "defined"
 )
 
 type idlArgument struct {
-	Name string  `json:"name"`
-	Type argType `json:"type"`
+	Name      string                 `json:"name"`
+	Type      argType                `json:"type"`
+	TypeInfo  map[string]interface{} `json:"-"`
+	IsComplex bool                   `json:"-"`
+}
+
+func (arg *idlArgument) UnmarshalJSON(data []byte) error {
+	type Alias idlArgument
+	aux := &struct {
+		Type json.RawMessage `json:"type"`
+		*Alias
+	}{
+		Alias: (*Alias)(arg),
+	}
+
+	err := json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(aux.Type, &arg.Type)
+	if err != nil {
+		return err
+	}
+
+	var typeInfo map[string]interface{}
+	err = json.Unmarshal(aux.Type, &typeInfo)
+	if err == nil && len(typeInfo) > 0 {
+		arg.TypeInfo = typeInfo
+		arg.IsComplex = isComplexType(typeInfo)
+	}
+
+	return nil
+}
+
+func isComplexType(typeInfo map[string]interface{}) bool {
+	if len(typeInfo) == 0 {
+		return false
+	}
+
+	for key, value := range typeInfo {
+		switch key {
+		case "vec":
+			vecContent, ok := value.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			if _, hasDefined := vecContent["defined"]; hasDefined {
+				return true
+			}
+			return isComplexType(vecContent)
+		case "defined":
+			return true
+		case "option":
+			optionContent, ok := value.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			return isComplexType(optionContent)
+		}
+	}
+
+	return false
 }
 
 type idlType struct {

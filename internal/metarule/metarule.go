@@ -657,8 +657,8 @@ func getFixed(c *types.Constraint) (string, error) {
 	return c.GetFixedValue(), nil
 }
 
-// deriveATA derives the Associated Token Account address for a given owner and mint
-func deriveATA(ownerStr, mintStr string) (string, error) {
+// DeriveATA derives the Associated Token Account address for a given owner and mint
+func DeriveATA(ownerStr, mintStr string) (string, error) {
 	owner, err := solana.PublicKeyFromBase58(ownerStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid owner address: %w", err)
@@ -772,6 +772,46 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		"exactOutRoute",
 	}
 
+	fromAddressStr, err := getFixed(c.fromAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for fromAddress: %w", err)
+	}
+
+	toAddressStr, err := getFixed(c.toAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
+	}
+
+	var sourceTokenAccountConstraint *types.Constraint
+	if fromAssetStr != "" {
+		sourceATA, err := DeriveATA(fromAddressStr, fromAssetStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, fromAssetStr, err)
+		}
+		sourceTokenAccountConstraint = fixed(sourceATA)
+	} else {
+		sourceATA, err := DeriveATA(fromAddressStr, solana.SolMint.String())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive source ATA for owner %s and WSOL mint: %w", fromAddressStr, err)
+		}
+		sourceTokenAccountConstraint = fixed(sourceATA)
+	}
+
+	var destinationTokenAccountConstraint *types.Constraint
+	if toAssetStr != "" {
+		destATA, err := DeriveATA(toAddressStr, toAssetStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, toAssetStr, err)
+		}
+		destinationTokenAccountConstraint = fixed(destATA)
+	} else {
+		destATA, err := DeriveATA(toAddressStr, solana.SolMint.String())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive destination ATA for owner %s and WSOL mint: %w", toAddressStr, err)
+		}
+		destinationTokenAccountConstraint = fixed(destATA)
+	}
+
 	for _, instruction := range jupiterInstructions {
 		out := proto.Clone(in).(*types.Rule)
 		out.Resource = "solana.jupiter_aggregatorv6." + instruction
@@ -797,7 +837,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_sourceTokenAccount",
-				Constraint:    anyConstraint(),
+				Constraint:    sourceTokenAccountConstraint,
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_programSourceTokenAccount",
@@ -809,7 +849,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_destinationTokenAccount",
-				Constraint:    anyConstraint(),
+				Constraint:    destinationTokenAccountConstraint,
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_sourceMint",
@@ -825,16 +865,16 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_token2022Program",
-				Constraint:    fixed(solana.Token2022ProgramID.String()),
+				Constraint:    fixed(solana.Token2022ProgramID.String()), // CLAUDE don't change this
 			})
 		} else {
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_userSourceTokenAccount",
-				Constraint:    anyConstraint(),
+				Constraint:    sourceTokenAccountConstraint,
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_userDestinationTokenAccount",
-				Constraint:    anyConstraint(),
+				Constraint:    destinationTokenAccountConstraint,
 			})
 			if instruction == "exactOutRoute" {
 				constraints = append(constraints, &types.ParameterConstraint{

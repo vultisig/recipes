@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
@@ -1175,4 +1176,210 @@ func TestEvaluate_SPLTokenTransfer_InvalidProgram(t *testing.T) {
 	err = engine.Evaluate(rule, txBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to assert target: tx target is wrong")
+}
+
+func TestEvaluate_JupiterSharedAccountsRoute(t *testing.T) {
+	tx := "CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKCQgTBi8dL5WH7sWHTBp28kz8oNCmbKHfJXQoeBxJllkgszhxM32R3yvnX/HBzojB9fApPOfuRWL27j4EX6B/qtMR3WZ/y1OFUjaxGSYPYSYxL38DI5jSwryQ6RMhtMx+2NckxFh1gLBtjJtNTvcrXvXuh/PFZ/fM4IPgPkuzzyhB/G27Pda2pnGc3R0WktKvNfpBJorRv4iVoUOTn784IlhxGfXyb4o/nn+6d0cPFBPmUKZ4EVZLKuWY5mIcburZi74iieJ/mkkOagUIRksszWMNCgHFsDMiMCfHN+J1rwoXyWiagAv/TIc2iJbCD8FAc+vxy1qjdf6B/k29yCuk37deeOvseGzjAy+w0P7kS+cz0i3FdAlPQMKRmD4EAqGenMprv67g5bFDc7KxpFz5i1fj1470rV3a6ExmnSw6yPuHi/M6az5ztylrtKOlPWSGFPJNVv+Lb9+NyZHORsoMDZu6UAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpBpuIV/6rgYT7aH9jRhjANdrEOdwa6ztVmKDwAAAAAAHG+nrzvtutOj1l82qryXQxsbvkwtL24OR8pgIDRS9dYQR51VvyMcBu7nTFbs5oFQf9sbLeo/SOUQKxzaJWvBOPtD/6J/XX9kp0wJsfKVh53ksJqzbfyd1RSzIap7OM5ei1w1W367Ykl8/1heeE1Ct6pgMZQ89eFMSv0TWee6UaMEcn0nz5UKgy0QJ34xepN6SZQQ1LggwZ6QPHCYVaRRN9zNbBTO0ZD5TB0ZEBaayT6GzFN/sZJShMvBo8S2hacJKEB66guxxmMx9J7GcDW1ZYuFjwk5echKsWPvICBacgSQEOGQsHCgABAgMMDQ4ODw4QEQQSBQYHAQIICQskwSCbM0HWnIECAQAAADBkAAGA8PoCAAAAAGSslgAAAAAAZAAA"
+
+	engine, err := NewSolana()
+	require.NoError(t, err)
+
+	txBytes, err := base64.StdEncoding.DecodeString(tx)
+	require.NoError(t, err)
+
+	jupiterV6ProgramID := solana.MustPublicKeyFromBase58("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4")
+	jupiterEvent := solana.MustPublicKeyFromBase58("D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf")
+	usdcMint := solana.MustPublicKeyFromBase58("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+
+	programAuthority := solana.MustPublicKeyFromBase58("BQ72nSv9f3PRyRKCBnHLVrerrv37CYTHm5h3s9VSGQDV")
+	userTransferAuthority := solana.MustPublicKeyFromBase58("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM")
+	sourceTokenAccount := solana.MustPublicKeyFromBase58("R97cgCoxcqrUaaW7wg8drNBiLkicyQQHmct7pY8tdMR")
+	programSourceTokenAccount := solana.MustPublicKeyFromBase58("8ctcHN52LY21FEipCjr1MVWtoZa1irJQTPyAaTj72h7S")
+	programDestinationTokenAccount := solana.MustPublicKeyFromBase58("7u7cD7NxcZEuzRCBaYo8uVpotRdqZwez47vvuwzCov43")
+	destinationTokenAccount := solana.MustPublicKeyFromBase58("EDT9FrASLP4gRKFnka5h4vgVBHzrmTZxgxmGa4G4vect")
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.jupiter_aggregatorv6.sharedAccountsRoute",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: jupiterV6ProgramID.String(),
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "account_tokenProgram",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: solana.TokenProgramID.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_userTransferAuthority",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: userTransferAuthority.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_programAuthority",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: programAuthority.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_sourceTokenAccount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: sourceTokenAccount.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_programSourceTokenAccount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: programSourceTokenAccount.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_programDestinationTokenAccount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: programDestinationTokenAccount.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_destinationTokenAccount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: destinationTokenAccount.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_sourceMint",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: solana.SolMint.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_destinationMint",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: usdcMint.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_platformFeeAccount",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_token2022Program",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_eventAuthority",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: jupiterEvent.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "account_program",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: jupiterV6ProgramID.String(),
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_id",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_routePlan",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_slippageBps",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_platformFeeBps",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_inAmount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "50000000",
+					},
+					Required: true,
+				},
+			},
+			{
+				ParameterName: "arg_quotedOutAmount",
+				Constraint: &types.Constraint{
+					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = engine.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
 }

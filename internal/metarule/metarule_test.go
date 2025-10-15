@@ -1027,10 +1027,16 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	expectedUserSourceATA, err := DeriveATA(fromAddress, fromAsset)
+	require.NoError(t, err)
+	assert.Equal(t, expectedUserSourceATA, paramByName["account_userSourceTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userDestinationTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userDestinationTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userDestinationTokenAccount"].Constraint.Type)
+	expectedUserDestATA, err := DeriveATA(toAddress, toAsset)
+	require.NoError(t, err)
+	assert.Equal(t, expectedUserDestATA, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_destinationMint")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationMint"].Constraint.Type)
@@ -1483,7 +1489,7 @@ func TestDeriveATA(t *testing.T) {
 	mint := "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 	expectedATA := "EDT9FrASLP4gRKFnka5h4vgVBHzrmTZxgxmGa4G4vect"
 
-	ata, err := deriveATA(owner, mint)
+	ata, err := DeriveATA(owner, mint)
 	require.NoError(t, err)
 	assert.Equal(t, expectedATA, ata)
 }
@@ -1493,7 +1499,153 @@ func TestDeriveATA_WSOLDestination(t *testing.T) {
 	mint := "So11111111111111111111111111111111111111112"
 	expectedATA := "R97cgCoxcqrUaaW7wg8drNBiLkicyQQHmct7pY8tdMR"
 
-	ata, err := deriveATA(owner, mint)
+	ata, err := DeriveATA(owner, mint)
 	require.NoError(t, err)
 	assert.Equal(t, expectedATA, ata)
+}
+
+func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "So11111111111111111111111111111111111111112",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM",
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "50000000",
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "solana",
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 6, "should have 1 approve + 5 Jupiter routes")
+
+	// First rule should be SPL token approve for WSOL
+	approveRule := result[0]
+	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, "So11111111111111111111111111111111111111112", approveRule.Target.GetAddress())
+
+	// Find sharedAccountsRoute rule
+	var sharedAccountsRouteRule *types.Rule
+	for _, r := range result {
+		if r.Resource == "solana.jupiter_aggregatorv6.sharedAccountsRoute" {
+			sharedAccountsRouteRule = r
+			break
+		}
+	}
+	require.NotNil(t, sharedAccountsRouteRule, "should have sharedAccountsRoute rule")
+
+	// Build parameter map for easier assertions
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range sharedAccountsRouteRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Verify all account constraints are present
+	assert.Contains(t, paramByName, "account_tokenProgram")
+	assert.Contains(t, paramByName, "account_userTransferAuthority")
+	assert.Contains(t, paramByName, "account_programAuthority")
+	assert.Contains(t, paramByName, "account_sourceTokenAccount")
+	assert.Contains(t, paramByName, "account_programSourceTokenAccount")
+	assert.Contains(t, paramByName, "account_programDestinationTokenAccount")
+	assert.Contains(t, paramByName, "account_destinationTokenAccount")
+	assert.Contains(t, paramByName, "account_sourceMint")
+	assert.Contains(t, paramByName, "account_destinationMint")
+	assert.Contains(t, paramByName, "account_eventAuthority")
+	assert.Contains(t, paramByName, "account_program")
+
+	// Verify argument constraints are present
+	assert.Contains(t, paramByName, "arg_id")
+	assert.Contains(t, paramByName, "arg_routePlan")
+	assert.Contains(t, paramByName, "arg_inAmount")
+	assert.Contains(t, paramByName, "arg_quotedOutAmount")
+	assert.Contains(t, paramByName, "arg_slippageBps")
+	assert.Contains(t, paramByName, "arg_platformFeeBps")
+
+	// Verify FIXED constraints
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_tokenProgram"].Constraint.Type)
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", paramByName["account_tokenProgram"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_sourceMint"].Constraint.Type)
+	assert.Equal(t, "So11111111111111111111111111111111111111112", paramByName["account_sourceMint"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationMint"].Constraint.Type)
+	assert.Equal(t, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", paramByName["account_destinationMint"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_eventAuthority"].Constraint.Type)
+	assert.Equal(t, "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf", paramByName["account_eventAuthority"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_program"].Constraint.Type)
+	assert.Equal(t, "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", paramByName["account_program"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_inAmount"].Constraint.Type)
+	assert.Equal(t, "50000000", paramByName["arg_inAmount"].Constraint.GetFixedValue())
+
+	// Verify ANY constraints exist for program-managed dynamic fields
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_programAuthority"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_programSourceTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_programDestinationTokenAccount"].Constraint.Type)
+
+	// Verify FIXED constraints for derived ATAs
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_sourceTokenAccount"].Constraint.Type)
+	expectedSourceATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "So11111111111111111111111111111111111111112")
+	require.NoError(t, err)
+	assert.Equal(t, expectedSourceATA, paramByName["account_sourceTokenAccount"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationTokenAccount"].Constraint.Type)
+	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+	require.NoError(t, err)
+	assert.Equal(t, expectedDestATA, paramByName["account_destinationTokenAccount"].Constraint.GetFixedValue())
 }
