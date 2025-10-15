@@ -696,6 +696,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	const (
 		jupAddr  = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
 		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
+		wsolMint = "So11111111111111111111111111111111111111112"
 	)
 
 	var rules []*types.Rule
@@ -703,6 +704,31 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	fromAssetStr, err := getFixed(c.fromAsset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value: %w", err)
+	}
+
+	toAssetStr, err := getFixed(c.toAsset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
+	}
+
+	sourceMintConstraint := c.fromAsset
+	if fromAssetStr == "" {
+		sourceMintConstraint = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: wsolMint,
+			},
+		}
+	}
+
+	destinationMintConstraint := c.toAsset
+	if toAssetStr == "" {
+		destinationMintConstraint = &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+			Value: &types.Constraint_FixedValue{
+				FixedValue: wsolMint,
+			},
+		}
 	}
 
 	userSourceTokenAccount := anyConstraint()
@@ -801,20 +827,13 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_destinationTokenAccount",
 				Constraint:    anyConstraint(),
 			})
-			if fromAssetStr != "" {
-				constraints = append(constraints, &types.ParameterConstraint{
-					ParameterName: "account_sourceMint",
-					Constraint:    c.fromAsset,
-				})
-			} else {
-				constraints = append(constraints, &types.ParameterConstraint{
-					ParameterName: "account_sourceMint",
-					Constraint:    anyConstraint(),
-				})
-			}
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_sourceMint",
+				Constraint:    sourceMintConstraint,
+			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_destinationMint",
-				Constraint:    c.toAsset,
+				Constraint:    destinationMintConstraint,
 			})
 		} else {
 			constraints = append(constraints, &types.ParameterConstraint{
@@ -826,21 +845,14 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				Constraint:    anyConstraint(),
 			})
 			if instruction == "exactOutRoute" {
-				if fromAssetStr != "" {
-					constraints = append(constraints, &types.ParameterConstraint{
-						ParameterName: "account_sourceMint",
-						Constraint:    c.fromAsset,
-					})
-				} else {
-					constraints = append(constraints, &types.ParameterConstraint{
-						ParameterName: "account_sourceMint",
-						Constraint:    anyConstraint(),
-					})
-				}
+				constraints = append(constraints, &types.ParameterConstraint{
+					ParameterName: "account_sourceMint",
+					Constraint:    sourceMintConstraint,
+				})
 			}
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_destinationMint",
-				Constraint:    c.toAsset,
+				Constraint:    destinationMintConstraint,
 			})
 		}
 
