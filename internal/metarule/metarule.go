@@ -750,31 +750,26 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 
 	var sourceTokenAccountConstraint *types.Constraint
-	if fromAssetStr != "" {
-		sourceATA, err := DeriveATA(fromAddressStr, fromAssetStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, fromAssetStr, err)
-		}
-		sourceTokenAccountConstraint = fixed(sourceATA)
-	} else {
-		sourceTokenAccountConstraint = c.fromAddress
+	sourceMintForATA := fromAssetStr
+	if sourceMintForATA == "" {
+		sourceMintForATA = solana.SolMint.String()
 	}
+	sourceATA, err := DeriveATA(fromAddressStr, sourceMintForATA)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, sourceMintForATA, err)
+	}
+	sourceTokenAccountConstraint = fixed(sourceATA)
 
 	var destinationTokenAccountConstraint *types.Constraint
-	if toAssetStr != "" {
-		destATA, err := DeriveATA(toAddressStr, toAssetStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, toAssetStr, err)
-		}
-		destinationTokenAccountConstraint = fixed(destATA)
-	} else {
-		destinationTokenAccountConstraint = c.toAddress
+	destMintForATA := toAssetStr
+	if destMintForATA == "" {
+		destMintForATA = solana.SolMint.String()
 	}
-
-	approveTargetMint := fromAssetStr
-	if approveTargetMint == "" {
-		approveTargetMint = solana.SolMint.String()
+	destATA, err := DeriveATA(toAddressStr, destMintForATA)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, destMintForATA, err)
 	}
+	destinationTokenAccountConstraint = fixed(destATA)
 
 	rules = append(rules, &types.Rule{
 		Resource: "solana.spl_token.approve",
@@ -800,7 +795,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: approveTargetMint,
+				Address: solana.TokenProgramID.String(),
 			},
 		},
 	})
@@ -858,7 +853,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_token2022Program",
-				Constraint:    fixed(solana.Token2022ProgramID.String()), // CLAUDE don't change this
+				Constraint:    anyConstraint(),
 			})
 		} else {
 			constraints = append(constraints, &types.ParameterConstraint{
