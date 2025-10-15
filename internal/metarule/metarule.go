@@ -709,10 +709,10 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		return nil, fmt.Errorf("failed to get fixed value for fromAddress: %w", err)
 	}
 
-	toAddressStr, err := getFixed(c.toAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
-	}
+	//toAddressStr, err := getFixed(c.toAddress)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
+	//}
 
 	var userSourceTokenAccount *types.Constraint
 	if fromAssetStr != "" {
@@ -760,67 +760,67 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		})
 	}
 
-	toAssetStr, err := getFixed(c.toAsset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
-	}
+	//toAssetStr, err := getFixed(c.toAsset)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
+	//}
 
-	var userDestinationTokenAccount *types.Constraint
-	if toAssetStr != "" {
-		destATA, err := deriveATA(toAddressStr, toAssetStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive destination ATA: %w", err)
-		}
-		userDestinationTokenAccount = &types.Constraint{
-			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-			Value: &types.Constraint_FixedValue{
-				FixedValue: destATA,
-			},
-		}
-
-		ataCreate := proto.Clone(in).(*types.Rule)
-		ataCreate.Resource = "solana.associated_token_account.create"
-		ataCreate.Effect = types.Effect_EFFECT_ALLOW
-		ataCreate.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-			},
-		}
-		ataCreate.ParameterConstraints = []*types.ParameterConstraint{{
-			ParameterName: "account_payer",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_associatedTokenAccount",
-			Constraint:    userDestinationTokenAccount,
-		}, {
-			ParameterName: "account_owner",
-			Constraint:    c.toAddress,
-		}, {
-			ParameterName: "account_mint",
-			Constraint:    c.toAsset,
-		}, {
-			ParameterName: "account_systemProgram",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-				Value: &types.Constraint_FixedValue{
-					FixedValue: solana.SystemProgramID.String(),
-				},
-			},
-		}, {
-			ParameterName: "account_tokenProgram",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-				Value: &types.Constraint_FixedValue{
-					FixedValue: solana.TokenProgramID.String(),
-				},
-			},
-		}}
-
-		rules = append(rules, ataCreate)
-	} else {
-		userDestinationTokenAccount = c.toAddress
-	}
+	userDestinationTokenAccount := anyConstraint()
+	//if toAssetStr != "" {
+	//	destATA, err := deriveATA(toAddressStr, toAssetStr)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("failed to derive destination ATA: %w", err)
+	//	}
+	//	userDestinationTokenAccount = &types.Constraint{
+	//		Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+	//		Value: &types.Constraint_FixedValue{
+	//			FixedValue: destATA,
+	//		},
+	//	}
+	//
+	//	ataCreate := proto.Clone(in).(*types.Rule)
+	//	ataCreate.Resource = "solana.associated_token_account.create"
+	//	ataCreate.Effect = types.Effect_EFFECT_ALLOW
+	//	ataCreate.Target = &types.Target{
+	//		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+	//		Target: &types.Target_Address{
+	//			Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+	//		},
+	//	}
+	//	ataCreate.ParameterConstraints = []*types.ParameterConstraint{{
+	//		ParameterName: "account_payer",
+	//		Constraint:    c.fromAddress,
+	//	}, {
+	//		ParameterName: "account_associatedTokenAccount",
+	//		Constraint:    userDestinationTokenAccount,
+	//	}, {
+	//		ParameterName: "account_owner",
+	//		Constraint:    c.toAddress,
+	//	}, {
+	//		ParameterName: "account_mint",
+	//		Constraint:    c.toAsset,
+	//	}, {
+	//		ParameterName: "account_systemProgram",
+	//		Constraint: &types.Constraint{
+	//			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+	//			Value: &types.Constraint_FixedValue{
+	//				FixedValue: solana.SystemProgramID.String(),
+	//			},
+	//		},
+	//	}, {
+	//		ParameterName: "account_tokenProgram",
+	//		Constraint: &types.Constraint{
+	//			Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+	//			Value: &types.Constraint_FixedValue{
+	//				FixedValue: solana.TokenProgramID.String(),
+	//			},
+	//		},
+	//	}}
+	//
+	//	rules = append(rules, ataCreate)
+	//} else {
+	//	userDestinationTokenAccount = c.toAddress
+	//}
 
 	baseConstraints := []*types.ParameterConstraint{{
 		ParameterName: "arg_routePlan",

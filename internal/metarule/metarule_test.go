@@ -1536,3 +1536,24 @@ func TestTryFormat_XRP_UnsupportedProtocol(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported protocol id for XRP: stake")
 }
+
+func TestDeriveATA(t *testing.T) {
+	// https://solscan.io/account/EDT9FrASLP4gRKFnka5h4vgVBHzrmTZxgxmGa4G4vect
+	owner := "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	mint := "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+	expectedATA := "EDT9FrASLP4gRKFnka5h4vgVBHzrmTZxgxmGa4G4vect"
+
+	ata, err := deriveATA(owner, mint)
+	require.NoError(t, err)
+	assert.Equal(t, expectedATA, ata)
+}
+
+func TestDeriveATA_WSOLDestination(t *testing.T) {
+	owner := "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	mint := "So11111111111111111111111111111111111111112"
+	expectedATA := "R97cgCoxcqrUaaW7wg8drNBiLkicyQQHmct7pY8tdMR"
+
+	ata, err := deriveATA(owner, mint)
+	require.NoError(t, err)
+	assert.Equal(t, expectedATA, ata)
+}
