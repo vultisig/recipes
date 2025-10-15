@@ -9,6 +9,7 @@ import (
 	"github.com/gagliardetto/solana-go/programs/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vultisig/recipes/internal/metarule"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -1176,6 +1177,93 @@ func TestEvaluate_SPLTokenTransfer_InvalidProgram(t *testing.T) {
 	err = engine.Evaluate(rule, txBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to assert target: tx target is wrong")
+}
+
+func TestEvaluate_MetaJupiter(t *testing.T) {
+	tx := "CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKCQgTBi8dL5WH7sWHTBp28kz8oNCmbKHfJXQoeBxJllkgszhxM32R3yvnX/HBzojB9fApPOfuRWL27j4EX6B/qtMR3WZ/y1OFUjaxGSYPYSYxL38DI5jSwryQ6RMhtMx+2NckxFh1gLBtjJtNTvcrXvXuh/PFZ/fM4IPgPkuzzyhB/G27Pda2pnGc3R0WktKvNfpBJorRv4iVoUOTn784IlhxGfXyb4o/nn+6d0cPFBPmUKZ4EVZLKuWY5mIcburZi74iieJ/mkkOagUIRksszWMNCgHFsDMiMCfHN+J1rwoXyWiagAv/TIc2iJbCD8FAc+vxy1qjdf6B/k29yCuk37deeOvseGzjAy+w0P7kS+cz0i3FdAlPQMKRmD4EAqGenMprv67g5bFDc7KxpFz5i1fj1470rV3a6ExmnSw6yPuHi/M6az5ztylrtKOlPWSGFPJNVv+Lb9+NyZHORsoMDZu6UAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpBpuIV/6rgYT7aH9jRhjANdrEOdwa6ztVmKDwAAAAAAHG+nrzvtutOj1l82qryXQxsbvkwtL24OR8pgIDRS9dYQR51VvyMcBu7nTFbs5oFQf9sbLeo/SOUQKxzaJWvBOPtD/6J/XX9kp0wJsfKVh53ksJqzbfyd1RSzIap7OM5ei1w1W367Ykl8/1heeE1Ct6pgMZQ89eFMSv0TWee6UaMEcn0nz5UKgy0QJ34xepN6SZQQ1LggwZ6QPHCYVaRRN9zNbBTO0ZD5TB0ZEBaayT6GzFN/sZJShMvBo8S2hacJKEB66guxxmMx9J7GcDW1ZYuFjwk5echKsWPvICBacgSQEOGQsHCgABAgMMDQ4ODw4QEQQSBQYHAQIICQskwSCbM0HWnIECAQAAADBkAAGA8PoCAAAAAGSslgAAAAAAZAAA"
+	txBytes, err := base64.StdEncoding.DecodeString(tx)
+	require.NoError(t, err)
+
+	eng, err := NewSolana()
+	require.NoError(t, err)
+
+	meta := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.swap",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM",
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "50000000",
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "solana",
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM",
+					},
+				},
+			},
+		},
+	}
+
+	rules, err := metarule.NewMetaRule().TryFormat(meta)
+	require.NoError(t, err)
+
+	var errs []error
+	for _, rule := range rules {
+		err = eng.Evaluate(rule, txBytes)
+		if err == nil {
+			return
+		}
+		errs = append(errs, err)
+	}
+
+	t.Error(errs)
 }
 
 func TestEvaluate_JupiterSharedAccountsRoute(t *testing.T) {

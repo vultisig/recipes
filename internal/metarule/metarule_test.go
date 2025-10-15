@@ -982,7 +982,10 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	}
 
 	assert.Contains(t, paramByName, "account_source")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_source"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_source"].Constraint.Type)
+	expectedSourceATA, err := DeriveATA(fromAddress, fromAsset)
+	require.NoError(t, err)
+	assert.Equal(t, expectedSourceATA, paramByName["account_source"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_delegate")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_delegate"].Constraint.Type)
@@ -1138,7 +1141,12 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 5) // 5 Jupiter route variants for native SOL to SPL token
+	require.Len(t, result, 6) // WSOL approve + 5 Jupiter route variants for native SOL to SPL token
+
+	// First rule should be WSOL approve
+	approveRule := result[0]
+	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, "So11111111111111111111111111111111111111112", approveRule.Target.GetAddress())
 
 	// Verify all 5 Jupiter instruction variants are present
 	jupiterInstructions := []string{
@@ -1149,7 +1157,7 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 		"exactOutRoute",
 	}
 	for i, instruction := range jupiterInstructions {
-		jupiterRule := result[i]
+		jupiterRule := result[1+i]
 		assert.Equal(t, "solana.jupiter_aggregatorv6."+instruction, jupiterRule.Resource)
 	}
 }
@@ -1515,7 +1523,7 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: "So11111111111111111111111111111111111111112",
+						FixedValue: "",
 					},
 				},
 			},
@@ -1640,9 +1648,7 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 
 	// Verify FIXED constraints for derived ATAs
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_sourceTokenAccount"].Constraint.Type)
-	expectedSourceATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "So11111111111111111111111111111111111111112")
-	require.NoError(t, err)
-	assert.Equal(t, expectedSourceATA, paramByName["account_sourceTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", paramByName["account_sourceTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationTokenAccount"].Constraint.Type)
 	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")

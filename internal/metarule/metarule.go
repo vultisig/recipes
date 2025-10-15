@@ -720,39 +720,6 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		destinationMintConstraint = fixed(solana.SolMint.String())
 	}
 
-	userSourceTokenAccount := anyConstraint()
-
-	if fromAssetStr != "" {
-		rules = append(rules, &types.Rule{
-			Resource: "solana.spl_token.approve",
-			Effect:   types.Effect_EFFECT_ALLOW,
-			ParameterConstraints: []*types.ParameterConstraint{{
-				ParameterName: "account_source",
-				Constraint:    userSourceTokenAccount,
-			}, {
-				ParameterName: "account_delegate",
-				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: jupAddr,
-					},
-				},
-			}, {
-				ParameterName: "account_owner",
-				Constraint:    c.fromAddress,
-			}, {
-				ParameterName: "arg_amount",
-				Constraint:    c.fromAmount,
-			}},
-			Target: &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: fromAssetStr,
-				},
-			},
-		})
-	}
-
 	baseConstraints := []*types.ParameterConstraint{{
 		ParameterName: "arg_routePlan",
 		Constraint:    anyConstraint(),
@@ -803,6 +770,40 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	} else {
 		destinationTokenAccountConstraint = c.toAddress
 	}
+
+	approveTargetMint := fromAssetStr
+	if approveTargetMint == "" {
+		approveTargetMint = solana.SolMint.String()
+	}
+
+	rules = append(rules, &types.Rule{
+		Resource: "solana.spl_token.approve",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_source",
+			Constraint:    sourceTokenAccountConstraint,
+		}, {
+			ParameterName: "account_delegate",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				Value: &types.Constraint_FixedValue{
+					FixedValue: jupAddr,
+				},
+			},
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "arg_amount",
+			Constraint:    c.fromAmount,
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: approveTargetMint,
+			},
+		},
+	})
 
 	for _, instruction := range jupiterInstructions {
 		out := proto.Clone(in).(*types.Rule)
