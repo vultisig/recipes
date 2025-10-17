@@ -771,10 +771,11 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 	destinationTokenAccountConstraint = fixed(destATA)
 
-	// Allow System Program transfer for funding rent-exempt accounts
-	// This allows transfers to source and destination ATAs for rent
-	// Max rent for a token account is ~0.00203928 SOL (2,039,280 lamports)
-	// We set a conservative limit of 5,000,000 lamports (~0.005 SOL) to cover rent + any overhead
+	// Allow System Program transfer for funding rent-exempt accounts and wrapping SOL
+	// This allows transfers to source and destination ATAs
+	// For native SOL swaps, Jupiter wraps SOL into WSOL by transferring to the WSOL ATA
+	// Typical amounts: rent ~2,039,280 lamports + wrapped SOL amount for swap
+	// We use the swap amount as the limit since it covers both rent and wrapped SOL
 	rules = append(rules, &types.Rule{
 		Resource: "solana.system.transfer",
 		Effect:   types.Effect_EFFECT_ALLOW,
@@ -786,12 +787,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			Constraint:    sourceTokenAccountConstraint,
 		}, {
 			ParameterName: "arg_lamports",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-				Value: &types.Constraint_MaxValue{
-					MaxValue: "5000000",
-				},
-			},
+			Constraint:    c.fromAmount,
 		}},
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
@@ -815,7 +811,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			Constraint: &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
 				Value: &types.Constraint_MaxValue{
-					MaxValue: "5000000",
+					MaxValue: "10000000",
 				},
 			},
 		}},
