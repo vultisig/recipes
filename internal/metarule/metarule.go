@@ -887,6 +887,23 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		},
 	})
 
+	// SPL Token syncNative - syncs native SOL balance in WSOL account after wrapping
+	// This is required after transferring SOL to a WSOL ATA to update the token account balance
+	rules = append(rules, &types.Rule{
+		Resource: "solana.spl_token.syncNative",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_account",
+			Constraint:    sourceTokenAccountConstraint,
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.TokenProgramID.String(),
+			},
+		},
+	})
+
 	// SPL Token Approve - account_source must be an Associated Token Account (ATA)
 	// The account_source constraint ensures the approved token account is derived from the ATA program
 	rules = append(rules, &types.Rule{
