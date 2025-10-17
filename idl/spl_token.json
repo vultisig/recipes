@@ -155,6 +155,20 @@
       "metadata": {
         "discriminator": [8]
       }
+    },
+    {
+      "name": "syncNative",
+      "accounts": [
+        {
+          "name": "account",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "metadata": {
+        "discriminator": [17]
+      }
     }
   ]
 }
