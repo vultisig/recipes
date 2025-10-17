@@ -771,71 +771,69 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 	destinationTokenAccountConstraint = fixed(destATA)
 
-	// Add createIdempotent for source ATA if source asset is not native SOL
-	if fromAssetStr != "" {
-		rules = append(rules, &types.Rule{
-			Resource: "solana.associated_token_account.createIdempotent",
-			Effect:   types.Effect_EFFECT_ALLOW,
-			ParameterConstraints: []*types.ParameterConstraint{{
-				ParameterName: "account_payer",
-				Constraint:    c.fromAddress,
-			}, {
-				ParameterName: "account_associatedTokenAccount",
-				Constraint:    sourceTokenAccountConstraint,
-			}, {
-				ParameterName: "account_owner",
-				Constraint:    c.fromAddress,
-			}, {
-				ParameterName: "account_mint",
-				Constraint:    sourceMintConstraint,
-			}, {
-				ParameterName: "account_systemProgram",
-				Constraint:    fixed(solana.SystemProgramID.String()),
-			}, {
-				ParameterName: "account_tokenProgram",
-				Constraint:    fixed(solana.TokenProgramID.String()),
-			}},
-			Target: &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-				},
+	// Add createIdempotent for source ATA
+	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
+	rules = append(rules, &types.Rule{
+		Resource: "solana.associated_token_account.createIdempotent",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_payer",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_associatedTokenAccount",
+			Constraint:    sourceTokenAccountConstraint,
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_mint",
+			Constraint:    sourceMintConstraint,
+		}, {
+			ParameterName: "account_systemProgram",
+			Constraint:    fixed(solana.SystemProgramID.String()),
+		}, {
+			ParameterName: "account_tokenProgram",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
 			},
-		})
-	}
+		},
+	})
 
-	// Add createIdempotent for destination ATA if destination asset is not native SOL
-	if toAssetStr != "" {
-		rules = append(rules, &types.Rule{
-			Resource: "solana.associated_token_account.createIdempotent",
-			Effect:   types.Effect_EFFECT_ALLOW,
-			ParameterConstraints: []*types.ParameterConstraint{{
-				ParameterName: "account_payer",
-				Constraint:    c.fromAddress,
-			}, {
-				ParameterName: "account_associatedTokenAccount",
-				Constraint:    destinationTokenAccountConstraint,
-			}, {
-				ParameterName: "account_owner",
-				Constraint:    c.toAddress,
-			}, {
-				ParameterName: "account_mint",
-				Constraint:    destinationMintConstraint,
-			}, {
-				ParameterName: "account_systemProgram",
-				Constraint:    fixed(solana.SystemProgramID.String()),
-			}, {
-				ParameterName: "account_tokenProgram",
-				Constraint:    fixed(solana.TokenProgramID.String()),
-			}},
-			Target: &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-				},
+	// Add createIdempotent for destination ATA
+	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
+	rules = append(rules, &types.Rule{
+		Resource: "solana.associated_token_account.createIdempotent",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_payer",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_associatedTokenAccount",
+			Constraint:    destinationTokenAccountConstraint,
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "account_mint",
+			Constraint:    destinationMintConstraint,
+		}, {
+			ParameterName: "account_systemProgram",
+			Constraint:    fixed(solana.SystemProgramID.String()),
+		}, {
+			ParameterName: "account_tokenProgram",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
 			},
-		})
-	}
+		},
+	})
 
 	// SPL Token Approve - account_source must be an Associated Token Account (ATA)
 	// The account_source constraint ensures the approved token account is derived from the ATA program
