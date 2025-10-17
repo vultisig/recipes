@@ -967,13 +967,25 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 6) // SPL token approve + 5 Jupiter route variants
+	require.Len(t, result, 8) // 2 ATA createIdempotent (source + dest) + SPL token approve + 5 Jupiter route variants
 
-	// First rule should be SPL token approve
-	approveRule := result[0]
+	// First rule should be source ATA createIdempotent (USDC)
+	sourceAtaRule := result[0]
+	assert.Equal(t, "solana.associated_token_account.createIdempotent", sourceAtaRule.Resource)
+	assert.Equal(t, types.Effect_EFFECT_ALLOW, sourceAtaRule.Effect)
+	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", sourceAtaRule.Target.GetAddress())
+
+	// Second rule should be destination ATA createIdempotent (WSOL)
+	destAtaRule := result[1]
+	assert.Equal(t, "solana.associated_token_account.createIdempotent", destAtaRule.Resource)
+	assert.Equal(t, types.Effect_EFFECT_ALLOW, destAtaRule.Effect)
+	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", destAtaRule.Target.GetAddress())
+
+	// Third rule should be SPL token approve
+	approveRule := result[2]
 	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
 	assert.Equal(t, types.Effect_EFFECT_ALLOW, approveRule.Effect)
-	assert.Equal(t, fromAsset, approveRule.Target.GetAddress())
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 	require.Len(t, approveRule.ParameterConstraints, 4)
 
 	paramByName := make(map[string]*types.ParameterConstraint)
@@ -1008,13 +1020,13 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 		"exactOutRoute",
 	}
 	for i, instruction := range jupiterInstructions {
-		jupiterRule := result[1+i]
+		jupiterRule := result[3+i]
 		assert.Equal(t, "solana.jupiter_aggregatorv6."+instruction, jupiterRule.Resource)
 		assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
 	}
 
 	// Verify first Jupiter route (route) has expected constraints
-	jupiterRule := result[1]
+	jupiterRule := result[3]
 	assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
 	require.Len(t, jupiterRule.ParameterConstraints, 12)
 
@@ -1141,12 +1153,17 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 6) // WSOL approve + 5 Jupiter route variants for native SOL to SPL token
+	require.Len(t, result, 7) // 1 ATA createIdempotent (dest only) + WSOL approve + 5 Jupiter route variants for native SOL to SPL token
 
-	// First rule should be WSOL approve
-	approveRule := result[0]
+	// First rule should be destination ATA createIdempotent (USDC - no source ATA needed for native SOL)
+	ataRule := result[0]
+	assert.Equal(t, "solana.associated_token_account.createIdempotent", ataRule.Resource)
+	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", ataRule.Target.GetAddress())
+
+	// Second rule should be WSOL approve
+	approveRule := result[1]
 	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
-	assert.Equal(t, "So11111111111111111111111111111111111111112", approveRule.Target.GetAddress())
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 
 	// Verify all 5 Jupiter instruction variants are present
 	jupiterInstructions := []string{
@@ -1157,7 +1174,7 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 		"exactOutRoute",
 	}
 	for i, instruction := range jupiterInstructions {
-		jupiterRule := result[1+i]
+		jupiterRule := result[2+i]
 		assert.Equal(t, "solana.jupiter_aggregatorv6."+instruction, jupiterRule.Resource)
 	}
 }
@@ -1577,12 +1594,17 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 6, "should have 1 approve + 5 Jupiter routes")
+	require.Len(t, result, 7, "should have 1 ATA create (dest only) + 1 approve + 5 Jupiter routes")
 
-	// First rule should be SPL token approve for WSOL
-	approveRule := result[0]
+	// First rule should be destination ATA createIdempotent (USDC - no source ATA for native SOL)
+	ataRule := result[0]
+	assert.Equal(t, "solana.associated_token_account.createIdempotent", ataRule.Resource)
+	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", ataRule.Target.GetAddress())
+
+	// Second rule should be SPL token approve for WSOL
+	approveRule := result[1]
 	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
-	assert.Equal(t, "So11111111111111111111111111111111111111112", approveRule.Target.GetAddress())
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 
 	// Find sharedAccountsRoute rule
 	var sharedAccountsRouteRule *types.Rule
@@ -1648,7 +1670,9 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 
 	// Verify FIXED constraints for derived ATAs
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_sourceTokenAccount"].Constraint.Type)
-	assert.Equal(t, "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", paramByName["account_sourceTokenAccount"].Constraint.GetFixedValue())
+	expectedSourceATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "So11111111111111111111111111111111111111112")
+	require.NoError(t, err)
+	assert.Equal(t, expectedSourceATA, paramByName["account_sourceTokenAccount"].Constraint.GetFixedValue())
 
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationTokenAccount"].Constraint.Type)
 	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
