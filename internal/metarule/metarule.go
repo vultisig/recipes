@@ -787,7 +787,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				Constraint:    c.fromAddress,
 			}, {
 				ParameterName: "account_mint",
-				Constraint:    c.fromAsset,
+				Constraint:    sourceMintConstraint,
 			}, {
 				ParameterName: "account_systemProgram",
 				Constraint:    fixed(solana.SystemProgramID.String()),
@@ -820,7 +820,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				Constraint:    c.toAddress,
 			}, {
 				ParameterName: "account_mint",
-				Constraint:    c.toAsset,
+				Constraint:    destinationMintConstraint,
 			}, {
 				ParameterName: "account_systemProgram",
 				Constraint:    fixed(solana.SystemProgramID.String()),
