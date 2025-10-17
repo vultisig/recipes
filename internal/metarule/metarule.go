@@ -771,6 +771,62 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 	destinationTokenAccountConstraint = fixed(destATA)
 
+	// Allow System Program transfer for funding rent-exempt accounts
+	// This allows transfers to source and destination ATAs for rent
+	// Max rent for a token account is ~0.00203928 SOL (2,039,280 lamports)
+	// We set a conservative limit of 5,000,000 lamports (~0.005 SOL) to cover rent + any overhead
+	rules = append(rules, &types.Rule{
+		Resource: "solana.system.transfer",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_from",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_to",
+			Constraint:    sourceTokenAccountConstraint,
+		}, {
+			ParameterName: "arg_lamports",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+				Value: &types.Constraint_MaxValue{
+					MaxValue: "5000000",
+				},
+			},
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.SystemProgramID.String(),
+			},
+		},
+	})
+
+	rules = append(rules, &types.Rule{
+		Resource: "solana.system.transfer",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_from",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_to",
+			Constraint:    destinationTokenAccountConstraint,
+		}, {
+			ParameterName: "arg_lamports",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+				Value: &types.Constraint_MaxValue{
+					MaxValue: "5000000",
+				},
+			},
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.SystemProgramID.String(),
+			},
+		},
+	})
+
 	// Add createIdempotent for source ATA
 	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
 	rules = append(rules, &types.Rule{
