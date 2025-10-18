@@ -1002,6 +1002,10 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_userDestinationTokenAccount",
 				Constraint:    destinationTokenAccountConstraint,
 			})
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_destinationTokenAccount",
+				Constraint:    destinationTokenAccountConstraint,
+			})
 			if instruction == "exactOutRoute" {
 				constraints = append(constraints, &types.ParameterConstraint{
 					ParameterName: "account_sourceMint",
