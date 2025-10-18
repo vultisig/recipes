@@ -1033,7 +1033,8 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, tokenProgramAddress, paramByName["account_tokenProgram"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userTransferAuthority")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userTransferAuthority"].Constraint.Type)
+	assert.Equal(t, fromAddress, paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
@@ -1662,8 +1663,11 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_inAmount"].Constraint.Type)
 	assert.Equal(t, "50000000", paramByName["arg_inAmount"].Constraint.GetFixedValue())
 
-	// Verify ANY constraints exist for dynamic fields
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
+	// Verify FIXED constraint for userTransferAuthority (must be the fromAddress)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userTransferAuthority"].Constraint.Type)
+	assert.Equal(t, "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
+
+	// Verify ANY constraints exist for dynamic Jupiter infrastructure fields
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destinationTokenAccount"].Constraint.Type)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_platformFeeAccount"].Constraint.Type)
 
