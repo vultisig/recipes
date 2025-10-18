@@ -698,8 +698,6 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		jupEvent = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"
 	)
 
-	var rules []*types.Rule
-
 	fromAssetStr, err := getFixed(c.fromAsset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value: %w", err)
@@ -708,35 +706,6 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	toAssetStr, err := getFixed(c.toAsset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value for toAsset: %w", err)
-	}
-
-	sourceMintConstraint := c.fromAsset
-	if fromAssetStr == "" {
-		sourceMintConstraint = fixed(solana.SolMint.String())
-	}
-
-	destinationMintConstraint := c.toAsset
-	if toAssetStr == "" {
-		destinationMintConstraint = fixed(solana.SolMint.String())
-	}
-
-	baseConstraints := []*types.ParameterConstraint{{
-		ParameterName: "arg_routePlan",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_slippageBps",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_platformFeeBps",
-		Constraint:    anyConstraint(),
-	}}
-
-	jupiterInstructions := []string{
-		"route",
-		"routeWithTokenLedger",
-		"sharedAccountsRoute",
-		"sharedAccountsRouteWithTokenLedger",
-		"exactOutRoute",
 	}
 
 	fromAddressStr, err := getFixed(c.fromAddress)
@@ -749,152 +718,115 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		return nil, fmt.Errorf("failed to get fixed value for toAddress: %w", err)
 	}
 
-	var sourceTokenAccountConstraint *types.Constraint
-	sourceMintForATA := fromAssetStr
-	if sourceMintForATA == "" {
-		sourceMintForATA = solana.SolMint.String()
+	getMint := func(asset string) string {
+		if asset == "" {
+			return solana.SolMint.String()
+		}
+		return asset
 	}
-	sourceATA, err := DeriveATA(fromAddressStr, sourceMintForATA)
+
+	sourceMint := getMint(fromAssetStr)
+	destMint := getMint(toAssetStr)
+
+	sourceMintConstraint := c.fromAsset
+	if fromAssetStr == "" {
+		sourceMintConstraint = fixed(sourceMint)
+	}
+
+	destinationMintConstraint := c.toAsset
+	if toAssetStr == "" {
+		destinationMintConstraint = fixed(destMint)
+	}
+
+	sourceATA, err := DeriveATA(fromAddressStr, sourceMint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, sourceMintForATA, err)
+		return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, sourceMint, err)
 	}
-	sourceTokenAccountConstraint = fixed(sourceATA)
 
-	var destinationTokenAccountConstraint *types.Constraint
-	destMintForATA := toAssetStr
-	if destMintForATA == "" {
-		destMintForATA = solana.SolMint.String()
-	}
-	destATA, err := DeriveATA(toAddressStr, destMintForATA)
+	destATA, err := DeriveATA(toAddressStr, destMint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, destMintForATA, err)
+		return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, destMint, err)
 	}
-	destinationTokenAccountConstraint = fixed(destATA)
 
-	// The optional destinationTokenAccount parameter can vary:
-	// - Sometimes it's the Jupiter program address (for routing)
-	// - Sometimes it's the user's destination ATA
-	// - Sometimes it's something else entirely
-	// Since it's optional and highly variable, we use ANY constraint
-	//
-	// User's always ATA defined as fixed in destinationTokenAccountConstraint
-	optionalDestinationTokenAccountConstraint := anyConstraint()
+	sourceTokenAccountConstraint := fixed(sourceATA)
+	destinationTokenAccountConstraint := fixed(destATA)
 
-	// Allow System Program transfer for funding rent-exempt accounts and wrapping SOL
-	// This allows transfers to source and destination ATAs
-	// For native SOL swaps, Jupiter wraps SOL into WSOL by transferring to the WSOL ATA
-	// Typical amounts: rent ~2,039,280 lamports + wrapped SOL amount for swap
-	// We use the swap amount as the limit since it covers both rent and wrapped SOL
-	rules = append(rules, &types.Rule{
-		Resource: "solana.system.transfer",
-		Effect:   types.Effect_EFFECT_ALLOW,
-		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_from",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_to",
-			Constraint:    sourceTokenAccountConstraint,
-		}, {
-			ParameterName: "arg_lamports",
-			Constraint:    c.fromAmount,
-		}},
-		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: solana.SystemProgramID.String(),
-			},
-		},
-	})
-
-	rules = append(rules, &types.Rule{
-		Resource: "solana.system.transfer",
-		Effect:   types.Effect_EFFECT_ALLOW,
-		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_from",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_to",
-			Constraint:    destinationTokenAccountConstraint,
-		}, {
-			ParameterName: "arg_lamports",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-				Value: &types.Constraint_MaxValue{
-					MaxValue: "10000000",
+	createSystemTransferRule := func(to, amount *types.Constraint) *types.Rule {
+		return &types.Rule{
+			Resource: "solana.system.transfer",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_from",
+				Constraint:    c.fromAddress,
+			}, {
+				ParameterName: "account_to",
+				Constraint:    to,
+			}, {
+				ParameterName: "arg_lamports",
+				Constraint:    amount,
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SystemProgramID.String(),
 				},
 			},
-		}},
-		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: solana.SystemProgramID.String(),
-			},
-		},
-	})
+		}
+	}
 
-	// Add createIdempotent for source ATA
-	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
-	rules = append(rules, &types.Rule{
-		Resource: "solana.associated_token_account.createIdempotent",
-		Effect:   types.Effect_EFFECT_ALLOW,
-		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_payer",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_associatedTokenAccount",
-			Constraint:    sourceTokenAccountConstraint,
-		}, {
-			ParameterName: "account_owner",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_mint",
-			Constraint:    sourceMintConstraint,
-		}, {
-			ParameterName: "account_systemProgram",
-			Constraint:    fixed(solana.SystemProgramID.String()),
-		}, {
-			ParameterName: "account_tokenProgram",
-			Constraint:    fixed(solana.TokenProgramID.String()),
-		}},
-		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-			},
-		},
-	})
+	var rules []*types.Rule
 
-	// Add createIdempotent for destination ATA
-	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
-	rules = append(rules, &types.Rule{
-		Resource: "solana.associated_token_account.createIdempotent",
-		Effect:   types.Effect_EFFECT_ALLOW,
-		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_payer",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "account_associatedTokenAccount",
-			Constraint:    destinationTokenAccountConstraint,
-		}, {
-			ParameterName: "account_owner",
-			Constraint:    c.toAddress,
-		}, {
-			ParameterName: "account_mint",
-			Constraint:    destinationMintConstraint,
-		}, {
-			ParameterName: "account_systemProgram",
-			Constraint:    fixed(solana.SystemProgramID.String()),
-		}, {
-			ParameterName: "account_tokenProgram",
-			Constraint:    fixed(solana.TokenProgramID.String()),
-		}},
-		Target: &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+	// Allow System Program transfer for funding rent-exempt accounts and wrapping SOL
+	// For native SOL swaps, Jupiter wraps SOL into WSOL by transferring to the WSOL ATA
+	// Typical amounts: rent ~2,039,280 lamports + wrapped SOL amount for swap
+	rules = append(rules,
+		createSystemTransferRule(sourceTokenAccountConstraint, c.fromAmount),
+		createSystemTransferRule(destinationTokenAccountConstraint, &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+			Value: &types.Constraint_MaxValue{
+				MaxValue: "10000000",
 			},
-		},
-	})
+		}),
+	)
+
+	createATARule := func(payer, ata, owner, mint *types.Constraint) *types.Rule {
+		return &types.Rule{
+			Resource: "solana.associated_token_account.create",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_payer",
+				Constraint:    payer,
+			}, {
+				ParameterName: "account_associatedTokenAccount",
+				Constraint:    ata,
+			}, {
+				ParameterName: "account_owner",
+				Constraint:    owner,
+			}, {
+				ParameterName: "account_mint",
+				Constraint:    mint,
+			}, {
+				ParameterName: "account_systemProgram",
+				Constraint:    fixed(solana.SystemProgramID.String()),
+			}, {
+				ParameterName: "account_tokenProgram",
+				Constraint:    fixed(solana.TokenProgramID.String()),
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+				},
+			},
+		}
+	}
+
+	// Add create for source and destination ATAs
+	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
+	rules = append(rules,
+		createATARule(c.fromAddress, sourceTokenAccountConstraint, c.fromAddress, sourceMintConstraint),
+		createATARule(c.fromAddress, destinationTokenAccountConstraint, c.toAddress, destinationMintConstraint),
+	)
 
 	// SPL Token syncNative - syncs native SOL balance in WSOL account after wrapping
 	// This is required after transferring SOL to a WSOL ATA to update the token account balance
@@ -947,144 +879,60 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		},
 	})
 
-	for _, instruction := range jupiterInstructions {
-		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "solana.jupiter_aggregatorv6." + instruction
-		out.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: jupAddr,
-			},
-		}
-
-		constraints := []*types.ParameterConstraint{{
-			ParameterName: "account_tokenProgram",
-			Constraint:    fixed(solana.TokenProgramID.String()),
-		}, {
-			ParameterName: "account_userTransferAuthority",
-			Constraint:    anyConstraint(),
-		}}
-
-		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_programAuthority",
-				Constraint:    anyConstraint(),
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_sourceTokenAccount",
-				Constraint:    sourceTokenAccountConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_programSourceTokenAccount",
-				Constraint:    anyConstraint(),
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_programDestinationTokenAccount",
-				Constraint:    anyConstraint(),
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_destinationTokenAccount",
-				Constraint:    destinationTokenAccountConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_sourceMint",
-				Constraint:    sourceMintConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_destinationMint",
-				Constraint:    destinationMintConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_platformFeeAccount",
-				Constraint:    anyConstraint(),
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_token2022Program",
-				Constraint:    anyConstraint(),
-			})
-		} else {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_userSourceTokenAccount",
-				Constraint:    sourceTokenAccountConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_userDestinationTokenAccount",
-				Constraint:    destinationTokenAccountConstraint,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_destinationTokenAccount",
-				Constraint:    optionalDestinationTokenAccountConstraint,
-			})
-			if instruction == "exactOutRoute" {
-				constraints = append(constraints, &types.ParameterConstraint{
-					ParameterName: "account_sourceMint",
-					Constraint:    sourceMintConstraint,
-				})
-			}
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_destinationMint",
-				Constraint:    destinationMintConstraint,
-			})
-			// platformFeeAccount is optional in regular routes
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_platformFeeAccount",
-				Constraint:    anyConstraint(),
-			})
-		}
-
-		if instruction == "routeWithTokenLedger" || instruction == "sharedAccountsRouteWithTokenLedger" {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "account_tokenLedger",
-				Constraint:    anyConstraint(),
-			})
-		}
-
-		constraints = append(constraints, &types.ParameterConstraint{
-			ParameterName: "account_eventAuthority",
-			Constraint:    fixed(jupEvent),
-		})
-		constraints = append(constraints, &types.ParameterConstraint{
-			ParameterName: "account_program",
-			Constraint:    fixed(jupAddr),
-		})
-
-		if instruction == "sharedAccountsRoute" || instruction == "sharedAccountsRouteWithTokenLedger" {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_id",
-				Constraint:    anyConstraint(),
-			})
-		}
-
-		constraints = append(constraints, baseConstraints...)
-
-		if instruction == "route" || instruction == "sharedAccountsRoute" {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_inAmount",
-				Constraint:    c.fromAmount,
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_quotedOutAmount",
-				Constraint:    anyConstraint(),
-			})
-		} else if instruction == "exactOutRoute" {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_outAmount",
-				Constraint:    anyConstraint(),
-			})
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_quotedInAmount",
-				Constraint:    anyConstraint(),
-			})
-		} else {
-			constraints = append(constraints, &types.ParameterConstraint{
-				ParameterName: "arg_quotedOutAmount",
-				Constraint:    anyConstraint(),
-			})
-		}
-
-		out.ParameterConstraints = constraints
-		rules = append(rules, out)
+	// Jupiter route instruction
+	jupiterRule := proto.Clone(in).(*types.Rule)
+	jupiterRule.Resource = "solana.jupiter_aggregatorv6.route"
+	jupiterRule.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+		Target: &types.Target_Address{
+			Address: jupAddr,
+		},
 	}
+	jupiterRule.ParameterConstraints = []*types.ParameterConstraint{{
+		ParameterName: "account_tokenProgram",
+		Constraint:    fixed(solana.TokenProgramID.String()),
+	}, {
+		ParameterName: "account_userTransferAuthority",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "account_userSourceTokenAccount",
+		Constraint:    sourceTokenAccountConstraint,
+	}, {
+		ParameterName: "account_userDestinationTokenAccount",
+		Constraint:    destinationTokenAccountConstraint,
+	}, {
+		ParameterName: "account_destinationTokenAccount",
+		Constraint:    anyConstraint(), // Jupiter infrastructure
+	}, {
+		ParameterName: "account_destinationMint",
+		Constraint:    destinationMintConstraint,
+	}, {
+		ParameterName: "account_platformFeeAccount",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "account_eventAuthority",
+		Constraint:    fixed(jupEvent),
+	}, {
+		ParameterName: "account_program",
+		Constraint:    fixed(jupAddr),
+	}, {
+		ParameterName: "arg_routePlan",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "arg_slippageBps",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "arg_platformFeeBps",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "arg_inAmount",
+		Constraint:    c.fromAmount,
+	}, {
+		ParameterName: "arg_quotedOutAmount",
+		Constraint:    anyConstraint(),
+	}}
+
+	rules = append(rules, jupiterRule)
 
 	return rules, nil
 }
