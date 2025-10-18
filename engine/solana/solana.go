@@ -57,11 +57,6 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to resolve program id: %w", err)
 	}
 
-	err = assertTarget(r, rule.GetTarget(), programID)
-	if err != nil {
-		return fmt.Errorf("failed to assert target: %w", err)
-	}
-
 	idlProtocolSchema, ok := s.idl[r.ProtocolId]
 	if !ok {
 		return fmt.Errorf("unknown protocol id: %s", r.ProtocolId)
@@ -69,11 +64,6 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 	idlInstSchema, err := findInstruction(idlProtocolSchema.Instructions, r.FunctionId)
 	if err != nil {
 		return fmt.Errorf("failed to find instruction: %w", err)
-	}
-
-	err = assertAccounts(rule.GetParameterConstraints(), tx.Message, idlInstSchema.Accounts)
-	if err != nil {
-		return fmt.Errorf("failed to assert accounts: %w", err)
 	}
 
 	err = assertArgs(
@@ -84,6 +74,16 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to assert args: %w", err)
+	}
+
+	err = assertTarget(r, rule.GetTarget(), programID)
+	if err != nil {
+		return fmt.Errorf("failed to assert target: %w", err)
+	}
+
+	err = assertAccounts(rule.GetParameterConstraints(), tx.Message, idlInstSchema.Accounts)
+	if err != nil {
+		return fmt.Errorf("failed to assert accounts: %w", err)
 	}
 	return nil
 }
