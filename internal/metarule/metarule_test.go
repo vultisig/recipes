@@ -1035,7 +1035,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	// Verify first Jupiter route (route) has expected constraints
 	jupiterRule := result[6]
 	assert.Equal(t, jupiterAddress, jupiterRule.Target.GetAddress())
-	require.Len(t, jupiterRule.ParameterConstraints, 13) // Added account_destinationTokenAccount
+	require.Len(t, jupiterRule.ParameterConstraints, 14) // Added account_destinationTokenAccount and account_platformFeeAccount
 
 	paramByName = make(map[string]*types.ParameterConstraint)
 	for _, param := range jupiterRule.ParameterConstraints {

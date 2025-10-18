@@ -1026,6 +1026,11 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_destinationMint",
 				Constraint:    destinationMintConstraint,
 			})
+			// platformFeeAccount is optional in regular routes
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "account_platformFeeAccount",
+				Constraint:    anyConstraint(),
+			})
 		}
 
 		if instruction == "routeWithTokenLedger" || instruction == "sharedAccountsRouteWithTokenLedger" {
