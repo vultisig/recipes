@@ -771,6 +771,16 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	}
 	destinationTokenAccountConstraint = fixed(destATA)
 
+	// For the optional destinationTokenAccount parameter in route instructions:
+	// - If toAsset is native SOL: use Jupiter program address (for routing)
+	// - If toAsset is SPL token: use user's destination ATA
+	var optionalDestinationTokenAccountConstraint *types.Constraint
+	if toAssetStr == "" {
+		optionalDestinationTokenAccountConstraint = fixed(jupAddr)
+	} else {
+		optionalDestinationTokenAccountConstraint = destinationTokenAccountConstraint
+	}
+
 	// Allow System Program transfer for funding rent-exempt accounts and wrapping SOL
 	// This allows transfers to source and destination ATAs
 	// For native SOL swaps, Jupiter wraps SOL into WSOL by transferring to the WSOL ATA
@@ -1000,11 +1010,11 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_userDestinationTokenAccount",
-				Constraint:    destinationTokenAccountConstraint,
+				Constraint:    optionalDestinationTokenAccountConstraint,
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_destinationTokenAccount",
-				Constraint:    destinationTokenAccountConstraint,
+				Constraint:    optionalDestinationTokenAccountConstraint,
 			})
 			if instruction == "exactOutRoute" {
 				constraints = append(constraints, &types.ParameterConstraint{
