@@ -957,10 +957,16 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		ParameterName: "account_destinationTokenAccount",
 		Constraint:    anyConstraint(),
 	}, {
+		ParameterName: "account_sourceMint",
+		Constraint:    sourceMintConstraint,
+	}, {
 		ParameterName: "account_destinationMint",
 		Constraint:    destinationMintConstraint,
 	}, {
 		ParameterName: "account_platformFeeAccount",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "account_token2022Program",
 		Constraint:    anyConstraint(),
 	}, {
 		ParameterName: "account_eventAuthority",

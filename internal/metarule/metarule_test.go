@@ -1028,7 +1028,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	jupiterExactOutRule := result[7]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.exactOutRoute", jupiterExactOutRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterExactOutRule.Target.GetAddress())
-	require.Len(t, jupiterExactOutRule.ParameterConstraints, 14)
+	require.Len(t, jupiterExactOutRule.ParameterConstraints, 16) // exactOutRoute has 2 more accounts: sourceMint and token2022Program
 
 	// Verify route rule parameters (same for both route and exactOutRoute except arg names)
 	jupiterRule := jupiterRouteRule
@@ -1042,8 +1042,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, tokenProgramAddress, paramByName["account_tokenProgram"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_userTransferAuthority")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userTransferAuthority"].Constraint.Type)
-	assert.Equal(t, fromAddress, paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
@@ -1676,11 +1675,8 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_inAmount"].Constraint.Type)
 	assert.Equal(t, "50000000", paramByName["arg_inAmount"].Constraint.GetFixedValue())
 
-	// Verify FIXED constraint for userTransferAuthority (must be the fromAddress)
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userTransferAuthority"].Constraint.Type)
-	assert.Equal(t, "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", paramByName["account_userTransferAuthority"].Constraint.GetFixedValue())
-
-	// Verify ANY constraints exist for dynamic Jupiter infrastructure fields
+	// Verify ANY constraints exist for dynamic fields (userTransferAuthority can be any signer)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destinationTokenAccount"].Constraint.Type)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_platformFeeAccount"].Constraint.Type)
 
@@ -1716,4 +1712,8 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Contains(t, exactOutParamByName, "arg_quotedInAmount")
 	assert.NotContains(t, exactOutParamByName, "arg_inAmount")
 	assert.NotContains(t, exactOutParamByName, "arg_quotedOutAmount")
+
+	// exactOutRoute should have account_sourceMint and account_token2022Program that route doesn't have
+	assert.Contains(t, exactOutParamByName, "account_sourceMint")
+	assert.Contains(t, exactOutParamByName, "account_token2022Program")
 }
