@@ -893,7 +893,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		Constraint:    fixed(solana.TokenProgramID.String()),
 	}, {
 		ParameterName: "account_userTransferAuthority",
-		Constraint:    c.fromAddress,
+		Constraint:    anyConstraint(),
 	}, {
 		ParameterName: "account_userSourceTokenAccount",
 		Constraint:    sourceTokenAccountConstraint,
@@ -946,7 +946,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		Constraint:    fixed(solana.TokenProgramID.String()),
 	}, {
 		ParameterName: "account_userTransferAuthority",
-		Constraint:    c.fromAddress,
+		Constraint:    anyConstraint(),
 	}, {
 		ParameterName: "account_userSourceTokenAccount",
 		Constraint:    sourceTokenAccountConstraint,
