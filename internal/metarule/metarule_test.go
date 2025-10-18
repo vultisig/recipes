@@ -1061,10 +1061,9 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, expectedUserDestATA, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
 
 	// Verify the newly added account_destinationTokenAccount constraint
-	// For SPL token destinations (like WSOL), should be FIXED to user's destination ATA
+	// This is optional and can be Jupiter address, user's ATA, or other values
 	assert.Contains(t, paramByName, "account_destinationTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationTokenAccount"].Constraint.Type)
-	assert.Equal(t, expectedUserDestATA, paramByName["account_destinationTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destinationTokenAccount"].Constraint.Type)
 
 	assert.Contains(t, paramByName, "account_destinationMint")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationMint"].Constraint.Type)
