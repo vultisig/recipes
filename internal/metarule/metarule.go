@@ -1010,7 +1010,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_userDestinationTokenAccount",
-				Constraint:    optionalDestinationTokenAccountConstraint,
+				Constraint:    destinationTokenAccountConstraint,
 			})
 			constraints = append(constraints, &types.ParameterConstraint{
 				ParameterName: "account_destinationTokenAccount",
