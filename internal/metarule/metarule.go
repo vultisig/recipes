@@ -880,118 +880,61 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 	})
 
 	// Jupiter route instruction (exact input amount)
-	jupiterRouteRule := proto.Clone(in).(*types.Rule)
-	jupiterRouteRule.Resource = "solana.jupiter_aggregatorv6.route"
-	jupiterRouteRule.Target = &types.Target{
-		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-		Target: &types.Target_Address{
-			Address: jupAddr,
+	jupiterRouteRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.jupiter_aggregatorv6.route",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: jupAddr,
+			},
 		},
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}, {
+			ParameterName: "account_user_transfer_authority",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_user_source_token_account",
+			Constraint:    sourceTokenAccountConstraint,
+		}, {
+			ParameterName: "account_user_destination_token_account",
+			Constraint:    destinationTokenAccountConstraint,
+		}, {
+			ParameterName: "account_destination_token_account",
+			Constraint:    anyConstraint(), // Jupiter infrastructure
+		}, {
+			ParameterName: "account_destination_mint",
+			Constraint:    destinationMintConstraint,
+		}, {
+			ParameterName: "account_platform_fee_account",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_event_authority",
+			Constraint:    fixed(jupEvent),
+		}, {
+			ParameterName: "account_program",
+			Constraint:    fixed(jupAddr),
+		}, {
+			ParameterName: "arg_route_plan",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_slippage_bps",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_platform_fee_bps",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_in_amount",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "arg_quoted_out_amount",
+			Constraint:    anyConstraint(),
+		}},
 	}
-	jupiterRouteRule.ParameterConstraints = []*types.ParameterConstraint{{
-		ParameterName: "account_token_program",
-		Constraint:    fixed(solana.TokenProgramID.String()),
-	}, {
-		ParameterName: "account_user_transfer_authority",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_user_source_token_account",
-		Constraint:    sourceTokenAccountConstraint,
-	}, {
-		ParameterName: "account_user_destination_token_account",
-		Constraint:    destinationTokenAccountConstraint,
-	}, {
-		ParameterName: "account_destination_token_account",
-		Constraint:    anyConstraint(), // Jupiter infrastructure
-	}, {
-		ParameterName: "account_destination_mint",
-		Constraint:    destinationMintConstraint,
-	}, {
-		ParameterName: "account_platform_fee_account",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_event_authority",
-		Constraint:    fixed(jupEvent),
-	}, {
-		ParameterName: "account_program",
-		Constraint:    fixed(jupAddr),
-	}, {
-		ParameterName: "arg_route_plan",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_slippage_bps",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_platform_fee_bps",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_in_amount",
-		Constraint:    c.fromAmount,
-	}, {
-		ParameterName: "arg_quoted_out_amount",
-		Constraint:    anyConstraint(),
-	}}
 
-	// Jupiter exactOutRoute instruction (exact output amount)
-	jupiterExactOutRule := proto.Clone(in).(*types.Rule)
-	jupiterExactOutRule.Resource = "solana.jupiter_aggregatorv6.exactOutRoute"
-	jupiterExactOutRule.Target = &types.Target{
-		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-		Target: &types.Target_Address{
-			Address: jupAddr,
-		},
-	}
-	jupiterExactOutRule.ParameterConstraints = []*types.ParameterConstraint{{
-		ParameterName: "account_token_program",
-		Constraint:    fixed(solana.TokenProgramID.String()),
-	}, {
-		ParameterName: "account_user_transfer_authority",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_user_source_token_account",
-		Constraint:    sourceTokenAccountConstraint,
-	}, {
-		ParameterName: "account_user_destination_token_account",
-		Constraint:    destinationTokenAccountConstraint,
-	}, {
-		ParameterName: "account_destination_token_account",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_source_mint",
-		Constraint:    sourceMintConstraint,
-	}, {
-		ParameterName: "account_destination_mint",
-		Constraint:    destinationMintConstraint,
-	}, {
-		ParameterName: "account_platform_fee_account",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_token_2022_program",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "account_event_authority",
-		Constraint:    fixed(jupEvent),
-	}, {
-		ParameterName: "account_program",
-		Constraint:    fixed(jupAddr),
-	}, {
-		ParameterName: "arg_route_plan",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_slippage_bps",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_platform_fee_bps",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_out_amount",
-		Constraint:    anyConstraint(),
-	}, {
-		ParameterName: "arg_quoted_in_amount",
-		Constraint:    anyConstraint(),
-	}}
-
-	rules = append(rules, jupiterRouteRule, jupiterExactOutRule)
+	rules = append(rules, jupiterRouteRule)
 
 	return rules, nil
 }

@@ -967,7 +967,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8) // 2 system transfers + 2 ATA create (source + dest) + 1 syncNative + 1 SPL token approve + 2 Jupiter (route + exactOutRoute)
+	require.Len(t, result, 7) // 2 system transfers + 2 ATA create (source + dest) + 1 syncNative + 1 SPL token approve + 1 Jupiter route
 
 	// First two rules should be system transfers
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1024,13 +1024,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, jupiterAddress, jupiterRouteRule.Target.GetAddress())
 	require.Len(t, jupiterRouteRule.ParameterConstraints, 14)
 
-	// Eighth rule should be Jupiter exactOutRoute
-	jupiterExactOutRule := result[7]
-	assert.Equal(t, "solana.jupiter_aggregatorv6.exactOutRoute", jupiterExactOutRule.Resource)
-	assert.Equal(t, jupiterAddress, jupiterExactOutRule.Target.GetAddress())
-	require.Len(t, jupiterExactOutRule.ParameterConstraints, 16) // exactOutRoute has 2 more accounts: sourceMint and token2022Program
-
-	// Verify route rule parameters (same for both route and exactOutRoute except arg names)
+	// Verify route rule parameters
 	jupiterRule := jupiterRouteRule
 
 	paramByName = make(map[string]*types.ParameterConstraint)
@@ -1161,7 +1155,7 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8) // 2 system transfers + 2 ATA create + 1 syncNative + 1 WSOL approve + 2 Jupiter (route + exactOutRoute) for native SOL to SPL token
+	require.Len(t, result, 7) // 2 system transfers + 2 ATA create + 1 syncNative + 1 WSOL approve + 1 Jupiter route for native SOL to SPL token
 
 	// First two rules should be system transfers
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1186,10 +1180,6 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 	// Seventh rule should be Jupiter route
 	jupiterRouteRule := result[6]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
-
-	// Eighth rule should be Jupiter exactOutRoute
-	jupiterExactOutRule := result[7]
-	assert.Equal(t, "solana.jupiter_aggregatorv6.exactOutRoute", jupiterExactOutRule.Resource)
 }
 
 const testXRPAddress = "rw2ciyaNshpHe7bCHo4bRWq6pqqynnWKQg"
@@ -1607,7 +1597,7 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8, "should have 2 system transfers + 2 ATA creates + 1 syncNative + 1 approve + 2 Jupiter (route + exactOutRoute)")
+	require.Len(t, result, 7, "should have 2 system transfers + 2 ATA creates + 1 syncNative + 1 approve + 1 Jupiter route")
 
 	// First two rules should be system transfers for source and destination ATA funding
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1690,30 +1680,4 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 	require.NoError(t, err)
 	assert.Equal(t, expectedDestATA, paramByName["account_user_destination_token_account"].Constraint.GetFixedValue())
-
-	// Also verify exactOutRoute rule exists with similar constraints
-	var exactOutRule *types.Rule
-	for _, r := range result {
-		if r.Resource == "solana.jupiter_aggregatorv6.exactOutRoute" {
-			exactOutRule = r
-			break
-		}
-	}
-	require.NotNil(t, exactOutRule, "should have exactOutRoute rule")
-
-	// Verify exactOutRoute has correct parameters
-	exactOutParamByName := make(map[string]*types.ParameterConstraint)
-	for _, param := range exactOutRule.ParameterConstraints {
-		exactOutParamByName[param.ParameterName] = param
-	}
-
-	// exactOutRoute should have arg_out_amount and arg_quoted_in_amount instead of arg_in_amount and arg_quoted_out_amount
-	assert.Contains(t, exactOutParamByName, "arg_out_amount")
-	assert.Contains(t, exactOutParamByName, "arg_quoted_in_amount")
-	assert.NotContains(t, exactOutParamByName, "arg_in_amount")
-	assert.NotContains(t, exactOutParamByName, "arg_quoted_out_amount")
-
-	// exactOutRoute should have account_source_mint and account_token_2022_program that route doesn't have
-	assert.Contains(t, exactOutParamByName, "account_source_mint")
-	assert.Contains(t, exactOutParamByName, "account_token_2022_program")
 }
