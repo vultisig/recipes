@@ -1,24 +1,29 @@
 {
-  "version": "1.0.0",
-  "name": "spl_token",
+  "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "metadata": {
+    "name": "spl_token",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
   "instructions": [
     {
       "name": "transfer",
+      "discriminator": [3],
       "accounts": [
         {
           "name": "source",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "destination",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "writable": false,
+          "signer": true
         }
       ],
       "args": [
@@ -26,33 +31,31 @@
           "name": "amount",
           "type": "u64"
         }
-      ],
-      "metadata": {
-        "discriminator": [3]
-      }
+      ]
     },
     {
       "name": "transferChecked",
+      "discriminator": [12],
       "accounts": [
         {
           "name": "source",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "mint",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "destination",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "writable": false,
+          "signer": true
         }
       ],
       "args": [
@@ -64,28 +67,26 @@
           "name": "decimals",
           "type": "u8"
         }
-      ],
-      "metadata": {
-        "discriminator": [12]
-      }
+      ]
     },
     {
       "name": "approve",
+      "discriminator": [4],
       "accounts": [
         {
           "name": "source",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "delegate",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "owner",
-          "isMut": false,
-          "isSigner": true
+          "writable": false,
+          "signer": true
         }
       ],
       "args": [
@@ -93,28 +94,26 @@
           "name": "amount",
           "type": "u64"
         }
-      ],
-      "metadata": {
-        "discriminator": [4]
-      }
+      ]
     },
     {
       "name": "mintTo",
+      "discriminator": [7],
       "accounts": [
         {
           "name": "mint",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "destination",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "writable": false,
+          "signer": true
         }
       ],
       "args": [
@@ -122,28 +121,26 @@
           "name": "amount",
           "type": "u64"
         }
-      ],
-      "metadata": {
-        "discriminator": [7]
-      }
+      ]
     },
     {
       "name": "burn",
+      "discriminator": [8],
       "accounts": [
         {
           "name": "source",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "mint",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "writable": false,
+          "signer": true
         }
       ],
       "args": [
@@ -151,24 +148,19 @@
           "name": "amount",
           "type": "u64"
         }
-      ],
-      "metadata": {
-        "discriminator": [8]
-      }
+      ]
     },
     {
       "name": "syncNative",
+      "discriminator": [17],
       "accounts": [
         {
           "name": "account",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         }
       ],
-      "args": [],
-      "metadata": {
-        "discriminator": [17]
-      }
+      "args": []
     }
   ]
 }

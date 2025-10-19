@@ -197,6 +197,12 @@ func assertArgsSequential(
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
+		case argBool:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewBool)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
 		case argPublicKey:
 			er := decodeAndAssert(decoder, constraints, name, solcmp.NewPubKey)
 			if er != nil {

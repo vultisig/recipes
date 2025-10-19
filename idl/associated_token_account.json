@@ -1,84 +1,84 @@
 {
-  "version": "1.0.0",
-  "name": "associated_token_account",
+  "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  "metadata": {
+    "name": "associated_token_account",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
   "instructions": [
     {
       "name": "create",
+      "discriminator": [],
       "accounts": [
         {
           "name": "payer",
-          "isMut": true,
-          "isSigner": true
+          "writable": true,
+          "signer": true
         },
         {
           "name": "associatedTokenAccount",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "owner",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "mint",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         }
       ],
-      "args": [],
-      "metadata": {
-        "discriminator": []
-      }
+      "args": []
     },
     {
       "name": "createIdempotent",
+      "discriminator": [1],
       "accounts": [
         {
           "name": "payer",
-          "isMut": true,
-          "isSigner": true
+          "writable": true,
+          "signer": true
         },
         {
           "name": "associatedTokenAccount",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         },
         {
           "name": "owner",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "mint",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         },
         {
           "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
+          "writable": false,
+          "signer": false
         }
       ],
-      "args": [],
-      "metadata": {
-        "discriminator": [1]
-      }
+      "args": []
     }
   ]
 }
