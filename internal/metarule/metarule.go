@@ -684,7 +684,7 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 	return ataAddr.String(), nil
 }
 
-func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*types.Rule, error) {
+func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types.Rule, error) {
 	toChainStr, err := getFixed(c.toChain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fixed value for toChain: %w", err)
