@@ -1071,20 +1071,20 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Contains(t, paramByName, "account_program")
 	assert.Equal(t, jupiterAddress, paramByName["account_program"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "arg_routePlan")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_routePlan"].Constraint.Type)
+	assert.Contains(t, paramByName, "arg_route_plan")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_route_plan"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "arg_inAmount")
-	assert.Equal(t, fromAmount, paramByName["arg_inAmount"].Constraint.GetFixedValue())
+	assert.Contains(t, paramByName, "arg_in_amount")
+	assert.Equal(t, fromAmount, paramByName["arg_in_amount"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "arg_quotedOutAmount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_quotedOutAmount"].Constraint.Type)
+	assert.Contains(t, paramByName, "arg_quoted_out_amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_quoted_out_amount"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "arg_slippageBps")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_slippageBps"].Constraint.Type)
+	assert.Contains(t, paramByName, "arg_slippage_bps")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_slippage_bps"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "arg_platformFeeBps")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_platformFeeBps"].Constraint.Type)
+	assert.Contains(t, paramByName, "arg_platform_fee_bps")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["arg_platform_fee_bps"].Constraint.Type)
 }
 
 func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
@@ -1653,11 +1653,11 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Contains(t, paramByName, "account_program")
 
 	// Verify argument constraints are present
-	assert.Contains(t, paramByName, "arg_routePlan")
-	assert.Contains(t, paramByName, "arg_inAmount")
-	assert.Contains(t, paramByName, "arg_quotedOutAmount")
-	assert.Contains(t, paramByName, "arg_slippageBps")
-	assert.Contains(t, paramByName, "arg_platformFeeBps")
+	assert.Contains(t, paramByName, "arg_route_plan")
+	assert.Contains(t, paramByName, "arg_in_amount")
+	assert.Contains(t, paramByName, "arg_quoted_out_amount")
+	assert.Contains(t, paramByName, "arg_slippage_bps")
+	assert.Contains(t, paramByName, "arg_platform_fee_bps")
 
 	// Verify FIXED constraints
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_token_program"].Constraint.Type)
@@ -1672,8 +1672,8 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_program"].Constraint.Type)
 	assert.Equal(t, "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", paramByName["account_program"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_inAmount"].Constraint.Type)
-	assert.Equal(t, "50000000", paramByName["arg_inAmount"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_in_amount"].Constraint.Type)
+	assert.Equal(t, "50000000", paramByName["arg_in_amount"].Constraint.GetFixedValue())
 
 	// Verify ANY constraints exist for dynamic fields (userTransferAuthority can be any signer)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_user_transfer_authority"].Constraint.Type)
@@ -1707,11 +1707,11 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 		exactOutParamByName[param.ParameterName] = param
 	}
 
-	// exactOutRoute should have arg_outAmount and arg_quotedInAmount instead of arg_inAmount and arg_quotedOutAmount
-	assert.Contains(t, exactOutParamByName, "arg_outAmount")
-	assert.Contains(t, exactOutParamByName, "arg_quotedInAmount")
-	assert.NotContains(t, exactOutParamByName, "arg_inAmount")
-	assert.NotContains(t, exactOutParamByName, "arg_quotedOutAmount")
+	// exactOutRoute should have arg_out_amount and arg_quoted_in_amount instead of arg_in_amount and arg_quoted_out_amount
+	assert.Contains(t, exactOutParamByName, "arg_out_amount")
+	assert.Contains(t, exactOutParamByName, "arg_quoted_in_amount")
+	assert.NotContains(t, exactOutParamByName, "arg_in_amount")
+	assert.NotContains(t, exactOutParamByName, "arg_quoted_out_amount")
 
 	// exactOutRoute should have account_source_mint and account_token_2022_program that route doesn't have
 	assert.Contains(t, exactOutParamByName, "account_source_mint")

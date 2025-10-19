@@ -916,19 +916,19 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		ParameterName: "account_program",
 		Constraint:    fixed(jupAddr),
 	}, {
-		ParameterName: "arg_routePlan",
+		ParameterName: "arg_route_plan",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_slippageBps",
+		ParameterName: "arg_slippage_bps",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_platformFeeBps",
+		ParameterName: "arg_platform_fee_bps",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_inAmount",
+		ParameterName: "arg_in_amount",
 		Constraint:    c.fromAmount,
 	}, {
-		ParameterName: "arg_quotedOutAmount",
+		ParameterName: "arg_quoted_out_amount",
 		Constraint:    anyConstraint(),
 	}}
 
@@ -975,19 +975,19 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		ParameterName: "account_program",
 		Constraint:    fixed(jupAddr),
 	}, {
-		ParameterName: "arg_routePlan",
+		ParameterName: "arg_route_plan",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_slippageBps",
+		ParameterName: "arg_slippage_bps",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_platformFeeBps",
+		ParameterName: "arg_platform_fee_bps",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_outAmount",
+		ParameterName: "arg_out_amount",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "arg_quotedInAmount",
+		ParameterName: "arg_quoted_in_amount",
 		Constraint:    anyConstraint(),
 	}}
 
