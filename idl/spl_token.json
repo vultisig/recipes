@@ -161,6 +161,28 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "closeAccount",
+      "discriminator": [9],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "owner",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": []
     }
   ]
 }
