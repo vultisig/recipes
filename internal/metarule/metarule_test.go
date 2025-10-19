@@ -1038,35 +1038,35 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 		paramByName[param.ParameterName] = param
 	}
 
-	assert.Contains(t, paramByName, "account_tokenProgram")
-	assert.Equal(t, tokenProgramAddress, paramByName["account_tokenProgram"].Constraint.GetFixedValue())
+	assert.Contains(t, paramByName, "account_token_program")
+	assert.Equal(t, tokenProgramAddress, paramByName["account_token_program"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "account_userTransferAuthority")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
+	assert.Contains(t, paramByName, "account_user_transfer_authority")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_user_transfer_authority"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	assert.Contains(t, paramByName, "account_user_source_token_account")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_user_source_token_account"].Constraint.Type)
 	expectedUserSourceATA, err := DeriveATA(fromAddress, fromAsset)
 	require.NoError(t, err)
-	assert.Equal(t, expectedUserSourceATA, paramByName["account_userSourceTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, expectedUserSourceATA, paramByName["account_user_source_token_account"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "account_userDestinationTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userDestinationTokenAccount"].Constraint.Type)
+	assert.Contains(t, paramByName, "account_user_destination_token_account")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_user_destination_token_account"].Constraint.Type)
 	expectedUserDestATA, err := DeriveATA(toAddress, toAsset)
 	require.NoError(t, err)
-	assert.Equal(t, expectedUserDestATA, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, expectedUserDestATA, paramByName["account_user_destination_token_account"].Constraint.GetFixedValue())
 
-	// Verify the newly added account_destinationTokenAccount constraint
+	// Verify the newly added account_destination_token_account constraint
 	// This is optional and can be Jupiter address, user's ATA, or other values
-	assert.Contains(t, paramByName, "account_destinationTokenAccount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destinationTokenAccount"].Constraint.Type)
+	assert.Contains(t, paramByName, "account_destination_token_account")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destination_token_account"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "account_destinationMint")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationMint"].Constraint.Type)
-	assert.Equal(t, toAsset, paramByName["account_destinationMint"].Constraint.GetFixedValue())
+	assert.Contains(t, paramByName, "account_destination_mint")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destination_mint"].Constraint.Type)
+	assert.Equal(t, toAsset, paramByName["account_destination_mint"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "account_eventAuthority")
-	assert.Equal(t, jupiterEvent, paramByName["account_eventAuthority"].Constraint.GetFixedValue())
+	assert.Contains(t, paramByName, "account_event_authority")
+	assert.Equal(t, jupiterEvent, paramByName["account_event_authority"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_program")
 	assert.Equal(t, jupiterAddress, paramByName["account_program"].Constraint.GetFixedValue())
@@ -1642,14 +1642,14 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	}
 
 	// Verify all account constraints are present
-	assert.Contains(t, paramByName, "account_tokenProgram")
-	assert.Contains(t, paramByName, "account_userTransferAuthority")
-	assert.Contains(t, paramByName, "account_userSourceTokenAccount")
-	assert.Contains(t, paramByName, "account_userDestinationTokenAccount")
-	assert.Contains(t, paramByName, "account_destinationTokenAccount")
-	assert.Contains(t, paramByName, "account_destinationMint")
-	assert.Contains(t, paramByName, "account_platformFeeAccount")
-	assert.Contains(t, paramByName, "account_eventAuthority")
+	assert.Contains(t, paramByName, "account_token_program")
+	assert.Contains(t, paramByName, "account_user_transfer_authority")
+	assert.Contains(t, paramByName, "account_user_source_token_account")
+	assert.Contains(t, paramByName, "account_user_destination_token_account")
+	assert.Contains(t, paramByName, "account_destination_token_account")
+	assert.Contains(t, paramByName, "account_destination_mint")
+	assert.Contains(t, paramByName, "account_platform_fee_account")
+	assert.Contains(t, paramByName, "account_event_authority")
 	assert.Contains(t, paramByName, "account_program")
 
 	// Verify argument constraints are present
@@ -1660,14 +1660,14 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Contains(t, paramByName, "arg_platformFeeBps")
 
 	// Verify FIXED constraints
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_tokenProgram"].Constraint.Type)
-	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", paramByName["account_tokenProgram"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_token_program"].Constraint.Type)
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", paramByName["account_token_program"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destinationMint"].Constraint.Type)
-	assert.Equal(t, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", paramByName["account_destinationMint"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destination_mint"].Constraint.Type)
+	assert.Equal(t, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", paramByName["account_destination_mint"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_eventAuthority"].Constraint.Type)
-	assert.Equal(t, "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf", paramByName["account_eventAuthority"].Constraint.GetFixedValue())
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_event_authority"].Constraint.Type)
+	assert.Equal(t, "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf", paramByName["account_event_authority"].Constraint.GetFixedValue())
 
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_program"].Constraint.Type)
 	assert.Equal(t, "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", paramByName["account_program"].Constraint.GetFixedValue())
@@ -1676,20 +1676,20 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Equal(t, "50000000", paramByName["arg_inAmount"].Constraint.GetFixedValue())
 
 	// Verify ANY constraints exist for dynamic fields (userTransferAuthority can be any signer)
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_userTransferAuthority"].Constraint.Type)
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destinationTokenAccount"].Constraint.Type)
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_platformFeeAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_user_transfer_authority"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_destination_token_account"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_platform_fee_account"].Constraint.Type)
 
 	// Verify FIXED constraints for user ATAs
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userSourceTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_user_source_token_account"].Constraint.Type)
 	expectedSourceATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "So11111111111111111111111111111111111111112")
 	require.NoError(t, err)
-	assert.Equal(t, expectedSourceATA, paramByName["account_userSourceTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, expectedSourceATA, paramByName["account_user_source_token_account"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_userDestinationTokenAccount"].Constraint.Type)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_user_destination_token_account"].Constraint.Type)
 	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 	require.NoError(t, err)
-	assert.Equal(t, expectedDestATA, paramByName["account_userDestinationTokenAccount"].Constraint.GetFixedValue())
+	assert.Equal(t, expectedDestATA, paramByName["account_user_destination_token_account"].Constraint.GetFixedValue())
 
 	// Also verify exactOutRoute rule exists with similar constraints
 	var exactOutRule *types.Rule
@@ -1713,7 +1713,7 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.NotContains(t, exactOutParamByName, "arg_inAmount")
 	assert.NotContains(t, exactOutParamByName, "arg_quotedOutAmount")
 
-	// exactOutRoute should have account_sourceMint and account_token2022Program that route doesn't have
-	assert.Contains(t, exactOutParamByName, "account_sourceMint")
-	assert.Contains(t, exactOutParamByName, "account_token2022Program")
+	// exactOutRoute should have account_source_mint and account_token_2022_program that route doesn't have
+	assert.Contains(t, exactOutParamByName, "account_source_mint")
+	assert.Contains(t, exactOutParamByName, "account_token_2022_program")
 }

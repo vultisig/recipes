@@ -16,7 +16,7 @@
           "signer": true
         },
         {
-          "name": "associatedTokenAccount",
+          "name": "associated_token_account",
           "writable": true,
           "signer": false
         },
@@ -31,12 +31,12 @@
           "signer": false
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "writable": false,
           "signer": false
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "writable": false,
           "signer": false
         }
@@ -53,7 +53,7 @@
           "signer": true
         },
         {
-          "name": "associatedTokenAccount",
+          "name": "associated_token_account",
           "writable": true,
           "signer": false
         },
@@ -68,12 +68,12 @@
           "signer": false
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "writable": false,
           "signer": false
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "writable": false,
           "signer": false
         }

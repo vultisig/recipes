@@ -797,7 +797,7 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_payer",
 				Constraint:    payer,
 			}, {
-				ParameterName: "account_associatedTokenAccount",
+				ParameterName: "account_associated_token_account",
 				Constraint:    ata,
 			}, {
 				ParameterName: "account_owner",
@@ -806,10 +806,10 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 				ParameterName: "account_mint",
 				Constraint:    mint,
 			}, {
-				ParameterName: "account_systemProgram",
+				ParameterName: "account_system_program",
 				Constraint:    fixed(solana.SystemProgramID.String()),
 			}, {
-				ParameterName: "account_tokenProgram",
+				ParameterName: "account_token_program",
 				Constraint:    fixed(solana.TokenProgramID.String()),
 			}},
 			Target: &types.Target{
@@ -889,28 +889,28 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		},
 	}
 	jupiterRouteRule.ParameterConstraints = []*types.ParameterConstraint{{
-		ParameterName: "account_tokenProgram",
+		ParameterName: "account_token_program",
 		Constraint:    fixed(solana.TokenProgramID.String()),
 	}, {
-		ParameterName: "account_userTransferAuthority",
+		ParameterName: "account_user_transfer_authority",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_userSourceTokenAccount",
+		ParameterName: "account_user_source_token_account",
 		Constraint:    sourceTokenAccountConstraint,
 	}, {
-		ParameterName: "account_userDestinationTokenAccount",
+		ParameterName: "account_user_destination_token_account",
 		Constraint:    destinationTokenAccountConstraint,
 	}, {
-		ParameterName: "account_destinationTokenAccount",
+		ParameterName: "account_destination_token_account",
 		Constraint:    anyConstraint(), // Jupiter infrastructure
 	}, {
-		ParameterName: "account_destinationMint",
+		ParameterName: "account_destination_mint",
 		Constraint:    destinationMintConstraint,
 	}, {
-		ParameterName: "account_platformFeeAccount",
+		ParameterName: "account_platform_fee_account",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_eventAuthority",
+		ParameterName: "account_event_authority",
 		Constraint:    fixed(jupEvent),
 	}, {
 		ParameterName: "account_program",
@@ -942,34 +942,34 @@ func (m *MetaRule) createJupiterRule(in *types.Rule, c swapConstraints) ([]*type
 		},
 	}
 	jupiterExactOutRule.ParameterConstraints = []*types.ParameterConstraint{{
-		ParameterName: "account_tokenProgram",
+		ParameterName: "account_token_program",
 		Constraint:    fixed(solana.TokenProgramID.String()),
 	}, {
-		ParameterName: "account_userTransferAuthority",
+		ParameterName: "account_user_transfer_authority",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_userSourceTokenAccount",
+		ParameterName: "account_user_source_token_account",
 		Constraint:    sourceTokenAccountConstraint,
 	}, {
-		ParameterName: "account_userDestinationTokenAccount",
+		ParameterName: "account_user_destination_token_account",
 		Constraint:    destinationTokenAccountConstraint,
 	}, {
-		ParameterName: "account_destinationTokenAccount",
+		ParameterName: "account_destination_token_account",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_sourceMint",
+		ParameterName: "account_source_mint",
 		Constraint:    sourceMintConstraint,
 	}, {
-		ParameterName: "account_destinationMint",
+		ParameterName: "account_destination_mint",
 		Constraint:    destinationMintConstraint,
 	}, {
-		ParameterName: "account_platformFeeAccount",
+		ParameterName: "account_platform_fee_account",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_token2022Program",
+		ParameterName: "account_token_2022_program",
 		Constraint:    anyConstraint(),
 	}, {
-		ParameterName: "account_eventAuthority",
+		ParameterName: "account_event_authority",
 		Constraint:    fixed(jupEvent),
 	}, {
 		ParameterName: "account_program",
