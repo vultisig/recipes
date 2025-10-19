@@ -967,7 +967,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8) // 2 system transfers + 2 ATA create (source + dest) + 1 syncNative + 1 SPL token approve + 2 Jupiter (route + shared_accounts_route)
+	require.Len(t, result, 9) // 2 system transfers + 2 ATA create (source + dest) + 1 syncNative + 1 SPL token approve + 1 closeAccount + 2 Jupiter (route + shared_accounts_route)
 
 	// First two rules should be system transfers
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1018,14 +1018,20 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["arg_amount"].Constraint.Type)
 	assert.Equal(t, fromAmount, paramByName["arg_amount"].Constraint.GetFixedValue())
 
-	// Seventh rule should be Jupiter route
-	jupiterRouteRule := result[6]
+	// Seventh rule should be SPL token closeAccount
+	closeAccountRule := result[6]
+	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+	assert.Equal(t, tokenProgramAddress, closeAccountRule.Target.GetAddress())
+	require.Len(t, closeAccountRule.ParameterConstraints, 3)
+
+	// Eighth rule should be Jupiter route
+	jupiterRouteRule := result[7]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterRouteRule.Target.GetAddress())
 	require.Len(t, jupiterRouteRule.ParameterConstraints, 14)
 
-	// Eighth rule should be Jupiter shared_accounts_route
-	jupiterSharedAccountsRouteRule := result[7]
+	// Ninth rule should be Jupiter shared_accounts_route
+	jupiterSharedAccountsRouteRule := result[8]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.shared_accounts_route", jupiterSharedAccountsRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterSharedAccountsRouteRule.Target.GetAddress())
 	require.Len(t, jupiterSharedAccountsRouteRule.ParameterConstraints, 19)
@@ -1161,7 +1167,7 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8) // 2 system transfers + 2 ATA create + 1 syncNative + 1 WSOL approve + 2 Jupiter (route + shared_accounts_route) for native SOL to SPL token
+	require.Len(t, result, 9) // 2 system transfers + 2 ATA create + 1 syncNative + 1 WSOL approve + 1 closeAccount + 2 Jupiter (route + shared_accounts_route) for native SOL to SPL token
 
 	// First two rules should be system transfers
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1183,12 +1189,16 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 
-	// Seventh rule should be Jupiter route
-	jupiterRouteRule := result[6]
+	// Seventh rule should be SPL token closeAccount
+	closeAccountRule := result[6]
+	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+
+	// Eighth rule should be Jupiter route
+	jupiterRouteRule := result[7]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
 
-	// Eighth rule should be Jupiter shared_accounts_route
-	jupiterSharedAccountsRouteRule := result[7]
+	// Ninth rule should be Jupiter shared_accounts_route
+	jupiterSharedAccountsRouteRule := result[8]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.shared_accounts_route", jupiterSharedAccountsRouteRule.Resource)
 }
 
@@ -1607,7 +1617,7 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 8, "should have 2 system transfers + 2 ATA creates + 1 syncNative + 1 approve + 2 Jupiter (route + shared_accounts_route)")
+	require.Len(t, result, 9, "should have 2 system transfers + 2 ATA creates + 1 syncNative + 1 approve + 1 closeAccount + 2 Jupiter (route + shared_accounts_route)")
 
 	// First two rules should be system transfers for source and destination ATA funding
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
@@ -1624,6 +1634,11 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	approveRule := result[5]
 	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
+
+	// Seventh rule should be SPL token closeAccount
+	closeAccountRule := result[6]
+	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", closeAccountRule.Target.GetAddress())
 
 	// Find route rule
 	var routeRule *types.Rule

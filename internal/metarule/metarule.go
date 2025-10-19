@@ -879,6 +879,28 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 		},
 	})
 
+	// SPL Token CloseAccount - closes wSOL account and unwraps back to native SOL
+	rules = append(rules, &types.Rule{
+		Resource: "solana.spl_token.closeAccount",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_account",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_destination",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.fromAddress,
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.TokenProgramID.String(),
+			},
+		},
+	})
+
 	// Jupiter route instruction (exact input amount)
 	jupiterRouteRule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
