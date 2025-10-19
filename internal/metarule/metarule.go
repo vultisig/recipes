@@ -934,7 +934,77 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 		}},
 	}
 
-	rules = append(rules, jupiterRouteRule)
+	// Jupiter shared_accounts_route instruction (optimized for multi-hop swaps)
+	jupiterSharedAccountsRouteRule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.jupiter_aggregatorv6.shared_accounts_route",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: jupAddr,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}, {
+			ParameterName: "account_program_authority",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_user_transfer_authority",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_source_token_account",
+			Constraint:    sourceTokenAccountConstraint,
+		}, {
+			ParameterName: "account_program_source_token_account",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_program_destination_token_account",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_destination_token_account",
+			Constraint:    destinationTokenAccountConstraint,
+		}, {
+			ParameterName: "account_source_mint",
+			Constraint:    sourceMintConstraint,
+		}, {
+			ParameterName: "account_destination_mint",
+			Constraint:    destinationMintConstraint,
+		}, {
+			ParameterName: "account_platform_fee_account",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_token_2022_program",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "account_event_authority",
+			Constraint:    fixed(jupEvent),
+		}, {
+			ParameterName: "account_program",
+			Constraint:    fixed(jupAddr),
+		}, {
+			ParameterName: "arg_id",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_route_plan",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_in_amount",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "arg_quoted_out_amount",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_slippage_bps",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "arg_platform_fee_bps",
+			Constraint:    anyConstraint(),
+		}},
+	}
+
+	rules = append(rules, jupiterRouteRule, jupiterSharedAccountsRouteRule)
 
 	return rules, nil
 }
