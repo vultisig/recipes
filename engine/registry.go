@@ -5,6 +5,7 @@ import (
 
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
+	"github.com/vultisig/recipes/engine/thorchain"
 	"github.com/vultisig/recipes/engine/xrpl"
 	"github.com/vultisig/recipes/engine/solana"
 	"github.com/vultisig/recipes/types"
@@ -56,6 +57,9 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 	
 	// Register XRPL engine
 	registry.Register(xrpl.NewXRPL())
+
+	// Register Thorchain engine
+	registry.Register(thorchain.NewThorchain())
 
 	solEng, err := solana.NewSolana()
 	if err != nil {
