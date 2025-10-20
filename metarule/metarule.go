@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gagliardetto/solana-go"
-	"github.com/vultisig/recipes/internal/metarule/thorchain"
+	"github.com/vultisig/recipes/metarule/internal/thorchain"
 	"github.com/vultisig/recipes/sdk/evm"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
