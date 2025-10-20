@@ -1,19 +1,24 @@
 {
-  "version": "1.0.0",
-  "name": "system",
+  "address": "11111111111111111111111111111111",
+  "metadata": {
+    "name": "system",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
   "instructions": [
     {
       "name": "transfer",
+      "discriminator": [2, 0, 0, 0],
       "accounts": [
         {
           "name": "from",
-          "isMut": true,
-          "isSigner": true
+          "writable": true,
+          "signer": true
         },
         {
           "name": "to",
-          "isMut": true,
-          "isSigner": false
+          "writable": true,
+          "signer": false
         }
       ],
       "args": [
@@ -21,23 +26,21 @@
           "name": "lamports",
           "type": "u64"
         }
-      ],
-      "metadata": {
-        "discriminator": [2, 0, 0, 0]
-      }
+      ]
     },
     {
       "name": "create_account",
+      "discriminator": [0, 0, 0, 0],
       "accounts": [
         {
           "name": "from",
-          "isMut": true,
-          "isSigner": true
+          "writable": true,
+          "signer": true
         },
         {
           "name": "to",
-          "isMut": true,
-          "isSigner": true
+          "writable": true,
+          "signer": true
         }
       ],
       "args": [
@@ -53,10 +56,7 @@
           "name": "owner",
           "type": "publicKey"
         }
-      ],
-      "metadata": {
-        "discriminator": [0, 0, 0, 0]
-      }
+      ]
     }
   ]
 }

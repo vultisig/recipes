@@ -105,11 +105,14 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 	const constraintPrefix = "account_"
 
 	inst := msg.Instructions[0]
-	if len(accs) != len(inst.Accounts) {
+	idlAccountCount := len(accs)
+	actualAccountCount := len(inst.Accounts)
+
+	if actualAccountCount < idlAccountCount {
 		return fmt.Errorf(
-			"account count mismatch: IDL has %d accounts, tx has %d accounts",
-			len(accs),
-			len(inst.Accounts),
+			"not enough accounts: IDL requires %d accounts, tx has %d accounts",
+			idlAccountCount,
+			actualAccountCount,
 		)
 	}
 
@@ -132,6 +135,7 @@ func assertAccounts(constraints []*types.ParameterConstraint, msg solana.Message
 			return fmt.Errorf("failed to assert: name=%s: %w", name, err)
 		}
 	}
+
 	return nil
 }
 
@@ -148,8 +152,100 @@ func assertArgs(
 		return fmt.Errorf("discriminator validation failed: %w", err)
 	}
 
+	firstComplexIdx := -1
+	for i, arg := range args {
+		if arg.IsComplex {
+			firstComplexIdx = i
+			break
+		}
+	}
+
+	if firstComplexIdx == -1 {
+		return assertArgsSequential(constraints, data, args, discriminator, constraintPrefix)
+	}
+
+	return assertArgsWithComplex(constraints, data, args, discriminator, constraintPrefix, firstComplexIdx)
+}
+
+func assertArgsSequential(
+	constraints []*types.ParameterConstraint,
+	data solana.Base58,
+	args []idlArgument,
+	discriminator []byte,
+	constraintPrefix string,
+) error {
 	decoder := bin.NewBorshDecoder(data[len(discriminator):])
 	for _, arg := range args {
+		name := constraintPrefix + arg.Name
+
+		switch arg.Type {
+		case argU8:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint8)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argU16:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint16)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argU64:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewUint64)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argBool:
+			er := decodeAndAssert(decoder, constraints, name, compare.NewBool)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argPublicKey:
+			er := decodeAndAssert(decoder, constraints, name, solcmp.NewPubKey)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argVec:
+			var vecLen uint32
+			er := decoder.Decode(&vecLen)
+			if er != nil {
+				return fmt.Errorf("failed to decode vector length for %s: %w", name, er)
+			}
+
+			er = compare.AssertArg(
+				common.Solana.String(),
+				constraints,
+				name,
+				struct{}{},
+				compare.NewFalsy,
+			)
+			if er != nil {
+				return fmt.Errorf("failed to assert vector: %w", er)
+			}
+
+		default:
+			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
+		}
+	}
+	return nil
+}
+
+func assertArgsWithComplex(
+	constraints []*types.ParameterConstraint,
+	data solana.Base58,
+	args []idlArgument,
+	discriminator []byte,
+	constraintPrefix string,
+	firstComplexIdx int,
+) error {
+	decoder := bin.NewBorshDecoder(data[len(discriminator):])
+
+	for i := 0; i < firstComplexIdx; i++ {
+		arg := args[i]
 		name := constraintPrefix + arg.Name
 
 		switch arg.Type {
@@ -177,31 +273,94 @@ func assertArgs(
 				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
-		// For vector types, decode the length first and then skip the vector elements
-		// Falsy comparer means assert would pass only on ANY rule-constraint, for example, for FIXED it would fail
-		case argVec:
-			// add correct padding to the decoder offset
-			var vecLen uint32
-			er := decoder.Decode(&vecLen)
+		default:
+			return fmt.Errorf("unsupported argument type before complex: %s (name=%s)", arg.Type, arg.Name)
+		}
+	}
+
+	lastComplexIdx := firstComplexIdx
+	for i := firstComplexIdx; i < len(args); i++ {
+		if args[i].IsComplex {
+			lastComplexIdx = i
+		} else {
+			break
+		}
+	}
+
+	for i := firstComplexIdx; i <= lastComplexIdx; i++ {
+		arg := args[i]
+		name := constraintPrefix + arg.Name
+
+		er := compare.AssertArg(
+			common.Solana.String(),
+			constraints,
+			name,
+			struct{}{},
+			compare.NewFalsy,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert complex type: %w", er)
+		}
+	}
+
+	if lastComplexIdx+1 >= len(args) {
+		return nil
+	}
+
+	suffixBytes := 0
+	for i := lastComplexIdx + 1; i < len(args); i++ {
+		arg := args[i]
+		switch arg.Type {
+		case argU8:
+			suffixBytes += 1
+		case argU16:
+			suffixBytes += 2
+		case argU64:
+			suffixBytes += 8
+		case argPublicKey:
+			suffixBytes += 32
+		default:
+			return fmt.Errorf("unsupported argument type after complex: %s (name=%s)", arg.Type, arg.Name)
+		}
+	}
+
+	suffixData := data[len(data)-suffixBytes:]
+	suffixDecoder := bin.NewBorshDecoder(suffixData)
+
+	for i := lastComplexIdx + 1; i < len(args); i++ {
+		arg := args[i]
+		name := constraintPrefix + arg.Name
+
+		switch arg.Type {
+		case argU8:
+			er := decodeAndAssert(suffixDecoder, constraints, name, compare.NewUint8)
 			if er != nil {
-				return fmt.Errorf("failed to decode vector length for %s: %w", name, er)
+				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
-			er = compare.AssertArg(
-				common.Solana.String(),
-				constraints,
-				name,
-				struct{}{},
-				compare.NewFalsy,
-			)
+		case argU16:
+			er := decodeAndAssert(suffixDecoder, constraints, name, compare.NewUint16)
 			if er != nil {
-				return fmt.Errorf("failed to assert vector: %w", er)
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argU64:
+			er := decodeAndAssert(suffixDecoder, constraints, name, compare.NewUint64)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
+			}
+
+		case argPublicKey:
+			er := decodeAndAssert(suffixDecoder, constraints, name, solcmp.NewPubKey)
+			if er != nil {
+				return fmt.Errorf("failed to decode & assert: %w", er)
 			}
 
 		default:
-			return fmt.Errorf("unsupported argument type: %s (name=%s)", arg.Type, arg.Name)
+			return fmt.Errorf("unsupported argument type after complex: %s (name=%s)", arg.Type, arg.Name)
 		}
 	}
+
 	return nil
 }
 
