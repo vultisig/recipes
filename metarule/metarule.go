@@ -359,10 +359,8 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		rules := make([]*types.Rule, 0)
 
-		spenderAddr := in.GetTarget().GetAddress()
-		if spenderAddr == "" {
-			spenderAddr = "0x111111125421ca6dc452d289314280a0f8842a65"
-		}
+		const routerAddr = "0x111111125421ca6dc452d289314280a0f8842a65"
+		router := fixed(routerAddr)
 
 		approve := proto.Clone(in).(*types.Rule)
 		approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
@@ -382,13 +380,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			},
 			{
 				ParameterName: "spender",
-				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: spenderAddr,
-					},
-					Required: true,
-				},
+				Constraint:    router,
 			},
 		}
 
@@ -396,7 +388,12 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		out := proto.Clone(in).(*types.Rule)
 		out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
-		out.Target = in.GetTarget()
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: routerAddr,
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "executor",
@@ -415,14 +412,11 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			},
 			{
 				ParameterName: "desc.srcReceiver",
-				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
-				},
+				Constraint:    c.fromAddress,
 			},
 			{
 				ParameterName: "desc.dstReceiver",
-				Constraint:    c.fromAddress,
+				Constraint:    c.toAddress,
 			},
 			{
 				ParameterName: "desc.amount",
