@@ -359,6 +359,11 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		rules := make([]*types.Rule, 0)
 
+		spenderAddr := in.GetTarget().GetAddress()
+		if spenderAddr == "" {
+			spenderAddr = "0x111111125421ca6dc452d289314280a0f8842a65"
+		}
+
 		approve := proto.Clone(in).(*types.Rule)
 		approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
 		approve.Target = &types.Target{
@@ -380,7 +385,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: in.GetTarget().GetAddress(),
+						FixedValue: spenderAddr,
 					},
 					Required: true,
 				},
