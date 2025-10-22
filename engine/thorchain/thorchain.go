@@ -29,7 +29,6 @@ type Thorchain struct {
 func NewThorchain() *Thorchain {
 	ir := codectypes.NewInterfaceRegistry()
 
-	// Let the modules register all their Msg implementations on the standard Msg interface.
 	banktypes.RegisterInterfaces(ir)
 
 	return &Thorchain{cdc: codec.NewProtoCodec(ir)}
@@ -41,7 +40,6 @@ func (t *Thorchain) Supports(chain common.Chain) bool {
 }
 
 // Evaluate validates a Thorchain transaction against policy rules
-// This is the main entry point called by the main engine
 func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 	// Validate rule effect is ALLOW (following existing pattern from other engines)
 	if rule.GetEffect().String() != vtypes.Effect_EFFECT_ALLOW.String() {
@@ -54,30 +52,25 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	// Parse Thorchain transaction from txBytes
 	txData, err := t.parseTransaction(txBytes)
 	if err != nil {
 		return fmt.Errorf("failed to parse Thorchain transaction: %w", err)
 	}
 
-	// Validate transaction has messages
 	if txData.Body == nil || len(txData.Body.Messages) == 0 {
 		return fmt.Errorf("transaction must have at least one message")
 	}
 
-	// Validate message type, only MsgSend currently
 	// TODO add MsgDeposit support for thorchain swaps
 	msg := txData.Body.Messages[0]
 	if err := t.validateMessageType(msg); err != nil {
 		return fmt.Errorf("unsupported message type: %w", err)
 	}
 
-	// Validate target if specified
 	if err := t.validateTarget(r, rule.GetTarget(), txData); err != nil {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
-	// Validate parameter constraints
 	if err := t.validateParameterConstraints(r, rule.GetParameterConstraints(), txData); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
@@ -141,8 +134,7 @@ func (t *Thorchain) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, erro
 func (t *Thorchain) validateMessageType(msg *codectypes.Any) error {
 	_, err := t.unpackMsgSend(msg)
 	if err != nil {
-		// TODO: Add support for MsgDeposit (swaps and DeFi operations)
-		// MsgDeposit will be needed for swap transactions with memos like "SWAP:ETH.ETH:address"
+		// TODO: Add support for MsgDeposit
 		return fmt.Errorf("only MsgSend transactions are supported for now, got: %s", msg.TypeUrl)
 	}
 	return nil
@@ -160,6 +152,7 @@ func (t *Thorchain) validateTarget(resource *vtypes.ResourcePath, target *vtypes
 	}
 
 	// Unpack the first message as MsgSend
+	// TODO add support for MsgDeposit
 	msg := txData.Body.Messages[0]
 	msgSend, err := t.unpackMsgSend(msg)
 	if err != nil {
@@ -172,7 +165,6 @@ func (t *Thorchain) validateTarget(resource *vtypes.ResourcePath, target *vtypes
 		if expectedAddress == "" {
 			return fmt.Errorf("target address cannot be empty")
 		}
-		// For Thorchain, we validate against the ToAddress (recipient)
 		if msgSend.ToAddress != expectedAddress {
 			return fmt.Errorf("target address mismatch: expected=%s, actual=%s",
 				expectedAddress, msgSend.ToAddress)
@@ -220,13 +212,11 @@ func (t *Thorchain) validateParameterConstraints(resource *vtypes.ResourcePath, 
 	for _, constraint := range constraints {
 		paramName := constraint.GetParameterName()
 
-		// Extract the actual value from the transaction based on parameter name
 		value, err := t.extractParameterValue(paramName, txData)
 		if err != nil {
 			return fmt.Errorf("failed to extract parameter %s: %w", paramName, err)
 		}
 
-		// Use type-based constraint validation
 		if err := t.assertArgsByType(resource.ChainId, paramName, value, constraints); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
 		}
@@ -241,6 +231,7 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 	}
 
 	// Unpack the first message as MsgSend
+	// TODO add support for MsgDeposit
 	msg := txData.Body.Messages[0]
 	msgSend, err := t.unpackMsgSend(msg)
 	if err != nil {
@@ -251,15 +242,12 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 	case "recipient":
 		return msgSend.ToAddress, nil
 	case "amount":
-		// Return amount as *big.Int for numeric comparisons
 		if len(msgSend.Amount) == 0 {
 			return nil, fmt.Errorf("no amount in message")
 		}
-		// Validate single coin only - multi-coin transfers not supported
 		if len(msgSend.Amount) != 1 {
 			return nil, fmt.Errorf("multi-coin transfers not supported, got %d coins", len(msgSend.Amount))
 		}
-		// Use the single coin amount
 		coin := msgSend.Amount[0]
 		return coin.Amount.BigInt(), nil
 	case "memo":
@@ -268,7 +256,6 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 		if len(msgSend.Amount) == 0 {
 			return nil, fmt.Errorf("no amount in message")
 		}
-		// Validate single coin only - multi-coin transfers not supported
 		if len(msgSend.Amount) != 1 {
 			return nil, fmt.Errorf("multi-coin transfers not supported, got %d coins", len(msgSend.Amount))
 		}
