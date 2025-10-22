@@ -104,6 +104,10 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 
 	// If JSON parsing fails, try base64 (common transport encoding for protobuf bytes)
 	if b64, err := base64.StdEncoding.DecodeString(string(txBytes)); err == nil {
+		// Check decoded size to prevent DoS via large decoded payloads
+		if len(b64) > maxTxBytes {
+			return nil, fmt.Errorf("decoded base64 transaction too large: %d bytes (max %d)", len(b64), maxTxBytes)
+		}
 		if err := t.cdc.Unmarshal(b64, &txData); err == nil {
 			return &txData, nil
 		}
@@ -118,6 +122,11 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	decodedBytes, hexErr := hex.DecodeString(s)
 	if hexErr != nil {
 		return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, base64, or hex")
+	}
+
+	// Check decoded size to prevent DoS via large decoded payloads
+	if len(decodedBytes) > maxTxBytes {
+		return nil, fmt.Errorf("decoded hex transaction too large: %d bytes (max %d)", len(decodedBytes), maxTxBytes)
 	}
 
 	// Try parsing decoded hex bytes as protobuf
