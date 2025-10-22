@@ -27,6 +27,25 @@ const (
 	swap metaProtocol = "swap"
 )
 
+func getOneInchSpender(chain common.Chain) (string, error) {
+	oneInchSpenders := map[common.Chain]string{
+		common.Ethereum:  "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Arbitrum:  "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Avalanche: "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.BscChain:  "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Base:      "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Optimism:  "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Polygon:   "0x111111125421ca6dc452d289314280a0f8842a65",
+		common.Zksync:    "0x6fd4383cb451173d5f9304f041c7bcbf27d561ff",
+	}
+
+	spender, ok := oneInchSpenders[chain]
+	if !ok {
+		return "", fmt.Errorf("no 1inch spender address configured for chain: %s", chain.String())
+	}
+	return spender, nil
+}
+
 // TryFormat meta-rule to exact rule(s). For example:
 // solana.send -> solana.system.transfer or solana.spl_token.transfer
 // solana.system.transfer -> unmodified solana.system.transfer
@@ -357,9 +376,12 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("invalid chainID: %w", err)
 		}
 
-		rules := make([]*types.Rule, 0)
+		routerAddr, err := getOneInchSpender(chain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get 1inch spender: %w", err)
+		}
 
-		const routerAddr = "0x111111125421ca6dc452d289314280a0f8842a65"
+		rules := make([]*types.Rule, 0)
 		router := fixed(routerAddr)
 
 		approve := proto.Clone(in).(*types.Rule)
