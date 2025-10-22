@@ -155,6 +155,8 @@ func mockAccsAndArgs(instruction idlInstruction) ([]*solana.Wallet, map[string]a
 			values[a.Name] = argument{kind: a.Type, value: "1000"}
 		case argU8:
 			values[a.Name] = argument{kind: a.Type, value: "6"}
+		case argBool:
+			values[a.Name] = argument{kind: a.Type, value: "true"}
 		case argPublicKey:
 			values[a.Name] = argument{kind: a.Type, value: solana.NewWallet().PublicKey().String()}
 		case argVec:
@@ -464,6 +466,14 @@ func buildInstructionData(
 			}
 			if er := encoder.WriteUint8(uint8(val)); er != nil {
 				return nil, fmt.Errorf("failed to encode u8 value for arg %s: %w", arg.Name, er)
+			}
+		case argBool:
+			val, err := strconv.ParseBool(v.value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse bool value %q for arg %s: %w", v, arg.Name, err)
+			}
+			if er := encoder.WriteBool(val); er != nil {
+				return nil, fmt.Errorf("failed to encode bool value for arg %s: %w", arg.Name, er)
 			}
 		case argPublicKey:
 			pubkey, err := solana.PublicKeyFromBase58(v.value)

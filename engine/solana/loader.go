@@ -25,14 +25,67 @@ type idlInstruction struct {
 	Metadata idlMetadata   `json:"metadata"`
 }
 
+func (inst *idlInstruction) UnmarshalJSON(data []byte) error {
+	type Alias idlInstruction
+	aux := &struct {
+		Discriminator []byte `json:"discriminator"`
+		*Alias
+	}{
+		Alias: (*Alias)(inst),
+	}
+
+	err := json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	if len(aux.Discriminator) > 0 {
+		inst.Metadata.Discriminator = aux.Discriminator
+	}
+
+	return nil
+}
+
 type idlMetadata struct {
 	Discriminator []byte `json:"discriminator,omitempty"`
 }
 
 type idlAccount struct {
-	Name     string `json:"name"`
-	IsMut    bool   `json:"isMut"`
-	IsSigner bool   `json:"isSigner"`
+	Name       string `json:"name"`
+	IsMut      bool   `json:"isMut"`
+	IsSigner   bool   `json:"isSigner"`
+	IsOptional bool   `json:"isOptional"`
+}
+
+func (acc *idlAccount) UnmarshalJSON(data []byte) error {
+	type Alias idlAccount
+	aux := &struct {
+		Writable *bool `json:"writable"`
+		Signer   *bool `json:"signer"`
+		Optional *bool `json:"optional"`
+		*Alias
+	}{
+		Alias: (*Alias)(acc),
+	}
+
+	err := json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	if aux.Writable != nil {
+		acc.IsMut = *aux.Writable
+	}
+
+	if aux.Signer != nil {
+		acc.IsSigner = *aux.Signer
+	}
+
+	if aux.Optional != nil {
+		acc.IsOptional = *aux.Optional
+	}
+
+	return nil
 }
 
 type argType string
@@ -64,15 +117,78 @@ const (
 	argU8        argType = "u8"
 	argU16       argType = "u16"
 	argU64       argType = "u64"
+	argBool      argType = "bool"
 	argPublicKey argType = "publicKey"
 
 	// nested types
-	argVec argType = "vec"
+	argVec     argType = "vec"
+	argDefined argType = "defined"
 )
 
 type idlArgument struct {
-	Name string  `json:"name"`
-	Type argType `json:"type"`
+	Name      string                 `json:"name"`
+	Type      argType                `json:"type"`
+	TypeInfo  map[string]interface{} `json:"-"`
+	IsComplex bool                   `json:"-"`
+}
+
+func (arg *idlArgument) UnmarshalJSON(data []byte) error {
+	type Alias idlArgument
+	aux := &struct {
+		Type json.RawMessage `json:"type"`
+		*Alias
+	}{
+		Alias: (*Alias)(arg),
+	}
+
+	err := json.Unmarshal(data, aux)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(aux.Type, &arg.Type)
+	if err != nil {
+		return err
+	}
+
+	var typeInfo map[string]interface{}
+	err = json.Unmarshal(aux.Type, &typeInfo)
+	if err == nil && len(typeInfo) > 0 {
+		arg.TypeInfo = typeInfo
+		arg.IsComplex = isComplexType(typeInfo)
+	}
+
+	return nil
+}
+
+func isComplexType(typeInfo map[string]interface{}) bool {
+	if len(typeInfo) == 0 {
+		return false
+	}
+
+	for key, value := range typeInfo {
+		switch key {
+		case "vec":
+			vecContent, ok := value.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			if _, hasDefined := vecContent["defined"]; hasDefined {
+				return true
+			}
+			return isComplexType(vecContent)
+		case "defined":
+			return true
+		case "option":
+			optionContent, ok := value.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			return isComplexType(optionContent)
+		}
+	}
+
+	return false
 }
 
 type idlType struct {
