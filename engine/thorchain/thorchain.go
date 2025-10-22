@@ -62,6 +62,10 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 		return fmt.Errorf("transaction must have at least one message")
 	}
 
+	if len(txData.Body.Messages) != 1 {
+		return fmt.Errorf("only single-message transactions supported, got %d messages", len(txData.Body.Messages))
+	}
+
 	// TODO add MsgDeposit support for thorchain swaps
 	msg := txData.Body.Messages[0]
 	if err := t.validateMessageType(msg); err != nil {
