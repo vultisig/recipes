@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -312,19 +314,75 @@ func TestThorchain_parseTransaction(t *testing.T) {
 		{
 			name:        "empty transaction data",
 			txBytes:     []byte{},
-			shouldError: false, // Empty bytes actually parse successfully as empty protobuf
+			shouldError: true,
+			errorMsg:    "empty transaction data",
 		},
 		{
 			name:        "invalid JSON",
 			txBytes:     []byte(`{"invalid": json}`),
 			shouldError: true,
-			errorMsg:    "failed to parse transaction as protobuf, JSON, or hex",
+			errorMsg:    "failed to parse transaction as protobuf, JSON, base64, or hex",
 		},
 		{
 			name:        "invalid hex string",
 			txBytes:     []byte("0xZZZZ"),
 			shouldError: true,
-			errorMsg:    "failed to parse transaction as protobuf, JSON, or hex",
+			errorMsg:    "failed to parse transaction as protobuf, JSON, base64, or hex",
+		},
+		{
+			name: "transaction size too large",
+			setup: func() []byte {
+				// Create a transaction larger than 32 KB limit
+				return make([]byte, 32*1024+1) // 32 KB + 1 byte
+			},
+			shouldError: true,
+			errorMsg:    "transaction too large",
+		},
+		{
+			name: "valid hex-encoded transaction with 0x prefix",
+			setup: func() []byte {
+				// Create a valid transaction and hex encode it
+				engine := NewThorchain()
+				msgSend := &banktypes.MsgSend{
+					FromAddress: "thor1from123456789",
+					ToAddress:   "thor1to123456789",
+					Amount:      sdk.NewCoins(sdk.NewCoin("rune", math.NewInt(1000000))),
+				}
+				msgAny, _ := types.NewAnyWithValue(msgSend)
+				txData := &tx.Tx{
+					Body: &tx.TxBody{
+						Messages: []*types.Any{msgAny},
+						Memo:     "hex test",
+					},
+				}
+				protoBytes, _ := engine.cdc.Marshal(txData)
+				hexStr := "0x" + hex.EncodeToString(protoBytes)
+				return []byte(hexStr)
+			},
+			shouldError: false,
+		},
+		{
+			name: "valid base64-encoded transaction",
+			setup: func() []byte {
+				// Create a valid transaction and base64 encode it
+				engine := NewThorchain()
+				msgSend := &banktypes.MsgSend{
+					FromAddress: "thor1from123456789",
+					ToAddress:   "thor1to123456789",
+					Amount:      sdk.NewCoins(sdk.NewCoin("rune", math.NewInt(1000000))),
+				}
+				msgAny, _ := types.NewAnyWithValue(msgSend)
+				txData := &tx.Tx{
+					Body: &tx.TxBody{
+						Messages: []*types.Any{msgAny},
+						Memo:     "base64 test",
+					},
+				}
+				protoBytes, _ := engine.cdc.Marshal(txData)
+				base64Str := base64.StdEncoding.EncodeToString(protoBytes)
+				return []byte(base64Str)
+			},
+			shouldError: false,
 		},
 	}
 

@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -79,7 +80,17 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 }
 
 // parseTransaction parses Thorchain transaction bytes into a Cosmos SDK transaction
+// Supports protobuf, JSON, base64-encoded, and hex-encoded formats with security hardening
 func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
+	const maxTxBytes = 32 * 1024 // 32 KB - sufficient for complex transactions while preventing DoS
+	if len(txBytes) > maxTxBytes {
+		return nil, fmt.Errorf("transaction too large: %d bytes (max %d)", len(txBytes), maxTxBytes)
+	}
+
+	if len(txBytes) == 0 {
+		return nil, fmt.Errorf("empty transaction data")
+	}
+
 	// Try to parse as protobuf first (standard Cosmos SDK format)
 	var txData tx.Tx
 	if err := t.cdc.Unmarshal(txBytes, &txData); err == nil {
@@ -91,24 +102,35 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 		return &txData, nil
 	}
 
-	// If JSON parsing fails, try to decode as hex string
-	hexStr := strings.TrimPrefix(string(txBytes), "0x")
-	decodedBytes, hexErr := hex.DecodeString(hexStr)
-	if hexErr != nil {
-		return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, or hex")
+	// If JSON parsing fails, try base64 (common transport encoding for protobuf bytes)
+	if b64, err := base64.StdEncoding.DecodeString(string(txBytes)); err == nil {
+		if err := t.cdc.Unmarshal(b64, &txData); err == nil {
+			return &txData, nil
+		}
+		if err := json.Unmarshal(b64, &txData); err == nil {
+			return &txData, nil
+		}
 	}
 
-	// Try parsing decoded bytes as protobuf
+	// Finally, try hex (handle 0x/0X prefixes)
+	s := strings.TrimPrefix(string(txBytes), "0x")
+	s = strings.TrimPrefix(s, "0X")
+	decodedBytes, hexErr := hex.DecodeString(s)
+	if hexErr != nil {
+		return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, base64, or hex")
+	}
+
+	// Try parsing decoded hex bytes as protobuf
 	if err := t.cdc.Unmarshal(decodedBytes, &txData); err == nil {
 		return &txData, nil
 	}
 
-	// Try parsing decoded bytes as JSON
+	// Try parsing decoded hex bytes as JSON
 	if err := json.Unmarshal(decodedBytes, &txData); err == nil {
 		return &txData, nil
 	}
 
-	return nil, fmt.Errorf("unable to parse transaction in any supported format")
+	return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, base64, or hex")
 }
 
 // unpackMsgSend unpacks a message to MsgSend type
