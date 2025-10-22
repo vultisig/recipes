@@ -65,7 +65,8 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 		return fmt.Errorf("transaction must have at least one message")
 	}
 
-	// Validate message type
+	// Validate message type, only MsgSend currently
+	// TODO add MsgDeposit support for thorchain swaps
 	msg := txData.Body.Messages[0]
 	if err := t.validateMessageType(msg); err != nil {
 		return fmt.Errorf("unsupported message type: %w", err)
@@ -234,7 +235,6 @@ func (t *Thorchain) validateParameterConstraints(resource *vtypes.ResourcePath, 
 }
 
 // extractParameterValue extracts the actual value from transaction for the given parameter name
-// Returns appropriate Go types: *big.Int for amounts, string for others
 func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any, error) {
 	if txData.Body == nil || len(txData.Body.Messages) == 0 {
 		return nil, fmt.Errorf("no messages in transaction")
@@ -255,7 +255,11 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 		if len(msgSend.Amount) == 0 {
 			return nil, fmt.Errorf("no amount in message")
 		}
-		// Use the first coin amount (assuming RUNE transfers)
+		// Validate single coin only - multi-coin transfers not supported
+		if len(msgSend.Amount) != 1 {
+			return nil, fmt.Errorf("multi-coin transfers not supported, got %d coins", len(msgSend.Amount))
+		}
+		// Use the single coin amount
 		coin := msgSend.Amount[0]
 		return coin.Amount.BigInt(), nil
 	case "memo":
@@ -263,6 +267,10 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 	case "denom":
 		if len(msgSend.Amount) == 0 {
 			return nil, fmt.Errorf("no amount in message")
+		}
+		// Validate single coin only - multi-coin transfers not supported
+		if len(msgSend.Amount) != 1 {
+			return nil, fmt.Errorf("multi-coin transfers not supported, got %d coins", len(msgSend.Amount))
 		}
 		return msgSend.Amount[0].Denom, nil
 	default:
