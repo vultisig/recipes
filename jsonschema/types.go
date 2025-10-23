@@ -1,5 +1,11 @@
 package jsonschema
 
+func Definitions() map[string]interface{} {
+	return map[string]interface{}{
+		"asset": Asset(),
+	}
+}
+
 func Asset() map[string]interface{} {
 	return map[string]interface{}{
 		"$schema":     "https://json-schema.org/draft/2020-12/schema",
