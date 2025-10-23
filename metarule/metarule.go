@@ -444,7 +444,9 @@ func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, er
 		dstToken = oneinchNative
 	}
 
-	out := &types.Rule{}
+	out := &types.Rule{
+		Effect: types.Effect_EFFECT_ALLOW,
+	}
 	out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
 	out.Target = &types.Target{
 		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
