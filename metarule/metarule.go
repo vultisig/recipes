@@ -384,29 +384,44 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		rules := make([]*types.Rule, 0)
 		router := fixed(routerAddr)
 
-		approve := proto.Clone(in).(*types.Rule)
-		approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-		approve.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: c.fromAsset.GetFixedValue(),
-			},
-		}
-		approve.ParameterConstraints = []*types.ParameterConstraint{
-			{
-				ParameterName: "amount",
-				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
+		if c.fromAsset.GetFixedValue() != "" {
+			approve := proto.Clone(in).(*types.Rule)
+			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+			approve.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: c.fromAsset.GetFixedValue(),
 				},
-			},
-			{
-				ParameterName: "spender",
-				Constraint:    router,
-			},
+			}
+			approve.ParameterConstraints = []*types.ParameterConstraint{
+				{
+					ParameterName: "amount",
+					Constraint: &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+						Value: &types.Constraint_MinValue{
+							MinValue: c.fromAmount.GetFixedValue(),
+						},
+					},
+				},
+				{
+					ParameterName: "spender",
+					Constraint:    router,
+				},
+			}
+			rules = append(rules, approve)
 		}
 
-		rules = append(rules, approve)
+		const oneinchNative = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+
+		srcToken := c.fromAsset.GetFixedValue()
+		if c.fromAsset.GetFixedValue() == "" {
+			srcToken = oneinchNative
+		}
+
+		dstToken := c.toAsset.GetFixedValue()
+		if c.toAsset.GetFixedValue() == "" {
+			dstToken = oneinchNative
+		}
 
 		out := proto.Clone(in).(*types.Rule)
 		out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
@@ -420,21 +435,20 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			{
 				ParameterName: "executor",
 				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
 				},
 			},
 			{
 				ParameterName: "desc.srcToken",
-				Constraint:    c.fromAsset,
+				Constraint:    fixed(srcToken),
 			},
 			{
 				ParameterName: "desc.dstToken",
-				Constraint:    c.toAsset,
+				Constraint:    fixed(dstToken),
 			},
 			{
 				ParameterName: "desc.srcReceiver",
-				Constraint:    c.fromAddress,
+				Constraint:    anyConstraint(),
 			},
 			{
 				ParameterName: "desc.dstReceiver",
@@ -446,24 +460,15 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			},
 			{
 				ParameterName: "desc.minReturnAmount",
-				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
-				},
+				Constraint:    anyConstraint(),
 			},
 			{
 				ParameterName: "desc.flags",
-				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
-				},
+				Constraint:    anyConstraint(),
 			},
 			{
 				ParameterName: "data",
-				Constraint: &types.Constraint{
-					Type:     types.ConstraintType_CONSTRAINT_TYPE_ANY,
-					Required: true,
-				},
+				Constraint:    anyConstraint(),
 			}}
 		rules = append(rules, out)
 		return rules, nil
