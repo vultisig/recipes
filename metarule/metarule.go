@@ -376,13 +376,22 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("invalid chainID: %w", err)
 		}
 
-		routerAddr, err := getOneInchSpender(chain)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get 1inch spender: %w", err)
-		}
-
 		rules := make([]*types.Rule, 0)
-		router := fixed(routerAddr)
+
+		var router *types.Constraint
+		if r.GetChainId() == strings.ToLower(c.toChain.GetFixedValue()) {
+			// same chain - 1inch
+			oneinchRouter, out, er := oneinchSwap(chain, c)
+			if er != nil {
+				return nil, fmt.Errorf("failed to create oneinch swap rule: %w", er)
+			}
+
+			rules = append(rules, out)
+			router = fixed(oneinchRouter)
+		} else {
+			// cross chain - ThorChain
+			// TODO @webpiratt
+		}
 
 		if c.fromAsset.GetFixedValue() != "" {
 			approve := proto.Clone(in).(*types.Rule)
@@ -411,70 +420,79 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			rules = append(rules, approve)
 		}
 
-		const oneinchNative = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-
-		srcToken := c.fromAsset.GetFixedValue()
-		if c.fromAsset.GetFixedValue() == "" {
-			srcToken = oneinchNative
-		}
-
-		dstToken := c.toAsset.GetFixedValue()
-		if c.toAsset.GetFixedValue() == "" {
-			dstToken = oneinchNative
-		}
-
-		out := proto.Clone(in).(*types.Rule)
-		out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
-		out.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-			Target: &types.Target_Address{
-				Address: routerAddr,
-			},
-		}
-		out.ParameterConstraints = []*types.ParameterConstraint{
-			{
-				ParameterName: "executor",
-				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
-				},
-			},
-			{
-				ParameterName: "desc.srcToken",
-				Constraint:    fixed(srcToken),
-			},
-			{
-				ParameterName: "desc.dstToken",
-				Constraint:    fixed(dstToken),
-			},
-			{
-				ParameterName: "desc.srcReceiver",
-				Constraint:    anyConstraint(),
-			},
-			{
-				ParameterName: "desc.dstReceiver",
-				Constraint:    c.toAddress,
-			},
-			{
-				ParameterName: "desc.amount",
-				Constraint:    c.fromAmount,
-			},
-			{
-				ParameterName: "desc.minReturnAmount",
-				Constraint:    anyConstraint(),
-			},
-			{
-				ParameterName: "desc.flags",
-				Constraint:    anyConstraint(),
-			},
-			{
-				ParameterName: "data",
-				Constraint:    anyConstraint(),
-			}}
-		rules = append(rules, out)
 		return rules, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
+}
+
+func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, error) {
+	const oneinchNative = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+
+	oneinchRouterAddr, err := getOneInchSpender(chain)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get 1inch spender: %w", err)
+	}
+
+	srcToken := c.fromAsset.GetFixedValue()
+	if c.fromAsset.GetFixedValue() == "" {
+		srcToken = oneinchNative
+	}
+
+	dstToken := c.toAsset.GetFixedValue()
+	if c.toAsset.GetFixedValue() == "" {
+		dstToken = oneinchNative
+	}
+
+	out := &types.Rule{}
+	out.Resource = fmt.Sprintf("%s.routerV6_1inch.swap", strings.ToLower(chain.String()))
+	out.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+		Target: &types.Target_Address{
+			Address: oneinchRouterAddr,
+		},
+	}
+	out.ParameterConstraints = []*types.ParameterConstraint{
+		{
+			ParameterName: "executor",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+			},
+		},
+		{
+			ParameterName: "desc.srcToken",
+			Constraint:    fixed(srcToken),
+		},
+		{
+			ParameterName: "desc.dstToken",
+			Constraint:    fixed(dstToken),
+		},
+		{
+			ParameterName: "desc.srcReceiver",
+			Constraint:    anyConstraint(),
+		},
+		{
+			ParameterName: "desc.dstReceiver",
+			Constraint:    c.toAddress,
+		},
+		{
+			ParameterName: "desc.amount",
+			Constraint:    c.fromAmount,
+		},
+		{
+			ParameterName: "desc.minReturnAmount",
+			Constraint:    anyConstraint(),
+		},
+		{
+			ParameterName: "desc.flags",
+			Constraint:    anyConstraint(),
+		},
+		{
+			ParameterName: "data",
+			Constraint:    anyConstraint(),
+		}}
+
+	return oneinchRouterAddr, out, nil
 }
 
 func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
