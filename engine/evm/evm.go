@@ -74,13 +74,6 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return nil
 	}
 
-	if tx.Value() != nil && tx.Value().Sign() != 0 {
-		return fmt.Errorf(
-			"tx value must be zero for non-native: abi=%s, tx_value=%s",
-			r.ProtocolId,
-			tx.Value().String(),
-		)
-	}
 	er := e.assertArgsAbi(r, rule, tx.Data())
 	if er != nil {
 		return fmt.Errorf("failed to Evaluate ABI: %w", er)
