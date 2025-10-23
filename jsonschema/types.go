@@ -6,10 +6,14 @@ func Definitions() map[string]interface{} {
 	}
 }
 
+func id(label string) string {
+	return "https://github.com/vultisig/recipes/jsonschema/types/" + label
+}
+
 func Asset() map[string]interface{} {
 	return map[string]interface{}{
 		"$schema":     "https://json-schema.org/draft/2020-12/schema",
-		"$id":         "https://github.com/vultisig/recipes/jsonschema/asset",
+		"$id":         id("asset"),
 		"title":       "Asset",
 		"description": "An asset schema representing a blockchain asset with token, chain, and address information",
 		"type":        "object",
