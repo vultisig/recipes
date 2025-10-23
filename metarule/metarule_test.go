@@ -590,7 +590,7 @@ func TestTryFormat_EvmSwap(t *testing.T) {
 		fromAmount        = "1000000"
 		weth              = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" // WETH
 		usdc              = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
-		routerAddr        = "0x111111125421cA6dc452d289314280a0f8842A65"
+		routerAddr        = "0x111111125421ca6dc452d289314280a0f8842a65"
 		expectedResource0 = "ethereum.erc20.approve"
 		expectedResource1 = "ethereum.routerV6_1inch.swap"
 	)
@@ -667,29 +667,13 @@ func TestTryFormat_EvmSwap(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result, 2)
 
-	assert.Equal(t, expectedResource0, result[0].Resource)
+	assert.Equal(t, expectedResource1, result[0].Resource)
 	assert.Equal(t, types.TargetType_TARGET_TYPE_ADDRESS, result[0].Target.TargetType)
-	assert.Equal(t, usdc, result[0].GetTarget().GetAddress())
-	require.Len(t, result[0].ParameterConstraints, 2)
+	assert.Equal(t, routerAddr, result[0].GetTarget().GetAddress())
+	require.Len(t, result[0].ParameterConstraints, 9)
 
 	paramByName := make(map[string]*types.ParameterConstraint)
 	for _, param := range result[0].ParameterConstraints {
-		paramByName[param.ParameterName] = param
-	}
-
-	assert.Contains(t, paramByName, "spender")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["spender"].Constraint.Type)
-	assert.Equal(t, routerAddr, paramByName["spender"].Constraint.GetFixedValue())
-
-	assert.Contains(t, paramByName, "amount")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["amount"].Constraint.Type)
-
-	assert.Equal(t, expectedResource1, result[1].Resource)
-	assert.Equal(t, types.TargetType_TARGET_TYPE_ADDRESS, result[1].Target.TargetType)
-	require.Len(t, result[1].ParameterConstraints, 9)
-
-	paramByName = make(map[string]*types.ParameterConstraint)
-	for _, param := range result[1].ParameterConstraints {
 		paramByName[param.ParameterName] = param
 	}
 
@@ -707,6 +691,24 @@ func TestTryFormat_EvmSwap(t *testing.T) {
 	assert.Contains(t, paramByName, "desc.dstReceiver")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["desc.dstReceiver"].Constraint.Type)
 	assert.Equal(t, fromAddress, paramByName["desc.dstReceiver"].Constraint.GetFixedValue())
+
+	assert.Equal(t, expectedResource0, result[1].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_ADDRESS, result[1].Target.TargetType)
+	assert.Equal(t, usdc, result[1].GetTarget().GetAddress())
+	require.Len(t, result[1].ParameterConstraints, 2)
+
+	paramByName = make(map[string]*types.ParameterConstraint)
+	for _, param := range result[1].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MIN, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetMinValue())
+
+	assert.Contains(t, paramByName, "spender")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["spender"].Constraint.Type)
+	assert.Equal(t, routerAddr, paramByName["spender"].Constraint.GetFixedValue())
 }
 
 func TestTryFormat_BitcoinSwap(t *testing.T) {
