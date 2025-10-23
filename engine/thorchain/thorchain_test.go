@@ -2,7 +2,6 @@ package thorchain
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -216,7 +215,7 @@ func createValidMsgSendTransaction(t *testing.T, fromAddr, toAddr, amount, denom
 	engine := NewThorchain()
 	cdc := engine.cdc
 
-	// Create MsgSend
+	// Create bank MsgSend
 	amountInt, ok := math.NewIntFromString(amount)
 	require.True(t, ok, "Invalid amount string")
 
@@ -244,11 +243,12 @@ func createValidMsgSendTransaction(t *testing.T, fromAddr, toAddr, amount, denom
 		},
 	}
 
-	// Marshal to protobuf
+	// Marshal to protobuf then encode as base64
 	protoBytes, err := cdc.Marshal(txData)
 	require.NoError(t, err)
 
-	return protoBytes
+	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
+	return []byte(base64Str)
 }
 
 func TestThorchain_parseTransaction(t *testing.T) {
@@ -262,7 +262,7 @@ func TestThorchain_parseTransaction(t *testing.T) {
 		setup       func() []byte
 	}{
 		{
-			name: "protobuf transaction with MsgSend",
+			name: "base64-encoded protobuf transaction with MsgSend",
 			setup: func() []byte {
 				// Create a protobuf-encoded transaction
 				interfaceRegistry := types.NewInterfaceRegistry()
@@ -302,12 +302,13 @@ func TestThorchain_parseTransaction(t *testing.T) {
 					},
 				}
 
-				// Marshal to protobuf
+				// Marshal to protobuf then encode as base64
 				protoBytes, err := cdc.Marshal(txData)
 				if err != nil {
 					panic(err)
 				}
-				return protoBytes
+				base64Str := base64.StdEncoding.EncodeToString(protoBytes)
+				return []byte(base64Str)
 			},
 			shouldError: false,
 		},
@@ -318,16 +319,16 @@ func TestThorchain_parseTransaction(t *testing.T) {
 			errorMsg:    "empty transaction data",
 		},
 		{
-			name:        "invalid JSON",
+			name:        "invalid base64",
 			txBytes:     []byte(`{"invalid": json}`),
 			shouldError: true,
-			errorMsg:    "failed to parse transaction as protobuf, JSON, base64, or hex",
+			errorMsg:    "failed to decode base64 transaction",
 		},
 		{
-			name:        "invalid hex string",
-			txBytes:     []byte("0xZZZZ"),
+			name:        "invalid base64 string",
+			txBytes:     []byte("invalid-base64!@#"),
 			shouldError: true,
-			errorMsg:    "failed to parse transaction as protobuf, JSON, base64, or hex",
+			errorMsg:    "failed to decode base64 transaction",
 		},
 		{
 			name: "transaction size too large",
@@ -337,29 +338,6 @@ func TestThorchain_parseTransaction(t *testing.T) {
 			},
 			shouldError: true,
 			errorMsg:    "transaction too large",
-		},
-		{
-			name: "valid hex-encoded transaction with 0x prefix",
-			setup: func() []byte {
-				// Create a valid transaction and hex encode it
-				engine := NewThorchain()
-				msgSend := &banktypes.MsgSend{
-					FromAddress: "thor1from123456789",
-					ToAddress:   "thor1to123456789",
-					Amount:      sdk.NewCoins(sdk.NewCoin("rune", math.NewInt(1000000))),
-				}
-				msgAny, _ := types.NewAnyWithValue(msgSend)
-				txData := &tx.Tx{
-					Body: &tx.TxBody{
-						Messages: []*types.Any{msgAny},
-						Memo:     "hex test",
-					},
-				}
-				protoBytes, _ := engine.cdc.Marshal(txData)
-				hexStr := "0x" + hex.EncodeToString(protoBytes)
-				return []byte(hexStr)
-			},
-			shouldError: false,
 		},
 		{
 			name: "valid base64-encoded transaction",
@@ -451,12 +429,15 @@ func TestThorchain_parseTransaction_Protobuf(t *testing.T) {
 		},
 	}
 
-	// Marshal to protobuf
+	// Marshal to protobuf then encode as base64
 	protoBytes, err := cdc.Marshal(txData)
 	require.NoError(t, err)
 
+	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
+	base64Bytes := []byte(base64Str)
+
 	// Test parsing
-	result, err := thorchain.parseTransaction(protoBytes)
+	result, err := thorchain.parseTransaction(base64Bytes)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 

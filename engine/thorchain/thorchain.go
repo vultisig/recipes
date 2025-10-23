@@ -2,11 +2,8 @@ package thorchain
 
 import (
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -18,7 +15,6 @@ import (
 	vtypes "github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
-	// thortypes "gitlab.com/thorchain/thornode/x/thorchain/types" // when you add MsgDeposit
 )
 
 // Thorchain represents the Thorchain engine implementation
@@ -30,6 +26,7 @@ type Thorchain struct {
 func NewThorchain() *Thorchain {
 	ir := codectypes.NewInterfaceRegistry()
 
+	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
 
 	return &Thorchain{cdc: codec.NewProtoCodec(ir)}
@@ -95,58 +92,27 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 		return nil, fmt.Errorf("empty transaction data")
 	}
 
-	// Try to parse as protobuf first (standard Cosmos SDK format)
-	var txData tx.Tx
-	if err := t.cdc.Unmarshal(txBytes, &txData); err == nil {
-		return &txData, nil
-	}
-
-	// If protobuf parsing fails, try JSON format
-	if err := json.Unmarshal(txBytes, &txData); err == nil {
-		return &txData, nil
-	}
-
-	// If JSON parsing fails, try base64 (common transport encoding for protobuf bytes)
-	if b64, err := base64.StdEncoding.DecodeString(string(txBytes)); err == nil {
-		// Check decoded size to prevent DoS via large decoded payloads
-		if len(b64) > maxTxBytes {
-			return nil, fmt.Errorf("decoded base64 transaction too large: %d bytes (max %d)", len(b64), maxTxBytes)
-		}
-		if err := t.cdc.Unmarshal(b64, &txData); err == nil {
-			return &txData, nil
-		}
-		if err := json.Unmarshal(b64, &txData); err == nil {
-			return &txData, nil
-		}
-	}
-
-	// Finally, try hex (handle 0x/0X prefixes)
-	s := strings.TrimPrefix(string(txBytes), "0x")
-	s = strings.TrimPrefix(s, "0X")
-	decodedBytes, hexErr := hex.DecodeString(s)
-	if hexErr != nil {
-		return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, base64, or hex")
+	// Decode base64 to get protobuf bytes
+	protoBytes, err := base64.StdEncoding.DecodeString(string(txBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 transaction: %w", err)
 	}
 
 	// Check decoded size to prevent DoS via large decoded payloads
-	if len(decodedBytes) > maxTxBytes {
-		return nil, fmt.Errorf("decoded hex transaction too large: %d bytes (max %d)", len(decodedBytes), maxTxBytes)
+	if len(protoBytes) > maxTxBytes {
+		return nil, fmt.Errorf("decoded transaction too large: %d bytes (max %d)", len(protoBytes), maxTxBytes)
 	}
 
-	// Try parsing decoded hex bytes as protobuf
-	if err := t.cdc.Unmarshal(decodedBytes, &txData); err == nil {
-		return &txData, nil
+	// Unmarshal protobuf bytes to tx.Tx
+	var txData tx.Tx
+	if err := t.cdc.Unmarshal(protoBytes, &txData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal protobuf transaction: %w", err)
 	}
 
-	// Try parsing decoded hex bytes as JSON
-	if err := json.Unmarshal(decodedBytes, &txData); err == nil {
-		return &txData, nil
-	}
-
-	return nil, fmt.Errorf("failed to parse transaction as protobuf, JSON, base64, or hex")
+	return &txData, nil
 }
 
-// unpackMsgSend unpacks a message to MsgSend type
+// unpackMsgSend unpacks a message to bank MsgSend type
 func (t *Thorchain) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, error) {
 	if msg == nil {
 		return nil, fmt.Errorf("nil message")
@@ -159,7 +125,7 @@ func (t *Thorchain) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, erro
 
 	msgSend, ok := sdkMsg.(*banktypes.MsgSend)
 	if !ok {
-		return nil, fmt.Errorf("expected MsgSend, got: %T", sdkMsg)
+		return nil, fmt.Errorf("expected bank MsgSend, got: %T", sdkMsg)
 	}
 
 	return msgSend, nil
