@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"github.com/vultisig/recipes/internal/metarule"
+	"github.com/vultisig/recipes/metarule"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
