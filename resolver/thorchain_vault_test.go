@@ -225,12 +225,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 			var apiAddress string
 			for _, addr := range apiAddresses {
 				if strings.ToUpper(addr.Chain) == chain.thorchainName {
-					// For EVM chains, expect router address if available, otherwise vault address
-					if (chain.chainID == "ethereum" || chain.chainID == "base") && addr.Router != "" {
-						apiAddress = addr.Router
-					} else {
-						apiAddress = addr.Address
-					}
+					apiAddress = addr.Address
 					break
 				}
 			}
