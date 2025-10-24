@@ -46,6 +46,12 @@ func TestChainEngineRegistry(t *testing.T) {
 			shouldFind:  true,
 			description: "Solana should be supported by Solana engine",
 		},
+		{
+			name:        "Thorchain",
+			chain:       common.THORChain,
+			shouldFind:  true,
+			description: "THORChain should be supported by Thorchain engine",
+		},
 	}
 
 	for _, tt := range tests {
@@ -86,6 +92,7 @@ func TestChainEngineInterface(t *testing.T) {
 		common.Bitcoin, // BTC chains
 		common.XRP, // XRPL chains
 		common.Solana,  // Solana
+		common.THORChain, // Thorchain
 	}
 
 	for _, chain := range supportedChains {
