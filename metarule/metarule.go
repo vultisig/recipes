@@ -445,6 +445,26 @@ func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 		asset = evm.ZeroAddress.String()
 	}
 
+	chainInt, err := common.FromString(c.toChain.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse chain id: %w", err)
+	}
+
+	thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to make thor asset: %w", err)
+	}
+
+	shortCode := thorchain.ShortCode(thorAsset)
+	var assetPattern string
+	if shortCode != "" {
+		assetPattern = fmt.Sprintf("(%s|%s)",
+			regexp.QuoteMeta(thorAsset),
+			regexp.QuoteMeta(shortCode))
+	} else {
+		assetPattern = regexp.QuoteMeta(thorAsset)
+	}
+
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
 		Resource: fmt.Sprintf("%s.thorchain_router.depositWithExpiry", strings.ToLower(chain.String())),
@@ -477,7 +497,16 @@ func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
 					Value: &types.Constraint_RegexpValue{
-						RegexpValue: "",
+						// =:<asset>:<address>:<optional_params>
+						// The = is shorthand for the SWAP command
+						// Validates the destination asset in ThorChain notation
+						// Validates the destination address
+						// Allows optional parameters (streaming options, min amount, affiliate, etc.)
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
 					},
 				},
 			},
