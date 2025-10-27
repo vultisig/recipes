@@ -441,8 +441,10 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 	asset := c.fromAsset.GetFixedValue()
+	amount := c.fromAmount
 	if asset == "" {
 		asset = evm.ZeroAddress.String()
+		amount = fixed("0")
 	}
 
 	chainInt, err := common.FromString(c.toChain.GetFixedValue())
@@ -490,7 +492,7 @@ func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 			},
 			{
 				ParameterName: "amount",
-				Constraint:    c.fromAmount,
+				Constraint:    amount,
 			},
 			{
 				ParameterName: "memo",
