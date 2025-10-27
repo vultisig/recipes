@@ -389,8 +389,21 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			rules = append(rules, out)
 			router = fixed(oneinchRouter)
 		} else {
-			// cross chain - ThorChain
-			// TODO @webpiratt
+			// cross-chain - ThorChain
+			// here we don't care is a bridge direction supported — it's a plugin responsibility
+			// we build a safe ThorChain rule mapping to the swap request
+			out, er := thorchainSwap(chain, c)
+			if er != nil {
+				return nil, fmt.Errorf("failed to create thorchain swap rule: %w", er)
+			}
+
+			rules = append(rules, out)
+			router = &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+				},
+			}
 		}
 
 		if c.fromAsset.GetFixedValue() != "" {
@@ -424,6 +437,58 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
+}
+
+func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
+	asset := c.fromAsset.GetFixedValue()
+	if asset == "" {
+		asset = evm.ZeroAddress.String()
+	}
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: fmt.Sprintf("%s.thorchain_router.depositWithExpiry", strings.ToLower(chain.String())),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_THORCHAIN_ROUTER,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "vault",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "asset",
+				Constraint:    fixed(asset),
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						RegexpValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "expiration",
+				Constraint:    anyConstraint(),
+			},
+		},
+	}
+
+	return rule, nil
 }
 
 func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, error) {
