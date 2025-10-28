@@ -1,4 +1,4 @@
-package message_types
+package thorchain
 
 import "fmt"
 
