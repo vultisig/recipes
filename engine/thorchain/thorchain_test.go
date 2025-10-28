@@ -82,7 +82,7 @@ func TestThorchain_Evaluate_InvalidTransactionData(t *testing.T) {
 	thorchain := NewThorchain()
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 	}
 
 	err := thorchain.Evaluate(rule, []byte("invalid-tx-data"))
@@ -99,7 +99,7 @@ func TestThorchain_Evaluate_Success_WithTargetValidation(t *testing.T) {
 	// Create a rule with target validation
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &vtypes.Target_Address{
@@ -121,7 +121,7 @@ func TestThorchain_Evaluate_Failure_TargetMismatch(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &vtypes.Target_Address{
@@ -145,7 +145,7 @@ func TestThorchain_Evaluate_Success_WithParameterConstraints(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		ParameterConstraints: []*vtypes.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -190,7 +190,7 @@ func TestThorchain_Evaluate_Failure_ParameterConstraintViolation(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		ParameterConstraints: []*vtypes.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -220,7 +220,7 @@ func TestThorchain_Evaluate_Success_ThorchainSwap(t *testing.T) {
 	// Create a rule for thorchain_swap.swap with parameter constraints
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain_swap.swap",
+		Resource: "thorchain.thorchain_swap",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
 		},
@@ -268,7 +268,7 @@ func TestThorchain_Evaluate_Failure_ThorchainSwap_ParameterMismatch(t *testing.T
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain_swap.swap",
+		Resource: "thorchain.thorchain_swap.swap",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
 		},
@@ -299,7 +299,7 @@ func TestThorchain_Evaluate_Failure_ThorchainSwap_InvalidMemoFormat(t *testing.T
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain_swap.swap",
+		Resource: "thorchain.thorchain_swap.swap",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
 		},
