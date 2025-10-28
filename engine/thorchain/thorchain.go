@@ -68,8 +68,14 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 
 	// Validate message type is supported (MsgSend or MsgDeposit)
 	msg := txData.Body.Messages[0]
-	if _, err := t.detectMessageType(msg); err != nil {
+	mt, err := t.detectMessageType(msg)
+	if err != nil {
 		return fmt.Errorf("unsupported message type: %w", err)
+	}
+
+	// Enforce resource ↔ message-type compatibility
+	if err := t.ensureResourceMessageCompatibility(r, mt); err != nil {
+		return err
 	}
 
 	if err := t.validateTarget(r, rule.GetTarget(), txData); err != nil {
@@ -113,6 +119,24 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	}
 
 	return &txData, nil
+}
+
+// ensureResourceMessageCompatibility rejects mismatched resource/message combinations.
+func (t *Thorchain) ensureResourceMessageCompatibility(resource *vtypes.ResourcePath, mt MessageType) error {
+	switch resource.GetProtocolId() {
+	case "send":
+		if mt != MessageTypeSend {
+			return fmt.Errorf("resource %s.%s only allows MsgSend, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
+		}
+	case "thorchain_swap":
+		if mt != MessageTypeDeposit {
+			return fmt.Errorf("resource %s.%s only allows MsgDeposit, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
+		}
+	default:
+		// If new protocols are introduced, fail closed.
+		return fmt.Errorf("unsupported protocol: %s", resource.GetProtocolId())
+	}
+	return nil
 }
 
 // unpackMsgSend unpacks a message to bank MsgSend type
@@ -350,12 +374,11 @@ func (t *Thorchain) extractParameterFromMsgDeposit(paramName string, msgDeposit 
 			return nil, fmt.Errorf("multi-coin deposits not supported, got %d coins", len(msgDeposit.Coins))
 		}
 		coin := msgDeposit.Coins[0]
-		amount := new(big.Int)
-		amount, ok := amount.SetString(coin.Amount, 10)
-		if !ok {
+		v := new(big.Int)
+		if _, ok := v.SetString(coin.Amount, 10); !ok {
 			return nil, fmt.Errorf("invalid amount format: %s", coin.Amount)
 		}
-		return amount, nil
+		return v, nil
 	case "memo":
 		// For MsgDeposit, memo contains swap instructions including destination address
 		return msgDeposit.Memo, nil
