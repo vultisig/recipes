@@ -84,7 +84,7 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 }
 
 // parseTransaction parses Thorchain transaction bytes into a Cosmos SDK transaction
-// Supports protobuf, JSON, base64-encoded, and hex-encoded formats with security hardening
+// Supports base64-encoded protobuf format with security hardening
 func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	const maxTxBytes = 32 * 1024 // 32 KB - sufficient for complex transactions while preventing DoS
 	if len(txBytes) > maxTxBytes {
@@ -214,7 +214,7 @@ func (t *Thorchain) validateTarget(resource *vtypes.ResourcePath, target *vtypes
 	}
 
 	if messageType != MessageTypeSend {
-		return fmt.Errorf("target validation not yet implemented for message type: %s", messageType)
+		return fmt.Errorf("target validation only supported for MsgSend transactions, use TARGET_TYPE_UNSPECIFIED for %s", messageType)
 	}
 
 	msgSend, ok := unpackedMsg.(*banktypes.MsgSend)
