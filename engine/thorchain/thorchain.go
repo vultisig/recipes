@@ -29,6 +29,9 @@ func NewThorchain() *Thorchain {
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
 
+	// Register the generated protobuf MsgDeposit for THORChain swaps
+	ir.RegisterImplementations((*sdk.Msg)(nil), &vtypes.MsgDeposit{})
+
 	return &Thorchain{cdc: codec.NewProtoCodec(ir)}
 }
 
@@ -63,10 +66,16 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 		return fmt.Errorf("only single-message transactions supported, got %d messages", len(txData.Body.Messages))
 	}
 
-	// TODO add MsgDeposit support for thorchain swaps
+	// Validate message type is supported (MsgSend or MsgDeposit)
 	msg := txData.Body.Messages[0]
-	if err := t.validateMessageType(msg); err != nil {
+	mt, err := t.detectMessageType(msg)
+	if err != nil {
 		return fmt.Errorf("unsupported message type: %w", err)
+	}
+
+	// Enforce resource ↔ message-type compatibility
+	if err := t.ensureResourceMessageCompatibility(r, mt); err != nil {
+		return err
 	}
 
 	if err := t.validateTarget(r, rule.GetTarget(), txData); err != nil {
@@ -81,7 +90,7 @@ func (t *Thorchain) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 }
 
 // parseTransaction parses Thorchain transaction bytes into a Cosmos SDK transaction
-// Supports protobuf, JSON, base64-encoded, and hex-encoded formats with security hardening
+// Supports base64-encoded protobuf format with security hardening
 func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	const maxTxBytes = 32 * 1024 // 32 KB - sufficient for complex transactions while preventing DoS
 	if len(txBytes) > maxTxBytes {
@@ -112,6 +121,24 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	return &txData, nil
 }
 
+// ensureResourceMessageCompatibility rejects mismatched resource/message combinations.
+func (t *Thorchain) ensureResourceMessageCompatibility(resource *vtypes.ResourcePath, mt MessageType) error {
+	switch resource.GetProtocolId() {
+	case "send":
+		if mt != MessageTypeSend {
+			return fmt.Errorf("resource %s.%s only allows MsgSend, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
+		}
+	case "thorchain_swap":
+		if mt != MessageTypeDeposit {
+			return fmt.Errorf("resource %s.%s only allows MsgDeposit, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
+		}
+	default:
+		// If new protocols are introduced, fail closed.
+		return fmt.Errorf("unsupported protocol: %s", resource.GetProtocolId())
+	}
+	return nil
+}
+
 // unpackMsgSend unpacks a message to bank MsgSend type
 func (t *Thorchain) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, error) {
 	if msg == nil {
@@ -131,14 +158,65 @@ func (t *Thorchain) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, erro
 	return msgSend, nil
 }
 
-// validateMessageType validates that the message is MsgSend (direct transfers only)
-func (t *Thorchain) validateMessageType(msg *codectypes.Any) error {
-	_, err := t.unpackMsgSend(msg)
-	if err != nil {
-		// TODO: Add support for MsgDeposit
-		return fmt.Errorf("only MsgSend transactions are supported for now, got: %s", msg.TypeUrl)
+// unpackMsgDeposit unpacks a message to THORChain MsgDeposit type
+func (t *Thorchain) unpackMsgDeposit(msg *codectypes.Any) (*vtypes.MsgDeposit, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("nil message")
 	}
-	return nil
+
+	var sdkMsg sdk.Msg
+	if err := t.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
+	}
+
+	msgDeposit, ok := sdkMsg.(*vtypes.MsgDeposit)
+	if !ok {
+		return nil, fmt.Errorf("expected THORChain MsgDeposit, got: %T", sdkMsg)
+	}
+
+	return msgDeposit, nil
+}
+
+// detectMessageType determines the message type based on TypeUrl
+func (t *Thorchain) detectMessageType(msg *codectypes.Any) (MessageType, error) {
+	if msg == nil {
+		return MessageType(0), fmt.Errorf("nil message")
+	}
+
+	messageType, err := GetMessageTypeFromTypeUrl(msg.TypeUrl)
+	if err != nil {
+		return MessageType(0), fmt.Errorf("failed to detect message type: %w", err)
+	}
+
+	return messageType, nil
+}
+
+// unpackMessage unpacks a message to the appropriate type based on its TypeUrl
+// Returns the unpacked message and its type
+func (t *Thorchain) unpackMessage(msg *codectypes.Any) (interface{}, MessageType, error) {
+	messageType, err := t.detectMessageType(msg)
+	if err != nil {
+		return nil, MessageType(0), err
+	}
+
+	switch messageType {
+	case MessageTypeSend:
+		msgSend, err := t.unpackMsgSend(msg)
+		if err != nil {
+			return nil, MessageTypeSend, fmt.Errorf("failed to unpack MsgSend: %w", err)
+		}
+		return msgSend, MessageTypeSend, nil
+
+	case MessageTypeDeposit:
+		msgDeposit, err := t.unpackMsgDeposit(msg)
+		if err != nil {
+			return nil, MessageTypeDeposit, fmt.Errorf("failed to unpack MsgDeposit: %w", err)
+		}
+		return msgDeposit, MessageTypeDeposit, nil
+
+	default:
+		return nil, MessageType(0), fmt.Errorf("unsupported message type: %s", messageType)
+	}
 }
 
 // validateTarget validates the transaction target against the rule target
@@ -152,12 +230,20 @@ func (t *Thorchain) validateTarget(resource *vtypes.ResourcePath, target *vtypes
 		return fmt.Errorf("no messages in transaction")
 	}
 
-	// Unpack the first message as MsgSend
-	// TODO add support for MsgDeposit
+	// Use unified message unpacking to support both MsgSend and MsgDeposit
 	msg := txData.Body.Messages[0]
-	msgSend, err := t.unpackMsgSend(msg)
+	unpackedMsg, messageType, err := t.unpackMessage(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unpack message for target validation: %w", err)
+	}
+
+	if messageType != MessageTypeSend {
+		return fmt.Errorf("target validation only supported for MsgSend transactions, use TARGET_TYPE_UNSPECIFIED for %s", messageType)
+	}
+
+	msgSend, ok := unpackedMsg.(*banktypes.MsgSend)
+	if !ok {
+		return fmt.Errorf("expected MsgSend, got: %T", unpackedMsg)
 	}
 
 	switch target.GetTargetType() {
@@ -231,14 +317,25 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 		return nil, fmt.Errorf("no messages in transaction")
 	}
 
-	// Unpack the first message as MsgSend
-	// TODO add support for MsgDeposit
+	// Use unified message unpacking to support both MsgSend and MsgDeposit
 	msg := txData.Body.Messages[0]
-	msgSend, err := t.unpackMsgSend(msg)
+	unpackedMsg, messageType, err := t.unpackMessage(msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unpack message: %w", err)
 	}
 
+	switch messageType {
+	case MessageTypeSend:
+		return t.extractParameterFromMsgSend(paramName, unpackedMsg.(*banktypes.MsgSend), txData)
+	case MessageTypeDeposit:
+		return t.extractParameterFromMsgDeposit(paramName, unpackedMsg.(*vtypes.MsgDeposit))
+	default:
+		return nil, fmt.Errorf("unsupported message type: %s", messageType)
+	}
+}
+
+// extractParameterFromMsgSend extracts parameters from MsgSend
+func (t *Thorchain) extractParameterFromMsgSend(paramName string, msgSend *banktypes.MsgSend, txData *tx.Tx) (any, error) {
 	switch paramName {
 	case "recipient":
 		return msgSend.ToAddress, nil
@@ -262,6 +359,40 @@ func (t *Thorchain) extractParameterValue(paramName string, txData *tx.Tx) (any,
 		}
 		return msgSend.Amount[0].Denom, nil
 	default:
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
+	}
+}
+
+// extractParameterFromMsgDeposit extracts parameters from MsgDeposit (for swaps)
+func (t *Thorchain) extractParameterFromMsgDeposit(paramName string, msgDeposit *vtypes.MsgDeposit) (any, error) {
+	switch paramName {
+	case "amount":
+		if len(msgDeposit.Coins) == 0 {
+			return nil, fmt.Errorf("no coins in deposit message")
+		}
+		if len(msgDeposit.Coins) != 1 {
+			return nil, fmt.Errorf("multi-coin deposits not supported, got %d coins", len(msgDeposit.Coins))
+		}
+		coin := msgDeposit.Coins[0]
+		v := new(big.Int)
+		if _, ok := v.SetString(coin.Amount, 10); !ok {
+			return nil, fmt.Errorf("invalid amount format: %s", coin.Amount)
+		}
+		return v, nil
+	case "memo":
+		// For MsgDeposit, memo contains swap instructions including destination address
+		return msgDeposit.Memo, nil
+	case "denom":
+		if len(msgDeposit.Coins) == 0 {
+			return nil, fmt.Errorf("no coins in deposit message")
+		}
+		if len(msgDeposit.Coins) != 1 {
+			return nil, fmt.Errorf("multi-coin deposits not supported, got %d coins", len(msgDeposit.Coins))
+		}
+		return msgDeposit.Coins[0].Denom, nil
+	default:
+		// Note: 'recipient' parameter is not supported for THORChain swaps as there's no explicit
+		// destination address - the real destination is encoded in the memo field
 		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}
 }

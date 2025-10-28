@@ -82,7 +82,7 @@ func TestThorchain_Evaluate_InvalidTransactionData(t *testing.T) {
 	thorchain := NewThorchain()
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 	}
 
 	err := thorchain.Evaluate(rule, []byte("invalid-tx-data"))
@@ -99,7 +99,7 @@ func TestThorchain_Evaluate_Success_WithTargetValidation(t *testing.T) {
 	// Create a rule with target validation
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &vtypes.Target_Address{
@@ -121,7 +121,7 @@ func TestThorchain_Evaluate_Failure_TargetMismatch(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		Target: &vtypes.Target{
 			TargetType: vtypes.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &vtypes.Target_Address{
@@ -145,7 +145,7 @@ func TestThorchain_Evaluate_Success_WithParameterConstraints(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		ParameterConstraints: []*vtypes.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -190,7 +190,7 @@ func TestThorchain_Evaluate_Failure_ParameterConstraintViolation(t *testing.T) {
 
 	rule := &vtypes.Rule{
 		Effect:   vtypes.Effect_EFFECT_ALLOW,
-		Resource: "thorchain.send",
+		Resource: "thorchain.send.rune",
 		ParameterConstraints: []*vtypes.ParameterConstraint{
 			{
 				ParameterName: "recipient",
@@ -207,6 +207,163 @@ func TestThorchain_Evaluate_Failure_ParameterConstraintViolation(t *testing.T) {
 	err := thorchain.Evaluate(rule, txBytes)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to validate parameter constraints")
+}
+
+func TestThorchain_Evaluate_Success_ThorchainSwap(t *testing.T) {
+	thorchain := NewThorchain()
+
+	expectedAmount := "75000000"
+	expectedDenom := "rune"
+	expectedMemo := "=:ETH.ETH:0x1234567890123456789012345678901234567890"
+	txBytes := createValidMsgDepositTransaction(t, "thor1signer123", expectedAmount, expectedDenom, expectedMemo)
+
+	// Create a rule for thorchain_swap.swap with parameter constraints
+	rule := &vtypes.Rule{
+		Effect:   vtypes.Effect_EFFECT_ALLOW,
+		Resource: "thorchain.thorchain_swap",
+		Target: &vtypes.Target{
+			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
+		},
+		ParameterConstraints: []*vtypes.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &vtypes.Constraint_FixedValue{
+						FixedValue: expectedAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "denom",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &vtypes.Constraint_FixedValue{
+						FixedValue: expectedDenom,
+					},
+				},
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &vtypes.Constraint_RegexpValue{
+						RegexpValue: "^=:ETH\\.ETH:0x[a-fA-F0-9]{40}$",
+					},
+				},
+			},
+		},
+	}
+
+	err := thorchain.Evaluate(rule, txBytes)
+	assert.NoError(t, err)
+}
+
+func TestThorchain_Evaluate_Failure_ThorchainSwap_ParameterMismatch(t *testing.T) {
+	thorchain := NewThorchain()
+
+	actualAmount := "75000000"
+	expectedAmount := "100000000"
+	txBytes := createValidMsgDepositTransaction(t, "thor1signer123", actualAmount, "rune", "=:ETH.ETH:0x1234567890123456789012345678901234567890")
+
+	rule := &vtypes.Rule{
+		Effect:   vtypes.Effect_EFFECT_ALLOW,
+		Resource: "thorchain.thorchain_swap.swap",
+		Target: &vtypes.Target{
+			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
+		},
+		ParameterConstraints: []*vtypes.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &vtypes.Constraint_FixedValue{
+						FixedValue: expectedAmount,
+					},
+				},
+			},
+		},
+	}
+
+	err := thorchain.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to validate parameter constraints")
+}
+
+func TestThorchain_Evaluate_Failure_ThorchainSwap_InvalidMemoFormat(t *testing.T) {
+	thorchain := NewThorchain()
+
+	// Use an invalid memo format (missing =: prefix)
+	invalidMemo := "ETH.ETH:0x1234567890123456789012345678901234567890"
+	txBytes := createValidMsgDepositTransaction(t, "thor1signer123", "75000000", "rune", invalidMemo)
+
+	rule := &vtypes.Rule{
+		Effect:   vtypes.Effect_EFFECT_ALLOW,
+		Resource: "thorchain.thorchain_swap.swap",
+		Target: &vtypes.Target{
+			TargetType: vtypes.TargetType_TARGET_TYPE_UNSPECIFIED,
+		},
+		ParameterConstraints: []*vtypes.ParameterConstraint{
+			{
+				ParameterName: "memo",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &vtypes.Constraint_RegexpValue{
+						RegexpValue: "^=:ETH\\.ETH:0x[a-fA-F0-9]{40}$",
+					},
+				},
+			},
+		},
+	}
+
+	err := thorchain.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to validate parameter constraints")
+}
+
+// Helper function to create valid MsgDeposit transactions for testing thorchain_swap
+func createValidMsgDepositTransaction(t *testing.T, signer, amount, denom, memo string) []byte {
+	// Use the exact same codec setup as NewThorchain()
+	engine := NewThorchain()
+	cdc := engine.cdc
+
+	// Create protobuf Coins directly
+	pbCoins := make([]*vtypes.Coin, 1)
+	pbCoins[0] = &vtypes.Coin{
+		Denom:  denom,
+		Amount: amount,
+	}
+
+	msgDeposit := &vtypes.MsgDeposit{
+		Coins:  pbCoins,
+		Memo:   memo,
+		Signer: signer,
+	}
+
+	// Pack the message into Any
+	msgAny, err := types.NewAnyWithValue(msgDeposit)
+	require.NoError(t, err)
+
+	// Create transaction
+	txData := &tx.Tx{
+		Body: &tx.TxBody{
+			Messages: []*types.Any{msgAny},
+			Memo:     "", // For MsgDeposit, memo is in the message itself
+		},
+		AuthInfo: &tx.AuthInfo{
+			Fee: &tx.Fee{
+				Amount:   sdk.NewCoins(),
+				GasLimit: 200000,
+			},
+		},
+	}
+
+	// Marshal to protobuf then encode as base64
+	protoBytes, err := cdc.Marshal(txData)
+	require.NoError(t, err)
+
+	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
+	return []byte(base64Str)
 }
 
 // Helper function to create valid MsgSend transactions for testing
