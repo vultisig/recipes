@@ -389,8 +389,21 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			rules = append(rules, out)
 			router = fixed(oneinchRouter)
 		} else {
-			// cross chain - ThorChain
-			// TODO @webpiratt
+			// cross-chain - ThorChain
+			// here we don't care is a bridge direction supported — it's a plugin responsibility
+			// we build a safe ThorChain rule mapping to the swap request
+			out, er := thorchainSwap(chain, c)
+			if er != nil {
+				return nil, fmt.Errorf("failed to create thorchain swap rule: %w", er)
+			}
+
+			rules = append(rules, out)
+			router = &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+				},
+			}
 		}
 
 		if c.fromAsset.GetFixedValue() != "" {
@@ -424,6 +437,89 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
+}
+
+func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
+	asset := c.fromAsset.GetFixedValue()
+	amount := c.fromAmount
+	if asset == "" {
+		asset = evm.ZeroAddress.String()
+		amount = fixed("0")
+	}
+
+	chainInt, err := common.FromString(c.toChain.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse chain id: %w", err)
+	}
+
+	thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to make thor asset: %w", err)
+	}
+
+	shortCode := thorchain.ShortCode(thorAsset)
+	var assetPattern string
+	if shortCode != "" {
+		assetPattern = fmt.Sprintf("(%s|%s)",
+			regexp.QuoteMeta(thorAsset),
+			regexp.QuoteMeta(shortCode))
+	} else {
+		assetPattern = regexp.QuoteMeta(thorAsset)
+	}
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: fmt.Sprintf("%s.thorchain_router.depositWithExpiry", strings.ToLower(chain.String())),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_THORCHAIN_ROUTER,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "vault",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "asset",
+				Constraint:    fixed(asset),
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    amount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						// =:<asset>:<address>:<optional_params>
+						// The = is shorthand for the SWAP command
+						// Validates the destination asset in ThorChain notation
+						// Validates the destination address
+						// Allows optional parameters (streaming options, min amount, affiliate, etc.)
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+			{
+				ParameterName: "expiration",
+				Constraint:    anyConstraint(),
+			},
+		},
+	}
+
+	return rule, nil
 }
 
 func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, error) {
