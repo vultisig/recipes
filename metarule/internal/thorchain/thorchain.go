@@ -54,6 +54,7 @@ var pools = []metadata{
 	{asset: "ETH.YFI-0X0BC529C00C6401AEF6D220BE8C6EA1667F6AD93E"},
 	{asset: "GAIA.ATOM"},
 	{asset: "LTC.LTC"},
+	{asset: "THOR.RUNE"},
 	{asset: "THOR.NAMI"},
 	{asset: "THOR.RUJI"},
 	{asset: "THOR.TCY"},
@@ -63,12 +64,13 @@ var pools = []metadata{
 type network string
 
 const (
-	btc  network = "BTC"
-	eth  network = "ETH"
-	bsc  network = "BSC"
-	base network = "BASE"
-	avax network = "AVAX"
-	xrp  network = "XRP"
+	btc       network = "BTC"
+	eth       network = "ETH"
+	bsc       network = "BSC"
+	base      network = "BASE"
+	avax      network = "AVAX"
+	xrp       network = "XRP"
+	thorchain network = "THOR"
 )
 
 func parseNetwork(c common.Chain) (network, error) {
@@ -85,6 +87,8 @@ func parseNetwork(c common.Chain) (network, error) {
 		return avax, nil
 	case common.XRP:
 		return xrp, nil
+	case common.THORChain:
+		return thorchain, nil
 	default:
 		return "", errors.New("unknown chain")
 	}
