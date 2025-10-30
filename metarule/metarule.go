@@ -359,7 +359,11 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				)
 			}
 
-			out.Resource = fmt.Sprintf("%s.%s.transfer", strings.ToLower(chain.String()), nativeSymbol)
+			out.Resource = fmt.Sprintf(
+				"%s.%s.transfer",
+				strings.ToLower(chain.String()),
+				strings.ToLower(nativeSymbol),
+			)
 			out.Target = outTarget
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "amount",
