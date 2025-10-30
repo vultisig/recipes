@@ -150,8 +150,11 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 }
 
 type sendConstraints struct {
-	recipient *types.Constraint
-	amount    *types.Constraint
+	asset       *types.Constraint
+	fromAddress *types.Constraint
+	amount      *types.Constraint
+	toAddress   *types.Constraint
+	memo        *types.Constraint
 }
 
 func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
@@ -159,18 +162,30 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 
 	for _, c := range rule.GetParameterConstraints() {
 		switch c.GetParameterName() {
-		case "recipient":
-			res.recipient = c.GetConstraint()
+		case "asset":
+			res.asset = c.GetConstraint()
+		case "from_address":
+			res.fromAddress = c.GetConstraint()
 		case "amount":
 			res.amount = c.GetConstraint()
+		case "memo":
+			res.memo = c.GetConstraint()
+		case "to_address":
+			res.toAddress = c.GetConstraint()
 		}
 	}
 
-	if res.recipient == nil {
-		return res, fmt.Errorf("failed to find constraint: recipient")
+	if res.asset == nil {
+		return res, fmt.Errorf("failed to find constraint: asset")
+	}
+	if res.fromAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: from_address")
 	}
 	if res.amount == nil {
 		return res, fmt.Errorf("failed to find constraint: amount")
+	}
+	if res.toAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: to_address")
 	}
 
 	return res, nil
@@ -231,25 +246,25 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
 			// native transfer
 			var outTarget *types.Target
-			switch c.recipient.GetType() {
+			switch c.toAddress.GetType() {
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 					Target: &types.Target_Address{
-						Address: c.recipient.GetFixedValue(),
+						Address: c.toAddress.GetFixedValue(),
 					},
 				}
 			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 					Target: &types.Target_MagicConstant{
-						MagicConstant: c.recipient.GetMagicConstantValue(),
+						MagicConstant: c.toAddress.GetMagicConstantValue(),
 					},
 				}
 			default:
 				return nil, fmt.Errorf(
-					"invalid constraint type for `recipient`: %s",
-					c.recipient.GetType().String(),
+					"invalid constraint type for `to_address`: %s",
+					c.toAddress.GetType().String(),
 				)
 			}
 
@@ -260,7 +275,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 				Constraint:    anyConstraint(),
 			}, {
 				ParameterName: "account_to",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			}, {
 				ParameterName: "arg_lamports",
 				Constraint:    c.amount,
@@ -275,7 +290,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			Constraint:    anyConstraint(),
 		}, {
 			ParameterName: "account_destination",
-			Constraint:    c.recipient,
+			Constraint:    c.toAddress,
 		}, {
 			ParameterName: "account_authority",
 			Constraint:    anyConstraint(),
@@ -322,25 +337,25 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		if in.GetTarget().GetAddress() == evm.ZeroAddress.String() {
 			var outTarget *types.Target
-			switch c.recipient.GetType() {
+			switch c.toAddress.GetType() {
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 					Target: &types.Target_Address{
-						Address: c.recipient.GetFixedValue(),
+						Address: c.toAddress.GetFixedValue(),
 					},
 				}
 			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 					Target: &types.Target_MagicConstant{
-						MagicConstant: c.recipient.GetMagicConstantValue(),
+						MagicConstant: c.toAddress.GetMagicConstantValue(),
 					},
 				}
 			default:
 				return nil, fmt.Errorf(
-					"invalid constraint type for `recipient`: %s",
-					c.recipient.GetType().String(),
+					"invalid constraint type for `to_address`: %s",
+					c.toAddress.GetType().String(),
 				)
 			}
 
@@ -359,7 +374,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		out.Target = in.GetTarget()
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "recipient",
-			Constraint:    c.recipient,
+			Constraint:    c.toAddress,
 		}, {
 			ParameterName: "amount",
 			Constraint:    c.amount,
@@ -709,7 +724,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			},
 			{
 				ParameterName: "amount",
