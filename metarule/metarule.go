@@ -375,7 +375,12 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		// erc20 token transfer
 		out.Resource = fmt.Sprintf("%s.erc20.transfer", strings.ToLower(chain.String()))
-		out.Target = in.GetTarget()
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: c.toAddress.GetFixedValue(),
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "recipient",
 			Constraint:    c.toAddress,
