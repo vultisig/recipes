@@ -335,7 +335,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("failed to find native symbol: %w", err)
 		}
 
-		if in.GetTarget().GetAddress() == evm.ZeroAddress.String() {
+		if c.asset.GetFixedValue() == "" {
 			var outTarget *types.Target
 			switch c.toAddress.GetType() {
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
