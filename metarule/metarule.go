@@ -838,7 +838,7 @@ func (m *MetaRule) handleTHORChain(in *types.Rule, r *types.ResourcePath) ([]*ty
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			},
 			{
 				ParameterName: "amount",
