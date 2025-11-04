@@ -378,7 +378,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: c.toAddress.GetFixedValue(),
+				Address: c.asset.GetFixedValue(),
 			},
 		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
