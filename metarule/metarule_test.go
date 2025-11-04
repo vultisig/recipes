@@ -2,6 +2,7 @@ package metarule
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
@@ -1707,4 +1708,228 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	expectedDestATA, err := DeriveATA("4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 	require.NoError(t, err)
 	assert.Equal(t, expectedDestATA, paramByName["account_user_destination_token_account"].Constraint.GetFixedValue())
+}
+
+const testTHORChainAddress = "thor1abc123def456ghi789"
+
+func TestTryFormat_THORChainSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "thorchain.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testTHORChainAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000", // 1 RUNE
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "thorchain.rune.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, testTHORChainAddress, paramByName["recipient"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, "1000000", paramByName["amount"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_THORChainSwap(t *testing.T) {
+	const (
+		fromAddress      = testTHORChainAddress
+		fromAmount       = "2000000" // 2 RUNE
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "thorchain.thorchain_swap.swap"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "thorchain.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Empty for native RUNE
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Verify all required parameters are present
+	assert.Contains(t, paramByName, "amount")
+	assert.Contains(t, paramByName, "denom")
+	assert.Contains(t, paramByName, "memo")
+
+	// Verify constraint values
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
+
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["denom"].Constraint.Type)
+	assert.Equal(t, "", paramByName["denom"].Constraint.GetFixedValue()) // Empty for native RUNE
+
+	// Verify memo constraint (regexp for THORChain swap format)
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
+	regexpValue := paramByName["memo"].Constraint.GetRegexpValue()
+	expectedPattern := fmt.Sprintf("^=:ETH\\.USDC:%s:.*", regexp.QuoteMeta(toAddress))
+	assert.Equal(t, expectedPattern, regexpValue)
+}
+
+func TestTryFormat_THORChainSend_MissingRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "thorchain.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+}
+
+func TestTryFormat_THORChainSwap_MissingFromAsset(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "thorchain.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testTHORChainAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: from_asset")
+}
+
+func TestTryFormat_THORChain_UnsupportedProtocol(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "thorchain.stake", // Unsupported protocol
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testTHORChainAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported protocol id for THORChain: stake")
 }
