@@ -160,7 +160,7 @@ type sendConstraints struct {
 	fromAddress *types.Constraint
 	amount      *types.Constraint
 	toAddress   *types.Constraint
-	memo        *types.Constraint
+	// memo not supported yet
 }
 
 func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
@@ -174,10 +174,9 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 			res.fromAddress = c.GetConstraint()
 		case "amount":
 			res.amount = c.GetConstraint()
-		case "memo":
-			res.memo = c.GetConstraint()
 		case "to_address":
 			res.toAddress = c.GetConstraint()
+			// memo not supported yet
 		}
 	}
 
