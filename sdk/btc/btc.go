@@ -185,11 +185,18 @@ func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 	if input.WitnessUtxo != nil {
 		prevOutput := input.WitnessUtxo
 
-		// Create a simple prevOutput fetcher for NewTxSigHashes
 		prevFetcher := txscript.NewMultiPrevOutFetcher(nil)
-		prevFetcher.AddPrevOut(tx.TxIn[inputIndex].PreviousOutPoint, prevOutput)
+		for i, psbtInput := range pkt.Inputs {
+			if psbtInput.WitnessUtxo != nil {
+				prevFetcher.AddPrevOut(tx.TxIn[i].PreviousOutPoint, psbtInput.WitnessUtxo)
+			} else if psbtInput.NonWitnessUtxo != nil {
+				outIndex := tx.TxIn[i].PreviousOutPoint.Index
+				if int(outIndex) < len(psbtInput.NonWitnessUtxo.TxOut) {
+					prevFetcher.AddPrevOut(tx.TxIn[i].PreviousOutPoint, psbtInput.NonWitnessUtxo.TxOut[outIndex])
+				}
+			}
+		}
 
-		// Create TxSigHashes for caching
 		sigHashes := txscript.NewTxSigHashes(tx, prevFetcher)
 
 		// Determine the scriptCode for sighash calculation.
