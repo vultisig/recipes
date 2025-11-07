@@ -248,7 +248,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 
 		out := proto.Clone(in).(*types.Rule)
 
-		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
+		if c.asset.GetFixedValue() == "" {
 			// native transfer
 			var outTarget *types.Target
 			switch c.toAddress.GetType() {
@@ -277,7 +277,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			out.Target = outTarget
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "account_from",
-				Constraint:    anyConstraint(),
+				Constraint:    c.fromAddress,
 			}, {
 				ParameterName: "account_to",
 				Constraint:    c.toAddress,
@@ -288,17 +288,34 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			return []*types.Rule{out}, nil
 		}
 
+		const onlyFixed = "must be fixed constraint for spl token transfer"
+		if c.fromAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`from_address` " + onlyFixed)
+		}
+		if c.toAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`to_address` " + onlyFixed)
+		}
+
+		src, err := DeriveATA(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive src ATA: %w", err)
+		}
+		dst, err := DeriveATA(c.toAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive dst ATA: %w", err)
+		}
+
 		// SPL token transfer
 		out.Resource = "solana.spl_token.transfer"
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "account_source",
-			Constraint:    anyConstraint(),
+			Constraint:    fixed(src),
 		}, {
 			ParameterName: "account_destination",
-			Constraint:    c.toAddress,
+			Constraint:    fixed(dst),
 		}, {
 			ParameterName: "account_authority",
-			Constraint:    anyConstraint(),
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "arg_amount",
 			Constraint:    c.amount,
