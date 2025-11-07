@@ -986,6 +986,7 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 		changeAddress    = "bc1qchange123456789abcdef1234567890abcdef12"
 		recipientAddress = "bc1qrecipient123456789abcdef1234567890abcd"
 		amount           = "500000"
+		asset            = "BTC"
 		expectedResource = "bitcoin.btc.transfer"
 	)
 
@@ -995,7 +996,16 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 		Resource: "bitcoin.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: asset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -1013,7 +1023,7 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 				},
 			},
 			{
-				ParameterName: "change_address",
+				ParameterName: "from_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
