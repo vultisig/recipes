@@ -320,7 +320,35 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			ParameterName: "arg_amount",
 			Constraint:    c.amount,
 		}}
-		return []*types.Rule{out}, nil
+		return []*types.Rule{out, {
+			Resource: "solana.associated_token_account.create",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_payer",
+				Constraint:    c.fromAddress,
+			}, {
+				ParameterName: "account_associated_token_account",
+				Constraint:    fixed(dst),
+			}, {
+				ParameterName: "account_owner",
+				Constraint:    c.toAddress,
+			}, {
+				ParameterName: "account_mint",
+				Constraint:    c.asset,
+			}, {
+				ParameterName: "account_system_program",
+				Constraint:    fixed(solana.SystemProgramID.String()),
+			}, {
+				ParameterName: "account_token_program",
+				Constraint:    fixed(solana.TokenProgramID.String()),
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
+				},
+			},
+		}}, nil
 	case swap:
 		c, err := getSwapConstraints(in)
 		if err != nil {
@@ -952,7 +980,7 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 			solana.TokenProgramID.Bytes(),
 			mint.Bytes(),
 		},
-		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+		solana.SPLAssociatedTokenAccountProgramID,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to derive ATA: %w", err)
@@ -1092,7 +1120,7 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			Target: &types.Target{
 				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 				Target: &types.Target_Address{
-					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
 				},
 			},
 		}
