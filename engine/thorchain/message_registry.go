@@ -17,7 +17,7 @@ const (
 	TypeUrlThorchainMsgSend = "/types.MsgSend"
 	
 	// MsgDeposit TypeUrls
-	TypeUrlThorchainMsgDeposit = "/thorchain.v1.MsgDeposit"
+	TypeUrlThorchainMsgDeposit = "/types.MsgDeposit"
 )
 
 // typeUrlRegistry maps TypeUrls to MessageTypes
