@@ -249,32 +249,13 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 		out := proto.Clone(in).(*types.Rule)
 
 		if c.asset.GetFixedValue() == "" {
-			// native transfer
-			var outTarget *types.Target
-			switch c.toAddress.GetType() {
-			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-					Target: &types.Target_Address{
-						Address: c.toAddress.GetFixedValue(),
-					},
-				}
-			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
-					Target: &types.Target_MagicConstant{
-						MagicConstant: c.toAddress.GetMagicConstantValue(),
-					},
-				}
-			default:
-				return nil, fmt.Errorf(
-					"invalid constraint type for `to_address`: %s",
-					c.toAddress.GetType().String(),
-				)
-			}
-
 			out.Resource = "solana.system.transfer"
-			out.Target = outTarget
+			out.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SystemProgramID.String(),
+				},
+			}
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "account_from",
 				Constraint:    c.fromAddress,
@@ -307,6 +288,12 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 
 		// SPL token transfer
 		out.Resource = "solana.spl_token.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.TokenProgramID.String(),
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "account_source",
 			Constraint:    fixed(src),
