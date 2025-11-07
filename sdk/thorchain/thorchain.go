@@ -3,7 +3,6 @@ package thorchain
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -12,8 +11,12 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	vtypes "github.com/vultisig/recipes/types"
 )
 
 // RPCClient interface for THORChain CometBFT RPC calls
@@ -70,6 +73,12 @@ func NewCometBFTRPCClient(endpoint string) (*CometBFTRPCClient, error) {
 // makeCodec creates a codec for THORChain transactions
 func makeCodec() codec.Codec {
 	registry := types.NewInterfaceRegistry()
+	// Register crypto types (required for PubKey interfaces)
+	cryptocodec.RegisterInterfaces(registry)
+	// Register bank module message types
+	banktypes.RegisterInterfaces(registry)
+	// Register THORChain MsgDeposit for swaps
+	registry.RegisterImplementations((*sdk.Msg)(nil), &vtypes.MsgDeposit{})
 	return codec.NewProtoCodec(registry)
 }
 
@@ -132,17 +141,14 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("s must be 32 bytes, got %d", len(sBytes))
 	}
 
-	// Convert to DER format for Cosmos SDK
-	derSig, err := sdk.toDER(rBytes, sBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert to DER: %w", err)
-	}
+	// For Cosmos SDK SIGN_MODE_DIRECT, use raw 64-byte signature: R(32) || S(32)
+	rawSig := append(rBytes, sBytes...)
 
 	// Create the signed transaction with proper Cosmos SDK structure
 	signedTx := tx.Tx{
 		Body:       unsignedTx.Body,
 		AuthInfo:   unsignedTx.AuthInfo,
-		Signatures: [][]byte{derSig},
+		Signatures: [][]byte{rawSig},
 	}
 
 	// Marshal the signed transaction back to bytes
@@ -176,17 +182,51 @@ func (sdk *SDK) Send(ctx context.Context, unsignedTxBytes []byte, signatures map
 	return sdk.Broadcast(ctx, signedTxBytes)
 }
 
-// MessageHash calculates the message hash for signing
-func (sdk *SDK) MessageHash(unsignedTxBytes []byte) ([]byte, error) {
-	// THORChain uses standard Cosmos SDK transaction signing
-	hash := sha256.Sum256(unsignedTxBytes)
-	return hash[:], nil
-}
+// MessageHash calculates the sign document hash for Cosmos SDK signing
+func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequence uint64) ([]byte, error) {
+	// Parse the unsigned transaction
+	var unsignedTx tx.Tx
+	if err := sdk.codec.Unmarshal(unsignedTxBytes, &unsignedTx); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal unsigned transaction: %w", err)
+	}
 
-// deriveKeyFromMessage derives a key from a message hash for TSS lookup
-func (sdk *SDK) deriveKeyFromMessage(messageHash []byte) string {
-	hash := sha256.Sum256(messageHash)
-	return base64.StdEncoding.EncodeToString(hash[:])
+	// Validate AuthInfo exists
+	if unsignedTx.AuthInfo == nil {
+		return nil, fmt.Errorf("transaction missing AuthInfo")
+	}
+
+	// Extract signing info from the transaction
+	if len(unsignedTx.AuthInfo.SignerInfos) == 0 {
+		return nil, fmt.Errorf("transaction missing signer info")
+	}
+
+	// Validate and update sequence in AuthInfo to match the expected sequence
+	signerInfo := unsignedTx.AuthInfo.SignerInfos[0]
+	if signerInfo.Sequence != sequence {
+		signerInfo.Sequence = sequence
+	}
+
+	chainId := getChainIdFromTx(&unsignedTx)
+
+	// Create the sign document following Cosmos SDK SIGN_MODE_DIRECT
+	bodyBytes := mustMarshalTxBody(sdk.codec, unsignedTx.Body)
+	authInfoBytes := mustMarshalAuthInfo(sdk.codec, unsignedTx.AuthInfo)
+
+	signDoc := &tx.SignDoc{
+		BodyBytes:     bodyBytes,
+		AuthInfoBytes: authInfoBytes,
+		ChainId:       chainId,
+		AccountNumber: accountNumber,
+	}
+
+	// Marshal and hash the sign document
+	signDocBytes, err := sdk.codec.Marshal(signDoc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal sign document: %w", err)
+	}
+
+	hash := sha256.Sum256(signDocBytes)
+	return hash[:], nil
 }
 
 // toDER converts R,S to DER format for Cosmos SDK signatures
@@ -207,11 +247,11 @@ func (sdk *SDK) toDER(r, s []byte) ([]byte, error) {
 	intR := append([]byte{0x02, byte(len(r))}, r...)
 	intS := append([]byte{0x02, byte(len(s))}, s...)
 	content := append(intR, intS...)
-	
+
 	if len(content) > 255 {
 		return nil, fmt.Errorf("DER signature too long")
 	}
-	
+
 	seq := []byte{0x30, byte(len(content))}
 	return append(seq, content...), nil
 }
@@ -235,4 +275,59 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// Helper functions for sign document creation
+
+// mustMarshalTxBody marshals transaction body, panics on error (should not happen with valid tx)
+func mustMarshalTxBody(cdc codec.Codec, body *tx.TxBody) []byte {
+	if body == nil {
+		panic("nil transaction body")
+	}
+	bytes, err := cdc.Marshal(body)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal tx body: %v", err))
+	}
+	return bytes
+}
+
+// mustMarshalAuthInfo marshals auth info, panics on error (should not happen with valid tx)
+func mustMarshalAuthInfo(cdc codec.Codec, authInfo *tx.AuthInfo) []byte {
+	if authInfo == nil {
+		panic("nil auth info")
+	}
+	bytes, err := cdc.Marshal(authInfo)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal auth info: %v", err))
+	}
+	return bytes
+}
+
+// getChainIdFromTx extracts chain ID from transaction (should be embedded in the unsigned tx)
+func getChainIdFromTx(_ *tx.Tx) string {
+	// For THORChain, the chain ID should be "thorchain-1" for mainnet
+	// In a real implementation, this would be extracted from the transaction context
+	// or provided as a parameter during transaction building
+	return "thorchain-1"
+}
+
+
+// parseUint64 safely parses a string to uint64
+func parseUint64(s string) (uint64, error) {
+	result := uint64(0)
+	for _, char := range s {
+		if char < '0' || char > '9' {
+			return 0, fmt.Errorf("invalid number: %s", s)
+		}
+		result = result*10 + uint64(char-'0')
+	}
+	return result, nil
+}
+
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
