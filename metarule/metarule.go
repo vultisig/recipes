@@ -196,39 +196,6 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	return res, nil
 }
 
-type sendUtxoConstraints struct {
-	changeAddress *types.Constraint
-	recipient     *types.Constraint
-	amount        *types.Constraint
-}
-
-func getSendUtxoConstraints(rule *types.Rule) (sendUtxoConstraints, error) {
-	res := sendUtxoConstraints{}
-
-	for _, c := range rule.GetParameterConstraints() {
-		switch c.GetParameterName() {
-		case "change_address":
-			res.changeAddress = c.GetConstraint()
-		case "recipient":
-			res.recipient = c.GetConstraint()
-		case "amount":
-			res.amount = c.GetConstraint()
-		}
-	}
-
-	if res.changeAddress == nil {
-		return res, fmt.Errorf("failed to find constraint: change_address")
-	}
-	if res.recipient == nil {
-		return res, fmt.Errorf("failed to find constraint: recipient")
-	}
-	if res.amount == nil {
-		return res, fmt.Errorf("failed to find constraint: amount")
-	}
-
-	return res, nil
-}
-
 func (m *MetaRule) getConstraint(rule *types.Rule, name string) (*types.Constraint, error) {
 	for _, c := range rule.GetParameterConstraints() {
 		if c.GetParameterName() == name {
@@ -625,9 +592,9 @@ func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, er
 func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
 	switch metaProtocol(r.GetProtocolId()) {
 	case send:
-		c, err := getSendUtxoConstraints(in)
+		c, err := getSendConstraints(in)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse `send utxo` constraints: %w", err)
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
 		}
 
 		out := proto.Clone(in).(*types.Rule)
@@ -638,13 +605,13 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "output_address_0",
-			Constraint:    c.recipient,
+			Constraint:    c.toAddress,
 		}, {
 			ParameterName: "output_value_0",
 			Constraint:    c.amount,
 		}, {
 			ParameterName: "output_address_1",
-			Constraint:    c.changeAddress,
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "output_value_1",
 			Constraint:    anyConstraint(),
