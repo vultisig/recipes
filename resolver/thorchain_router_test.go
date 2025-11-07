@@ -108,6 +108,10 @@ func TestTHORChainRouterResolver_Resolve_Integration(t *testing.T) {
 			}
 
 			if err != nil {
+				if strings.Contains(err.Error(), "is currently halted") {
+					t.Skipf("Chain %s is currently halted on THORChain, skipping test", tt.chainID)
+					return
+				}
 				t.Errorf("Unexpected error for chainID %s: %v", tt.chainID, err)
 				return
 			}
@@ -198,6 +202,10 @@ func TestTHORChainRouterResolver_APIConsistency(t *testing.T) {
 				"asset",
 			)
 			if err != nil {
+				if strings.Contains(err.Error(), "is currently halted") {
+					t.Skipf("Chain %s is currently halted on THORChain, skipping test", chain.chainID)
+					return
+				}
 				t.Fatalf("Resolver failed for %s: %v", chain.chainID, err)
 			}
 
