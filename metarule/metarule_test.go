@@ -2092,15 +2092,15 @@ func TestTryFormat_THORChainSwap(t *testing.T) {
 
 	// Verify all required parameters are present
 	assert.Contains(t, paramByName, "amount")
-	assert.Contains(t, paramByName, "denom")
+	assert.Contains(t, paramByName, "from_asset")
 	assert.Contains(t, paramByName, "memo")
 
 	// Verify constraint values
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
 	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["denom"].Constraint.Type)
-	assert.Equal(t, "", paramByName["denom"].Constraint.GetFixedValue()) // Empty for native RUNE
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["from_asset"].Constraint.Type)
+	assert.Equal(t, "RUNE", paramByName["from_asset"].Constraint.GetFixedValue()) // Defaults to RUNE for empty from_asset
 
 	// Verify memo constraint (regexp for THORChain swap format)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
