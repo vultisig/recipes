@@ -879,14 +879,25 @@ func (m *MetaRule) handleTHORChain(in *types.Rule, r *types.ResourcePath) ([]*ty
 			assetPattern = regexp.QuoteMeta(thorAsset)
 		}
 
+		// Extract from_asset value, default to RUNE if empty (native token)
+		fromAssetValue := c.fromAsset.GetFixedValue()
+		if fromAssetValue == "" {
+			fromAssetValue = "RUNE"
+		}
+
 		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAssetValue,
+					},
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint:    c.fromAmount,
-			},
-			{
-				ParameterName: "denom",
-				Constraint:    c.fromAsset,
 			},
 			{
 				ParameterName: "memo",

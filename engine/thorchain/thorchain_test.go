@@ -242,6 +242,15 @@ func TestThorchain_Evaluate_Success_ThorchainSwap(t *testing.T) {
 					},
 				},
 			},
+			{
+				ParameterName: "from_asset",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &vtypes.Constraint_FixedValue{
+						FixedValue: "RUNE",
+					},
+				},
+			},
 		},
 	}
 

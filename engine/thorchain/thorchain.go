@@ -3,6 +3,7 @@ package thorchain
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -374,6 +375,19 @@ func (t *Thorchain) extractParameterFromMsgDeposit(paramName string, msgDeposit 
 	case "memo":
 		// For MsgDeposit, memo contains swap instructions including destination address
 		return msgDeposit.Memo, nil
+	case "from_asset":
+		if len(msgDeposit.Coins) == 0 {
+			return nil, fmt.Errorf("no coins in deposit message")
+		}
+		if len(msgDeposit.Coins) != 1 {
+			return nil, fmt.Errorf("multi-coin deposits not supported, got %d coins", len(msgDeposit.Coins))
+		}
+		coin := msgDeposit.Coins[0]
+		if coin.Asset == nil {
+			return nil, fmt.Errorf("coin missing asset information")
+		}
+		// Return the asset symbol in uppercase
+		return strings.ToUpper(coin.Asset.Symbol), nil
 	default:
 		// Note: 'recipient' parameter is not supported for THORChain swaps as there's no explicit
 		// destination address - the real destination is encoded in the memo field
