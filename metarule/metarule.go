@@ -215,36 +215,17 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 
 		out := proto.Clone(in).(*types.Rule)
 
-		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
-			// native transfer
-			var outTarget *types.Target
-			switch c.toAddress.GetType() {
-			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-					Target: &types.Target_Address{
-						Address: c.toAddress.GetFixedValue(),
-					},
-				}
-			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
-					Target: &types.Target_MagicConstant{
-						MagicConstant: c.toAddress.GetMagicConstantValue(),
-					},
-				}
-			default:
-				return nil, fmt.Errorf(
-					"invalid constraint type for `to_address`: %s",
-					c.toAddress.GetType().String(),
-				)
-			}
-
+		if c.asset.GetFixedValue() == "" {
 			out.Resource = "solana.system.transfer"
-			out.Target = outTarget
+			out.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SystemProgramID.String(),
+				},
+			}
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "account_from",
-				Constraint:    anyConstraint(),
+				Constraint:    c.fromAddress,
 			}, {
 				ParameterName: "account_to",
 				Constraint:    c.toAddress,
@@ -255,22 +236,73 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			return []*types.Rule{out}, nil
 		}
 
+		const onlyFixed = "must be fixed constraint for spl token transfer"
+		if c.fromAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`from_address` " + onlyFixed)
+		}
+		if c.toAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`to_address` " + onlyFixed)
+		}
+
+		src, err := DeriveATA(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive src ATA: %w", err)
+		}
+		dst, err := DeriveATA(c.toAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive dst ATA: %w", err)
+		}
+
 		// SPL token transfer
 		out.Resource = "solana.spl_token.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.TokenProgramID.String(),
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "account_source",
-			Constraint:    anyConstraint(),
+			Constraint:    fixed(src),
 		}, {
 			ParameterName: "account_destination",
-			Constraint:    c.toAddress,
+			Constraint:    fixed(dst),
 		}, {
 			ParameterName: "account_authority",
-			Constraint:    anyConstraint(),
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "arg_amount",
 			Constraint:    c.amount,
 		}}
-		return []*types.Rule{out}, nil
+		return []*types.Rule{out, {
+			Resource: "solana.associated_token_account.create",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_payer",
+				Constraint:    c.fromAddress,
+			}, {
+				ParameterName: "account_associated_token_account",
+				Constraint:    fixed(dst),
+			}, {
+				ParameterName: "account_owner",
+				Constraint:    c.toAddress,
+			}, {
+				ParameterName: "account_mint",
+				Constraint:    c.asset,
+			}, {
+				ParameterName: "account_system_program",
+				Constraint:    fixed(solana.SystemProgramID.String()),
+			}, {
+				ParameterName: "account_token_program",
+				Constraint:    fixed(solana.TokenProgramID.String()),
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
+				},
+			},
+		}}, nil
 	case swap:
 		c, err := getSwapConstraints(in)
 		if err != nil {
@@ -902,7 +934,7 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 			solana.TokenProgramID.Bytes(),
 			mint.Bytes(),
 		},
-		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+		solana.SPLAssociatedTokenAccountProgramID,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to derive ATA: %w", err)
@@ -1042,7 +1074,7 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			Target: &types.Target{
 				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 				Target: &types.Target_Address{
-					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
 				},
 			},
 		}
