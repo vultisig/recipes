@@ -1,7 +1,6 @@
 package thorchain
 
 import (
-	"encoding/base64"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -213,9 +212,9 @@ func TestThorchain_Evaluate_Success_ThorchainSwap(t *testing.T) {
 	thorchain := NewThorchain()
 
 	expectedAmount := "75000000"
-	expectedDenom := "rune"
+	expectedSymbol := "rune"
 	expectedMemo := "=:ETH.ETH:0x1234567890123456789012345678901234567890"
-	txBytes := createValidMsgDepositTransaction(t, "thor1signer123", expectedAmount, expectedDenom, expectedMemo)
+	txBytes := createValidMsgDepositTransaction(t, "thor1signer123", expectedAmount, expectedSymbol, expectedMemo)
 
 	// Create a rule for thorchain_swap.swap with parameter constraints
 	rule := &vtypes.Rule{
@@ -235,20 +234,20 @@ func TestThorchain_Evaluate_Success_ThorchainSwap(t *testing.T) {
 				},
 			},
 			{
-				ParameterName: "denom",
-				Constraint: &vtypes.Constraint{
-					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &vtypes.Constraint_FixedValue{
-						FixedValue: expectedDenom,
-					},
-				},
-			},
-			{
 				ParameterName: "memo",
 				Constraint: &vtypes.Constraint{
 					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_REGEXP,
 					Value: &vtypes.Constraint_RegexpValue{
 						RegexpValue: "^=:ETH\\.ETH:0x[a-fA-F0-9]{40}$",
+					},
+				},
+			},
+			{
+				ParameterName: "from_asset",
+				Constraint: &vtypes.Constraint{
+					Type: vtypes.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &vtypes.Constraint_FixedValue{
+						FixedValue: "RUNE",
 					},
 				},
 			},
@@ -322,22 +321,30 @@ func TestThorchain_Evaluate_Failure_ThorchainSwap_InvalidMemoFormat(t *testing.T
 }
 
 // Helper function to create valid MsgDeposit transactions for testing thorchain_swap
-func createValidMsgDepositTransaction(t *testing.T, signer, amount, denom, memo string) []byte {
+func createValidMsgDepositTransaction(t *testing.T, signer, amount, symbol, memo string) []byte {
 	// Use the exact same codec setup as NewThorchain()
 	engine := NewThorchain()
 	cdc := engine.cdc
 
-	// Create protobuf Coins directly
+	// Convert signer address to bytes
+	signerBytes := []byte(signer)
+
+	// Create protobuf Coins with Asset structure
 	pbCoins := make([]*vtypes.Coin, 1)
 	pbCoins[0] = &vtypes.Coin{
-		Denom:  denom,
-		Amount: amount,
+		Asset: &vtypes.Asset{
+			Chain:  "THOR",
+			Symbol: symbol,
+			Ticker: symbol,
+		},
+		Amount:   amount,
+		Decimals: 8,
 	}
 
 	msgDeposit := &vtypes.MsgDeposit{
 		Coins:  pbCoins,
 		Memo:   memo,
-		Signer: signer,
+		Signer: signerBytes,
 	}
 
 	// Pack the message into Any
@@ -358,12 +365,11 @@ func createValidMsgDepositTransaction(t *testing.T, signer, amount, denom, memo 
 		},
 	}
 
-	// Marshal to protobuf then encode as base64
+	// Marshal to protobuf and return raw bytes (not base64 encoded)
 	protoBytes, err := cdc.Marshal(txData)
 	require.NoError(t, err)
 
-	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
-	return []byte(base64Str)
+	return protoBytes
 }
 
 // Helper function to create valid MsgSend transactions for testing
@@ -400,12 +406,11 @@ func createValidMsgSendTransaction(t *testing.T, fromAddr, toAddr, amount, denom
 		},
 	}
 
-	// Marshal to protobuf then encode as base64
+	// Marshal to protobuf and return raw bytes (not base64 encoded)
 	protoBytes, err := cdc.Marshal(txData)
 	require.NoError(t, err)
 
-	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
-	return []byte(base64Str)
+	return protoBytes
 }
 
 func TestThorchain_parseTransaction(t *testing.T) {
@@ -459,13 +464,12 @@ func TestThorchain_parseTransaction(t *testing.T) {
 					},
 				}
 
-				// Marshal to protobuf then encode as base64
+				// Marshal to protobuf and return raw bytes
 				protoBytes, err := cdc.Marshal(txData)
 				if err != nil {
 					panic(err)
 				}
-				base64Str := base64.StdEncoding.EncodeToString(protoBytes)
-				return []byte(base64Str)
+				return protoBytes
 			},
 			shouldError: false,
 		},
@@ -476,16 +480,16 @@ func TestThorchain_parseTransaction(t *testing.T) {
 			errorMsg:    "empty transaction data",
 		},
 		{
-			name:        "invalid base64",
+			name:        "invalid protobuf",
 			txBytes:     []byte(`{"invalid": json}`),
 			shouldError: true,
-			errorMsg:    "failed to decode base64 transaction",
+			errorMsg:    "failed to unmarshal protobuf transaction",
 		},
 		{
-			name:        "invalid base64 string",
-			txBytes:     []byte("invalid-base64!@#"),
+			name:        "invalid protobuf string",
+			txBytes:     []byte("invalid-protobuf!@#"),
 			shouldError: true,
-			errorMsg:    "failed to decode base64 transaction",
+			errorMsg:    "failed to unmarshal protobuf transaction",
 		},
 		{
 			name: "transaction size too large",
@@ -514,8 +518,7 @@ func TestThorchain_parseTransaction(t *testing.T) {
 					},
 				}
 				protoBytes, _ := engine.cdc.Marshal(txData)
-				base64Str := base64.StdEncoding.EncodeToString(protoBytes)
-				return []byte(base64Str)
+				return protoBytes
 			},
 			shouldError: false,
 		},
@@ -586,15 +589,12 @@ func TestThorchain_parseTransaction_Protobuf(t *testing.T) {
 		},
 	}
 
-	// Marshal to protobuf then encode as base64
+	// Marshal to protobuf and test parsing with raw bytes
 	protoBytes, err := cdc.Marshal(txData)
 	require.NoError(t, err)
 
-	base64Str := base64.StdEncoding.EncodeToString(protoBytes)
-	base64Bytes := []byte(base64Str)
-
 	// Test parsing
-	result, err := thorchain.parseTransaction(base64Bytes)
+	result, err := thorchain.parseTransaction(protoBytes)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 

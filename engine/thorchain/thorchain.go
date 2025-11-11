@@ -1,12 +1,13 @@
 package thorchain
 
 import (
-	"encoding/base64"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -25,6 +26,9 @@ type Thorchain struct {
 // NewThorchain creates a new Thorchain engine instance
 func NewThorchain() *Thorchain {
 	ir := codectypes.NewInterfaceRegistry()
+
+	// Register crypto types (required for PubKey interfaces)
+	cryptocodec.RegisterInterfaces(ir)
 
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
@@ -101,20 +105,9 @@ func (t *Thorchain) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 		return nil, fmt.Errorf("empty transaction data")
 	}
 
-	// Decode base64 to get protobuf bytes
-	protoBytes, err := base64.StdEncoding.DecodeString(string(txBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode base64 transaction: %w", err)
-	}
-
-	// Check decoded size to prevent DoS via large decoded payloads
-	if len(protoBytes) > maxTxBytes {
-		return nil, fmt.Errorf("decoded transaction too large: %d bytes (max %d)", len(protoBytes), maxTxBytes)
-	}
-
 	// Unmarshal protobuf bytes to tx.Tx
 	var txData tx.Tx
-	if err := t.cdc.Unmarshal(protoBytes, &txData); err != nil {
+	if err := t.cdc.Unmarshal(txBytes, &txData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal protobuf transaction: %w", err)
 	}
 
@@ -382,14 +375,19 @@ func (t *Thorchain) extractParameterFromMsgDeposit(paramName string, msgDeposit 
 	case "memo":
 		// For MsgDeposit, memo contains swap instructions including destination address
 		return msgDeposit.Memo, nil
-	case "denom":
+	case "from_asset":
 		if len(msgDeposit.Coins) == 0 {
 			return nil, fmt.Errorf("no coins in deposit message")
 		}
 		if len(msgDeposit.Coins) != 1 {
 			return nil, fmt.Errorf("multi-coin deposits not supported, got %d coins", len(msgDeposit.Coins))
 		}
-		return msgDeposit.Coins[0].Denom, nil
+		coin := msgDeposit.Coins[0]
+		if coin.Asset == nil {
+			return nil, fmt.Errorf("coin missing asset information")
+		}
+		// Return the asset symbol in uppercase
+		return strings.ToUpper(coin.Asset.Symbol), nil
 	default:
 		// Note: 'recipient' parameter is not supported for THORChain swaps as there's no explicit
 		// destination address - the real destination is encoded in the memo field
