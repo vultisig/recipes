@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/cometbft/cometbft/rpc/client/http"
@@ -36,18 +37,9 @@ type SDK struct {
 	codec     codec.Codec
 }
 
-// THORChain mainnet endpoints
-var MainnetEndpoints = []string{
-	"https://rpc.thorchain.info",
-	"https://thornode.ninerealms.com",
-	"https://rpc-thorchain.nodeist.net",
-}
-
-// THORChain testnet endpoints
-var TestnetEndpoints = []string{
-	"https://testnet.rpc.thorchain.info",
-	"https://testnet.thornode.thorchain.info",
-}
+// secp256k1 curve parameters for low-S enforcement
+var secpN, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+var secpHalfN = new(big.Int).Rsh(new(big.Int).Set(secpN), 1)
 
 // NewSDK creates a new THORChain SDK instance
 func NewSDK(rpcClient RPCClient) *SDK {
@@ -100,7 +92,14 @@ func (c *CometBFTRPCClient) BroadcastTxSync(ctx context.Context, txBytes []byte)
 	return result, nil
 }
 
-// Sign applies TSS signatures to an unsigned THORChain transaction
+// Sign applies TSS signatures to an unsigned THORChain transaction.
+//
+// REQUIREMENTS: The unsigned transaction MUST have properly formatted AuthInfo with:
+// - SignerInfos[0].PublicKey set to a valid secp256k1 public key (33 bytes compressed)
+// - SignerInfos[0].ModeInfo set to SIGN_MODE_DIRECT
+// - SignerInfos[0].Sequence matching the sequence used in MessageHash()
+//
+// If these requirements are not met, the signed transaction will be rejected by the network.
 func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
 	if len(signatures) == 0 {
 		return nil, fmt.Errorf("no signatures provided")
@@ -142,6 +141,13 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	if len(sBytes) != 32 {
 		return nil, fmt.Errorf("s must be 32 bytes, got %d", len(sBytes))
 	}
+
+	// Enforce low-S to prevent transaction malleability
+	sLow, err := normalizeLowS(sBytes)
+	if err != nil {
+		return nil, fmt.Errorf("low-S normalization failed: %w", err)
+	}
+	sBytes = sLow
 
 	// For Cosmos SDK SIGN_MODE_DIRECT, use raw 64-byte signature: R(32) || S(32)
 	rawSig := append(rBytes, sBytes...)
@@ -208,8 +214,6 @@ func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequen
 		signerInfo.Sequence = sequence
 	}
 
-	chainId := getChainIdFromTx(&unsignedTx)
-
 	// Create the sign document following Cosmos SDK SIGN_MODE_DIRECT
 	bodyBytes := mustMarshalTxBody(sdk.codec, unsignedTx.Body)
 	authInfoBytes := mustMarshalAuthInfo(sdk.codec, unsignedTx.AuthInfo)
@@ -217,7 +221,7 @@ func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequen
 	signDoc := &tx.SignDoc{
 		BodyBytes:     bodyBytes,
 		AuthInfoBytes: authInfoBytes,
-		ChainId:       chainId,
+		ChainId:       "thorchain-1", // THORChain mainnet chain ID
 		AccountNumber: accountNumber,
 	}
 
@@ -231,18 +235,6 @@ func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequen
 	return hash[:], nil
 }
 
-// trimLeftZeros removes leading zeros from byte slice, keeping at least one byte
-func (sdk *SDK) trimLeftZeros(b []byte) []byte {
-	i := 0
-	for i < len(b) && b[i] == 0x00 {
-		i++
-	}
-	if i == len(b) {
-		return []byte{0x00} // Keep at least one zero
-	}
-	return b[i:]
-}
-
 // cleanHex removes 0x prefix from hex strings
 func cleanHex(s string) string {
 	s = strings.TrimSpace(s)
@@ -250,6 +242,28 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// normalizeLowS ensures the S value is in the lower half of the curve order to prevent malleability
+func normalizeLowS(s []byte) ([]byte, error) {
+	if len(s) == 0 {
+		return nil, fmt.Errorf("empty s")
+	}
+	var sb big.Int
+	sb.SetBytes(s)
+	if sb.Sign() <= 0 || sb.Cmp(secpN) >= 0 {
+		return nil, fmt.Errorf("s not in [1, N-1]")
+	}
+	if sb.Cmp(secpHalfN) > 0 {
+		sb.Sub(secpN, &sb)
+	}
+	out := sb.Bytes()
+	// left-pad to 32 bytes
+	if len(out) < 32 {
+		pad := make([]byte, 32-len(out))
+		out = append(pad, out...)
+	}
+	return out, nil
 }
 
 // Helper functions for sign document creation
@@ -276,12 +290,4 @@ func mustMarshalAuthInfo(cdc codec.Codec, authInfo *tx.AuthInfo) []byte {
 		panic(fmt.Sprintf("failed to marshal auth info: %v", err))
 	}
 	return bytes
-}
-
-// getChainIdFromTx extracts chain ID from transaction (should be embedded in the unsigned tx)
-func getChainIdFromTx(_ *tx.Tx) string {
-	// For THORChain, the chain ID should be "thorchain-1" for mainnet
-	// In a real implementation, this would be extracted from the transaction context
-	// or provided as a parameter during transaction building
-	return "thorchain-1"
 }
