@@ -7,12 +7,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
+	thorchain_sdk "github.com/vultisig/recipes/sdk/thorchain"
 	vtypes "github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -25,18 +25,7 @@ type Thorchain struct {
 
 // NewThorchain creates a new Thorchain engine instance
 func NewThorchain() *Thorchain {
-	ir := codectypes.NewInterfaceRegistry()
-
-	// Register crypto types (required for PubKey interfaces)
-	cryptocodec.RegisterInterfaces(ir)
-
-	// Register bank message types
-	banktypes.RegisterInterfaces(ir)
-
-	// Register the generated protobuf MsgDeposit for THORChain swaps
-	ir.RegisterImplementations((*sdk.Msg)(nil), &vtypes.MsgDeposit{})
-
-	return &Thorchain{cdc: codec.NewProtoCodec(ir)}
+	return &Thorchain{cdc: thorchain_sdk.MakeCodec()}
 }
 
 // Supports returns true if this engine supports the given chain

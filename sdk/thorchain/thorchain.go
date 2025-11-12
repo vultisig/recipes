@@ -53,7 +53,7 @@ var TestnetEndpoints = []string{
 func NewSDK(rpcClient RPCClient) *SDK {
 	return &SDK{
 		rpcClient: rpcClient,
-		codec:     makeCodec(),
+		codec:     MakeCodec(),
 	}
 }
 
@@ -66,12 +66,14 @@ func NewCometBFTRPCClient(endpoint string) (*CometBFTRPCClient, error) {
 
 	return &CometBFTRPCClient{
 		client: client,
-		codec:  makeCodec(),
+		codec:  MakeCodec(),
 	}, nil
 }
 
-// makeCodec creates a codec for THORChain transactions
-func makeCodec() codec.Codec {
+// MakeCodec creates a standardized codec for THORChain transactions.
+// This codec is used across SDK, engine, and tests to ensure consistency.
+// External plugins can use this to maintain compatibility with the recipes engine.
+func MakeCodec() codec.Codec {
 	registry := types.NewInterfaceRegistry()
 	// Register crypto types (required for PubKey interfaces)
 	cryptocodec.RegisterInterfaces(registry)
@@ -229,33 +231,6 @@ func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequen
 	return hash[:], nil
 }
 
-// toDER converts R,S to DER format for Cosmos SDK signatures
-func (sdk *SDK) toDER(r, s []byte) ([]byte, error) {
-	// Remove leading zeros
-	r = sdk.trimLeftZeros(r)
-	s = sdk.trimLeftZeros(s)
-
-	// Add 0x00 prefix if high bit is set
-	if len(r) > 0 && (r[0]&0x80) != 0 {
-		r = append([]byte{0x00}, r...)
-	}
-	if len(s) > 0 && (s[0]&0x80) != 0 {
-		s = append([]byte{0x00}, s...)
-	}
-
-	// Build DER sequence: SEQUENCE { INTEGER r, INTEGER s }
-	intR := append([]byte{0x02, byte(len(r))}, r...)
-	intS := append([]byte{0x02, byte(len(s))}, s...)
-	content := append(intR, intS...)
-
-	if len(content) > 255 {
-		return nil, fmt.Errorf("DER signature too long")
-	}
-
-	seq := []byte{0x30, byte(len(content))}
-	return append(seq, content...), nil
-}
-
 // trimLeftZeros removes leading zeros from byte slice, keeping at least one byte
 func (sdk *SDK) trimLeftZeros(b []byte) []byte {
 	i := 0
@@ -309,25 +284,4 @@ func getChainIdFromTx(_ *tx.Tx) string {
 	// In a real implementation, this would be extracted from the transaction context
 	// or provided as a parameter during transaction building
 	return "thorchain-1"
-}
-
-
-// parseUint64 safely parses a string to uint64
-func parseUint64(s string) (uint64, error) {
-	result := uint64(0)
-	for _, char := range s {
-		if char < '0' || char > '9' {
-			return 0, fmt.Errorf("invalid number: %s", s)
-		}
-		result = result*10 + uint64(char-'0')
-	}
-	return result, nil
-}
-
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
