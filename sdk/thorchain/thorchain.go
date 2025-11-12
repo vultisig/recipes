@@ -10,11 +10,13 @@ import (
 
 	"github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/vultisig/mobile-tss-lib/tss"
 	vtypes "github.com/vultisig/recipes/types"
@@ -35,6 +37,7 @@ type CometBFTRPCClient struct {
 type SDK struct {
 	rpcClient RPCClient
 	codec     codec.Codec
+	txConfig  client.TxConfig
 }
 
 // secp256k1 curve parameters for low-S enforcement
@@ -43,9 +46,12 @@ var secpHalfN = new(big.Int).Rsh(new(big.Int).Set(secpN), 1)
 
 // NewSDK creates a new THORChain SDK instance
 func NewSDK(rpcClient RPCClient) *SDK {
+	codec := MakeCodec()
+	txConfig := authtx.NewTxConfig(codec, authtx.DefaultSignModes)
 	return &SDK{
 		rpcClient: rpcClient,
-		codec:     MakeCodec(),
+		codec:     codec,
+		txConfig:  txConfig,
 	}
 }
 
@@ -152,17 +158,18 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	// For Cosmos SDK SIGN_MODE_DIRECT, use raw 64-byte signature: R(32) || S(32)
 	rawSig := append(rBytes, sBytes...)
 
-	// Create the signed transaction with proper Cosmos SDK structure
-	signedTx := tx.Tx{
+	// Create a transaction wrapper that implements sdk.Tx interface
+	txWrapper := authtx.WrapTx(&tx.Tx{
 		Body:       unsignedTx.Body,
 		AuthInfo:   unsignedTx.AuthInfo,
 		Signatures: [][]byte{rawSig},
-	}
+	})
 
-	// Marshal the signed transaction back to bytes
-	signedTxBytes, err := sdk.codec.Marshal(&signedTx)
+	// Use the SDK's TxEncoder for proper framing
+	txEncoder := sdk.txConfig.TxEncoder()
+	signedTxBytes, err := txEncoder(txWrapper.GetTx())
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal signed transaction: %w", err)
+		return nil, fmt.Errorf("failed to encode signed transaction: %w", err)
 	}
 
 	return signedTxBytes, nil
