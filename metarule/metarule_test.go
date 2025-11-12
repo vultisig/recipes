@@ -3,6 +3,7 @@ package metarule
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
@@ -30,20 +31,29 @@ func TestTryFormat_NonMetaRule(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				},
+			},
+			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
 						FixedValue: "1000000",
-					},
-				},
-			},
-			{
-				ParameterName: "recipient",
-				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: testAddress,
 					},
 				},
 			},
@@ -71,18 +81,29 @@ func TestTryFormat_UnsupportedChain(t *testing.T) {
 func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
 	metaRule := NewMetaRule()
 
-	// Test native SOL transfer (target is system program)
 	rule := &types.Rule{}
-	rule.Resource = "solana.send" // Meta-rule format with empty function ID
+	rule.Resource = "solana.send"
 	rule.Target = &types.Target{
 		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 		Target: &types.Target_Address{
-			Address: solana.SystemProgramID.String(), // Native SOL transfer
+			Address: solana.SystemProgramID.String(),
 		},
 	}
 	rule.ParameterConstraints = []*types.ParameterConstraint{
 		{
-			ParameterName: "recipient",
+			ParameterName: "asset",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+			},
+		},
+		{
+			ParameterName: "from_address",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+			},
+		},
+		{
+			ParameterName: "to_address",
 			Constraint: &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 				Value: &types.Constraint_FixedValue{
@@ -106,7 +127,7 @@ func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
 	assert.NotNil(t, result)
 	require.Len(t, result, 1)
 	assert.Equal(t, "solana.system.transfer", result[0].Resource)
-	assert.Equal(t, testAddress, result[0].Target.GetAddress())
+	assert.Equal(t, solana.SystemProgramID.String(), result[0].Target.GetAddress())
 	assert.Len(t, result[0].ParameterConstraints, 3)
 
 	paramNames := make([]string, len(result[0].ParameterConstraints))
@@ -121,19 +142,36 @@ func TestTryFormat_SolanaSOLTransfer(t *testing.T) {
 func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
 	metaRule := NewMetaRule()
 
-	// Test SPL token transfer (target is not system program)
-	const tokenMintAddress = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC mint
+	const tokenMintAddress = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 	rule := &types.Rule{
 		Resource: "solana.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: tokenMintAddress, // SPL token transfer
+				Address: tokenMintAddress,
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: tokenMintAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -156,9 +194,9 @@ func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
 	result, err := metaRule.TryFormat(rule)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	require.Len(t, result, 1)
+	require.Len(t, result, 2)
 	assert.Equal(t, "solana.spl_token.transfer", result[0].Resource)
-	assert.Equal(t, tokenMintAddress, result[0].Target.GetAddress())
+	assert.Equal(t, solana.TokenProgramID.String(), result[0].Target.GetAddress())
 	assert.Len(t, result[0].ParameterConstraints, 4)
 }
 
@@ -174,7 +212,19 @@ func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
-			// Missing recipient constraint
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			// Missing to_address constraint
 			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
@@ -189,7 +239,7 @@ func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+	assert.Contains(t, err.Error(), "failed to find constraint: to_address")
 }
 
 func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
@@ -205,7 +255,19 @@ func TestTryFormat_SolanaMissingAmountConstraint(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -243,19 +305,38 @@ func TestTryFormat_SolanaUnsupportedProtocol(t *testing.T) {
 func TestTryFormat_SolanaInvalidRecipientConstraintType(t *testing.T) {
 	metaRule := NewMetaRule()
 
+	const tokenMintAddress = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 	rule := &types.Rule{
 		Resource: "solana.send",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: solana.SystemProgramID.String(),
+				Address: tokenMintAddress,
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
 				Constraint: &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY, // Invalid for recipient
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: tokenMintAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
 				},
 			},
 			{
@@ -272,7 +353,7 @@ func TestTryFormat_SolanaInvalidRecipientConstraintType(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
+	assert.Contains(t, err.Error(), "`to_address` must be fixed constraint for spl token transfer")
 }
 
 const testEVMChain = "ethereum"
@@ -292,7 +373,19 @@ func TestHandleEVM_NativeTransfer(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -322,7 +415,7 @@ func TestHandleEVM_NativeTransfer(t *testing.T) {
 
 	chain, _ := common.FromString(testEVMChain)
 	nativeSymbol, _ := chain.NativeSymbol()
-	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
+	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, strings.ToLower(nativeSymbol))
 	assert.Equal(t, expectedResource, result[0].Resource)
 	assert.Equal(t, testRecipientAddress, result[0].Target.GetAddress())
 	assert.Equal(t, "amount", result[0].ParameterConstraints[0].ParameterName)
@@ -341,7 +434,22 @@ func TestHandleEVM_ERC20Transfer(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testTokenAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -407,7 +515,19 @@ func TestHandleEVM_MissingAmount(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -439,6 +559,18 @@ func TestHandleEVM_MissingRecipient(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
@@ -455,7 +587,7 @@ func TestHandleEVM_MissingRecipient(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+	assert.Contains(t, err.Error(), "failed to find constraint: to_address")
 }
 
 func TestHandleEVM_InvalidChain(t *testing.T) {
@@ -471,12 +603,21 @@ func TestHandleEVM_InvalidChain(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: testRecipientAddress,
-					},
 				},
 			},
 			{
@@ -512,7 +653,19 @@ func TestHandleEVM_InvalidTargetTypeForNative(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_UNSPECIFIED,
 				},
@@ -534,7 +687,7 @@ func TestHandleEVM_InvalidTargetTypeForNative(t *testing.T) {
 
 	_, err = metaRule.handleEVM(in, r)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid constraint type for `recipient`")
+	assert.Contains(t, err.Error(), "invalid constraint type for `to_address`")
 }
 
 func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
@@ -550,7 +703,19 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 					Value: &types.Constraint_MagicConstantValue{
@@ -580,7 +745,7 @@ func TestHandleEVM_MagicConstantTargetForNative(t *testing.T) {
 
 	chain, _ := common.FromString(testEVMChain)
 	nativeSymbol, _ := chain.NativeSymbol()
-	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, nativeSymbol)
+	expectedResource := fmt.Sprintf("%s.%s.transfer", testEVMChain, strings.ToLower(nativeSymbol))
 	assert.Equal(t, expectedResource, result[0].Resource)
 	assert.Equal(t, types.MagicConstant_VULTISIG_TREASURY, result[0].Target.GetMagicConstant())
 }
@@ -826,6 +991,7 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 		changeAddress    = "bc1qchange123456789abcdef1234567890abcdef12"
 		recipientAddress = "bc1qrecipient123456789abcdef1234567890abcd"
 		amount           = "500000"
+		asset            = "BTC"
 		expectedResource = "bitcoin.btc.transfer"
 	)
 
@@ -835,16 +1001,16 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 		Resource: "bitcoin.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "change_address",
+				ParameterName: "asset",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: changeAddress,
+						FixedValue: asset,
 					},
 				},
 			},
 			{
-				ParameterName: "recipient",
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -858,6 +1024,15 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
 						FixedValue: amount,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
 					},
 				},
 			},
@@ -1215,7 +1390,19 @@ func TestTryFormat_XRPSend(t *testing.T) {
 		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -1228,7 +1415,7 @@ func TestTryFormat_XRPSend(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: "1000000", // 1 XRP in drops
+						FixedValue: "1000000",
 					},
 				},
 			},
@@ -1364,6 +1551,18 @@ func TestTryFormat_XRPSend_MissingRecipient(t *testing.T) {
 		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
@@ -1377,7 +1576,7 @@ func TestTryFormat_XRPSend_MissingRecipient(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+	assert.Contains(t, err.Error(), "failed to find constraint: to_address")
 }
 
 func TestTryFormat_XRPSend_MissingAmount(t *testing.T) {
@@ -1387,7 +1586,19 @@ func TestTryFormat_XRPSend_MissingAmount(t *testing.T) {
 		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -1433,7 +1644,19 @@ func TestTryFormat_XRPSend_MagicConstantRecipient(t *testing.T) {
 		Resource: "ripple.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 					Value: &types.Constraint_MagicConstantValue{
@@ -1485,12 +1708,21 @@ func TestTryFormat_XRP_NonMetaRule(t *testing.T) {
 		},
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: testXRPVaultAddress,
-					},
 				},
 			},
 			{
@@ -1518,12 +1750,27 @@ func TestTryFormat_XRP_UnsupportedProtocol(t *testing.T) {
 		Resource: "ripple.stake", // Unsupported protocol
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: testXRPAddress,
-					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 				},
 			},
 		},
@@ -1719,7 +1966,19 @@ func TestTryFormat_THORChainSend(t *testing.T) {
 		Resource: "thorchain.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
@@ -1732,7 +1991,7 @@ func TestTryFormat_THORChainSend(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: "1000000", // 1 RUNE
+						FixedValue: "1000000",
 					},
 				},
 			},
@@ -1848,15 +2107,15 @@ func TestTryFormat_THORChainSwap(t *testing.T) {
 
 	// Verify all required parameters are present
 	assert.Contains(t, paramByName, "amount")
-	assert.Contains(t, paramByName, "denom")
+	assert.Contains(t, paramByName, "from_asset")
 	assert.Contains(t, paramByName, "memo")
 
 	// Verify constraint values
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
 	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
 
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["denom"].Constraint.Type)
-	assert.Equal(t, "", paramByName["denom"].Constraint.GetFixedValue()) // Empty for native RUNE
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["from_asset"].Constraint.Type)
+	assert.Equal(t, "RUNE", paramByName["from_asset"].Constraint.GetFixedValue()) // Defaults to RUNE for empty from_asset
 
 	// Verify memo constraint (regexp for THORChain swap format)
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
@@ -1872,6 +2131,18 @@ func TestTryFormat_THORChainSend_MissingRecipient(t *testing.T) {
 		Resource: "thorchain.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
 				ParameterName: "amount",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
@@ -1885,7 +2156,7 @@ func TestTryFormat_THORChainSend_MissingRecipient(t *testing.T) {
 
 	_, err := metaRule.TryFormat(rule)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find constraint: recipient")
+	assert.Contains(t, err.Error(), "failed to find constraint: to_address")
 }
 
 func TestTryFormat_THORChainSwap_MissingFromAsset(t *testing.T) {
@@ -1918,12 +2189,27 @@ func TestTryFormat_THORChain_UnsupportedProtocol(t *testing.T) {
 		Resource: "thorchain.stake", // Unsupported protocol
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
-				ParameterName: "recipient",
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-					Value: &types.Constraint_FixedValue{
-						FixedValue: testTHORChainAddress,
-					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 				},
 			},
 		},

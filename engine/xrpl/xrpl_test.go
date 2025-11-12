@@ -2,6 +2,7 @@ package xrpl
 
 import (
 	"encoding/hex"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -288,6 +289,10 @@ func TestXRPL_MagicConstant_THORChainVault(t *testing.T) {
 	// This should fail with target mismatch (not a resolution error),
 	// which means the magic constant resolution worked
 	assert.Error(t, err)
+	if strings.Contains(err.Error(), "is currently halted") {
+		t.Skipf("Chain is currently halted on THORChain, skipping test")
+		return
+	}
 	assert.Contains(t, err.Error(), "tx target is wrong",
 		"Should fail with target mismatch, indicating magic constant resolution worked")
 }

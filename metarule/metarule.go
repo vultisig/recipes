@@ -156,8 +156,11 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 }
 
 type sendConstraints struct {
-	recipient *types.Constraint
-	amount    *types.Constraint
+	asset       *types.Constraint
+	fromAddress *types.Constraint
+	amount      *types.Constraint
+	toAddress   *types.Constraint
+	// memo not supported yet
 }
 
 func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
@@ -165,51 +168,29 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 
 	for _, c := range rule.GetParameterConstraints() {
 		switch c.GetParameterName() {
-		case "recipient":
-			res.recipient = c.GetConstraint()
+		case "asset":
+			res.asset = c.GetConstraint()
+		case "from_address":
+			res.fromAddress = c.GetConstraint()
 		case "amount":
 			res.amount = c.GetConstraint()
+		case "to_address":
+			res.toAddress = c.GetConstraint()
+			// memo not supported yet
 		}
 	}
 
-	if res.recipient == nil {
-		return res, fmt.Errorf("failed to find constraint: recipient")
+	if res.asset == nil {
+		return res, fmt.Errorf("failed to find constraint: asset")
+	}
+	if res.fromAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: from_address")
 	}
 	if res.amount == nil {
 		return res, fmt.Errorf("failed to find constraint: amount")
 	}
-
-	return res, nil
-}
-
-type sendUtxoConstraints struct {
-	changeAddress *types.Constraint
-	recipient     *types.Constraint
-	amount        *types.Constraint
-}
-
-func getSendUtxoConstraints(rule *types.Rule) (sendUtxoConstraints, error) {
-	res := sendUtxoConstraints{}
-
-	for _, c := range rule.GetParameterConstraints() {
-		switch c.GetParameterName() {
-		case "change_address":
-			res.changeAddress = c.GetConstraint()
-		case "recipient":
-			res.recipient = c.GetConstraint()
-		case "amount":
-			res.amount = c.GetConstraint()
-		}
-	}
-
-	if res.changeAddress == nil {
-		return res, fmt.Errorf("failed to find constraint: change_address")
-	}
-	if res.recipient == nil {
-		return res, fmt.Errorf("failed to find constraint: recipient")
-	}
-	if res.amount == nil {
-		return res, fmt.Errorf("failed to find constraint: amount")
+	if res.toAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: to_address")
 	}
 
 	return res, nil
@@ -234,39 +215,20 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 
 		out := proto.Clone(in).(*types.Rule)
 
-		if in.GetTarget().GetAddress() == solana.SystemProgramID.String() {
-			// native transfer
-			var outTarget *types.Target
-			switch c.recipient.GetType() {
-			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-					Target: &types.Target_Address{
-						Address: c.recipient.GetFixedValue(),
-					},
-				}
-			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-				outTarget = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
-					Target: &types.Target_MagicConstant{
-						MagicConstant: c.recipient.GetMagicConstantValue(),
-					},
-				}
-			default:
-				return nil, fmt.Errorf(
-					"invalid constraint type for `recipient`: %s",
-					c.recipient.GetType().String(),
-				)
-			}
-
+		if c.asset.GetFixedValue() == "" {
 			out.Resource = "solana.system.transfer"
-			out.Target = outTarget
+			out.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SystemProgramID.String(),
+				},
+			}
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "account_from",
-				Constraint:    anyConstraint(),
+				Constraint:    c.fromAddress,
 			}, {
 				ParameterName: "account_to",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			}, {
 				ParameterName: "arg_lamports",
 				Constraint:    c.amount,
@@ -274,22 +236,73 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			return []*types.Rule{out}, nil
 		}
 
+		const onlyFixed = "must be fixed constraint for spl token transfer"
+		if c.fromAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`from_address` " + onlyFixed)
+		}
+		if c.toAddress.GetFixedValue() == "" {
+			return nil, fmt.Errorf("`to_address` " + onlyFixed)
+		}
+
+		src, err := DeriveATA(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive src ATA: %w", err)
+		}
+		dst, err := DeriveATA(c.toAddress.GetFixedValue(), c.asset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive dst ATA: %w", err)
+		}
+
 		// SPL token transfer
 		out.Resource = "solana.spl_token.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.TokenProgramID.String(),
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "account_source",
-			Constraint:    anyConstraint(),
+			Constraint:    fixed(src),
 		}, {
 			ParameterName: "account_destination",
-			Constraint:    c.recipient,
+			Constraint:    fixed(dst),
 		}, {
 			ParameterName: "account_authority",
-			Constraint:    anyConstraint(),
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "arg_amount",
 			Constraint:    c.amount,
 		}}
-		return []*types.Rule{out}, nil
+		return []*types.Rule{out, {
+			Resource: "solana.associated_token_account.create",
+			Effect:   types.Effect_EFFECT_ALLOW,
+			ParameterConstraints: []*types.ParameterConstraint{{
+				ParameterName: "account_payer",
+				Constraint:    c.fromAddress,
+			}, {
+				ParameterName: "account_associated_token_account",
+				Constraint:    fixed(dst),
+			}, {
+				ParameterName: "account_owner",
+				Constraint:    c.toAddress,
+			}, {
+				ParameterName: "account_mint",
+				Constraint:    c.asset,
+			}, {
+				ParameterName: "account_system_program",
+				Constraint:    fixed(solana.SystemProgramID.String()),
+			}, {
+				ParameterName: "account_token_program",
+				Constraint:    fixed(solana.TokenProgramID.String()),
+			}},
+			Target: &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
+				},
+			},
+		}}, nil
 	case swap:
 		c, err := getSwapConstraints(in)
 		if err != nil {
@@ -326,31 +339,35 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("failed to find native symbol: %w", err)
 		}
 
-		if in.GetTarget().GetAddress() == evm.ZeroAddress.String() {
+		if c.asset.GetFixedValue() == "" {
 			var outTarget *types.Target
-			switch c.recipient.GetType() {
+			switch c.toAddress.GetType() {
 			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 					Target: &types.Target_Address{
-						Address: c.recipient.GetFixedValue(),
+						Address: c.toAddress.GetFixedValue(),
 					},
 				}
 			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
 				outTarget = &types.Target{
 					TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
 					Target: &types.Target_MagicConstant{
-						MagicConstant: c.recipient.GetMagicConstantValue(),
+						MagicConstant: c.toAddress.GetMagicConstantValue(),
 					},
 				}
 			default:
 				return nil, fmt.Errorf(
-					"invalid constraint type for `recipient`: %s",
-					c.recipient.GetType().String(),
+					"invalid constraint type for `to_address`: %s",
+					c.toAddress.GetType().String(),
 				)
 			}
 
-			out.Resource = fmt.Sprintf("%s.%s.transfer", strings.ToLower(chain.String()), nativeSymbol)
+			out.Resource = fmt.Sprintf(
+				"%s.%s.transfer",
+				strings.ToLower(chain.String()),
+				strings.ToLower(nativeSymbol),
+			)
 			out.Target = outTarget
 			out.ParameterConstraints = []*types.ParameterConstraint{{
 				ParameterName: "amount",
@@ -362,10 +379,15 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		// erc20 token transfer
 		out.Resource = fmt.Sprintf("%s.erc20.transfer", strings.ToLower(chain.String()))
-		out.Target = in.GetTarget()
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: c.asset.GetFixedValue(),
+			},
+		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "recipient",
-			Constraint:    c.recipient,
+			Constraint:    c.toAddress,
 		}, {
 			ParameterName: "amount",
 			Constraint:    c.amount,
@@ -602,9 +624,9 @@ func oneinchSwap(chain common.Chain, c swapConstraints) (string, *types.Rule, er
 func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
 	switch metaProtocol(r.GetProtocolId()) {
 	case send:
-		c, err := getSendUtxoConstraints(in)
+		c, err := getSendConstraints(in)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse `send utxo` constraints: %w", err)
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
 		}
 
 		out := proto.Clone(in).(*types.Rule)
@@ -615,13 +637,13 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 
 		out.ParameterConstraints = []*types.ParameterConstraint{{
 			ParameterName: "output_address_0",
-			Constraint:    c.recipient,
+			Constraint:    c.toAddress,
 		}, {
 			ParameterName: "output_value_0",
 			Constraint:    c.amount,
 		}, {
 			ParameterName: "output_address_1",
-			Constraint:    c.changeAddress,
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "output_value_1",
 			Constraint:    anyConstraint(),
@@ -715,7 +737,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			},
 			{
 				ParameterName: "amount",
@@ -814,7 +836,7 @@ func (m *MetaRule) handleTHORChain(in *types.Rule, r *types.ResourcePath) ([]*ty
 		out.ParameterConstraints = []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
-				Constraint:    c.recipient,
+				Constraint:    c.toAddress,
 			},
 			{
 				ParameterName: "amount",
@@ -856,14 +878,25 @@ func (m *MetaRule) handleTHORChain(in *types.Rule, r *types.ResourcePath) ([]*ty
 			assetPattern = regexp.QuoteMeta(thorAsset)
 		}
 
+		// Extract from_asset value, default to RUNE if empty (native token)
+		fromAssetValue := c.fromAsset.GetFixedValue()
+		if fromAssetValue == "" {
+			fromAssetValue = "RUNE"
+		}
+
 		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAssetValue,
+					},
+				},
+			},
 			{
 				ParameterName: "amount",
 				Constraint:    c.fromAmount,
-			},
-			{
-				ParameterName: "denom",
-				Constraint:    c.fromAsset,
 			},
 			{
 				ParameterName: "memo",
@@ -912,7 +945,7 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 			solana.TokenProgramID.Bytes(),
 			mint.Bytes(),
 		},
-		solana.MustPublicKeyFromBase58("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+		solana.SPLAssociatedTokenAccountProgramID,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to derive ATA: %w", err)
@@ -1052,7 +1085,7 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			Target: &types.Target{
 				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 				Target: &types.Target_Address{
-					Address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					Address: solana.SPLAssociatedTokenAccountProgramID.String(),
 				},
 			},
 		}
