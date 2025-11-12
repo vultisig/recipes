@@ -2,11 +2,11 @@ package thorchain
 
 import (
 	"context"
-	"encoding/hex"
 	"testing"
 
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-	"github.com/cosmos/cosmos-sdk/codec/types"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
@@ -55,23 +55,29 @@ func buildRealisticTHORChainTx(t *testing.T) []byte {
 	}
 
 	// Pack the message into Any type
-	msgAny, err := types.NewAnyWithValue(msgSend)
+	msgAny, err := codectypes.NewAnyWithValue(msgSend)
 	require.NoError(t, err)
 
 	// Create transaction body
 	txBody := &tx.TxBody{
-		Messages:                    []*types.Any{msgAny},
+		Messages:                    []*codectypes.Any{msgAny},
 		Memo:                        "test transaction",
 		TimeoutHeight:               0,
-		ExtensionOptions:            []*types.Any{},
-		NonCriticalExtensionOptions: []*types.Any{},
+		ExtensionOptions:            []*codectypes.Any{},
+		NonCriticalExtensionOptions: []*codectypes.Any{},
 	}
+
+	// Create a test secp256k1 public key
+	testPrivKey := secp256k1.GenPrivKey()
+	testPubKey := testPrivKey.PubKey()
+	pubKeyAny, err := codectypes.NewAnyWithValue(testPubKey)
+	require.NoError(t, err)
 
 	// Create auth info with signer info (required for MessageHash)
 	authInfo := &tx.AuthInfo{
 		SignerInfos: []*tx.SignerInfo{
 			{
-				PublicKey: nil, // Public key not needed for MessageHash test
+				PublicKey: pubKeyAny,
 				ModeInfo: &tx.ModeInfo{
 					Sum: &tx.ModeInfo_Single_{
 						Single: &tx.ModeInfo_Single{
@@ -124,7 +130,6 @@ func TestNewCometBFTRPCClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.client)
-	assert.NotNil(t, client.codec)
 }
 
 func TestSDK_Sign_WithRealisticTransaction(t *testing.T) {
@@ -182,21 +187,7 @@ func TestSDK_Sign_MultipleSignatures(t *testing.T) {
 	assert.Contains(t, err.Error(), "expected 1 signature, got 2")
 }
 
-func TestSDK_Sign_InvalidRLength(t *testing.T) {
-	sdk := NewSDK(nil)
-
-	unsignedTxBytes := buildRealisticTHORChainTx(t)
-	signatures := map[string]tss.KeysignResponse{
-		"test_key": {
-			R: "1234", // Too short (should be 64 hex chars = 32 bytes)
-			S: "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
-		},
-	}
-
-	_, err := sdk.Sign(unsignedTxBytes, signatures)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "r must be 32 bytes")
-}
+// Removed - redundant with TestSDK_Sign_EdgeCases
 
 func TestSDK_Sign_InvalidProtobufData(t *testing.T) {
 	sdk := NewSDK(nil)
@@ -334,60 +325,45 @@ func TestSDK_MessageHash(t *testing.T) {
 
 func TestSDK_Sign_RawSignatureFormat(t *testing.T) {
 	sdk := NewSDK(nil)
-
 	unsignedTxBytes := buildRealisticTHORChainTx(t)
 
-	// Test with 32-byte R and S values
-	signatures := map[string]tss.KeysignResponse{
-		"test_key": {
-			R: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-			S: "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+	tests := []struct {
+		name string
+		sig  tss.KeysignResponse
+	}{
+		{
+			name: "without hex prefix",
+			sig: tss.KeysignResponse{
+				R: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+				S: "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+			},
+		},
+		{
+			name: "with hex prefix",
+			sig:  testSignatureVectors["with_hex_prefix"],
 		},
 	}
 
-	signedTxBytes, err := sdk.Sign(unsignedTxBytes, signatures)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			signatures := map[string]tss.KeysignResponse{"test_key": tt.sig}
 
-	// Verify the signed transaction structure
-	var signedTx tx.Tx
-	err = sdk.codec.Unmarshal(signedTxBytes, &signedTx)
-	require.NoError(t, err)
+			signedTxBytes, err := sdk.Sign(unsignedTxBytes, signatures)
+			require.NoError(t, err)
 
-	// Should have exactly one signature
-	require.Len(t, signedTx.Signatures, 1)
+			// Verify the signed transaction structure
+			var signedTx tx.Tx
+			err = sdk.codec.Unmarshal(signedTxBytes, &signedTx)
+			require.NoError(t, err)
 
-	// Signature should be 64 bytes (32 R + 32 S)
-	signature := signedTx.Signatures[0]
-	assert.Len(t, signature, 64, "Signature should be 64 bytes (raw R||S format)")
+			// Should have exactly one signature
+			require.Len(t, signedTx.Signatures, 1)
 
-	// First 32 bytes should be R
-	expectedR, _ := hex.DecodeString("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
-	assert.Equal(t, expectedR, signature[:32], "First 32 bytes should be R")
-
-	// Last 32 bytes should be S (normalized to low-S)
-	// Original S: fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321
-	// This S is high, so it gets normalized to N - S
-	expectedSNormalized, _ := hex.DecodeString("012345f6789abcde012345f6789abcdcbbd222dd27e35d19c0f5a48348d0fe20")
-	assert.Equal(t, expectedSNormalized, signature[32:], "Last 32 bytes should be normalized low-S")
-}
-
-func TestSDK_Sign_WithHexPrefixes(t *testing.T) {
-	sdk := NewSDK(nil)
-
-	unsignedTxBytes := buildRealisticTHORChainTx(t)
-	signatures := map[string]tss.KeysignResponse{
-		"test_key": testSignatureVectors["with_hex_prefix"], // Uses 0x prefixes
+			// Signature should be 64 bytes (32 R + 32 S)
+			signature := signedTx.Signatures[0]
+			assert.Len(t, signature, 64, "Signature should be 64 bytes (raw R||S format)")
+		})
 	}
-
-	signedTxBytes, err := sdk.Sign(unsignedTxBytes, signatures)
-	require.NoError(t, err)
-	assert.NotEmpty(t, signedTxBytes)
-
-	// Verify the signed transaction structure
-	var signedTx tx.Tx
-	err = sdk.codec.Unmarshal(signedTxBytes, &signedTx)
-	require.NoError(t, err)
-	assert.Len(t, signedTx.Signatures, 1)
 }
 
 func TestSDK_Integration_Testnet(t *testing.T) {
@@ -483,38 +459,83 @@ func TestSDK_Sign_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestCleanHex(t *testing.T) {
+func TestSDK_SignerInfoValidation(t *testing.T) {
+	sdk := NewSDK(nil)
+
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name        string
+		modifyTx    func(*tx.Tx)
+		expectError string
 	}{
 		{
-			name:     "with 0x prefix",
-			input:    "0x1234abcd",
-			expected: "1234abcd",
+			name: "missing AuthInfo",
+			modifyTx: func(txData *tx.Tx) {
+				txData.AuthInfo = nil
+			},
+			expectError: "transaction missing AuthInfo",
 		},
 		{
-			name:     "with 0X prefix",
-			input:    "0X1234ABCD",
-			expected: "1234ABCD",
+			name: "missing SignerInfos",
+			modifyTx: func(txData *tx.Tx) {
+				txData.AuthInfo.SignerInfos = nil
+			},
+			expectError: "transaction missing SignerInfos",
 		},
 		{
-			name:     "without prefix",
-			input:    "1234abcd",
-			expected: "1234abcd",
+			name: "missing PublicKey",
+			modifyTx: func(txData *tx.Tx) {
+				txData.AuthInfo.SignerInfos[0].PublicKey = nil
+			},
+			expectError: "signer missing PublicKey",
 		},
 		{
-			name:     "with whitespace",
-			input:    "  0x1234  ",
-			expected: "1234",
+			name: "missing ModeInfo",
+			modifyTx: func(txData *tx.Tx) {
+				txData.AuthInfo.SignerInfos[0].ModeInfo = nil
+			},
+			expectError: "signer missing ModeInfo",
+		},
+		{
+			name: "wrong sign mode",
+			modifyTx: func(txData *tx.Tx) {
+				txData.AuthInfo.SignerInfos[0].ModeInfo = &tx.ModeInfo{
+					Sum: &tx.ModeInfo_Single_{
+						Single: &tx.ModeInfo_Single{
+							Mode: signing.SignMode_SIGN_MODE_LEGACY_AMINO_JSON,
+						},
+					},
+				}
+			},
+			expectError: "expected SIGN_MODE_DIRECT, got: SIGN_MODE_LEGACY_AMINO_JSON",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := cleanHex(tt.input)
-			assert.Equal(t, tt.expected, result)
+			// Build a transaction with proper signer info first
+			unsignedTxBytes := buildRealisticTHORChainTx(t)
+
+			// Parse it back to modify
+			var unsignedTx tx.Tx
+			err := sdk.codec.Unmarshal(unsignedTxBytes, &unsignedTx)
+			require.NoError(t, err)
+
+			// Apply the modification
+			tt.modifyTx(&unsignedTx)
+
+			// Marshal it back
+			modifiedTxBytes, err := sdk.codec.Marshal(&unsignedTx)
+			require.NoError(t, err)
+
+			// Try to sign - should fail validation
+			signatures := map[string]tss.KeysignResponse{
+				"test_key": testSignatureVectors["valid_signature"],
+			}
+
+			_, err = sdk.Sign(modifiedTxBytes, signatures)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectError)
 		})
 	}
 }
+

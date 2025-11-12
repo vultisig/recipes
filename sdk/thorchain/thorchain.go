@@ -30,7 +30,6 @@ type RPCClient interface {
 // CometBFTRPCClient implements RPCClient using CometBFT HTTP client
 type CometBFTRPCClient struct {
 	client *http.HTTP
-	codec  codec.Codec
 }
 
 // SDK represents the THORChain SDK for transaction signing and broadcasting
@@ -64,7 +63,6 @@ func NewCometBFTRPCClient(endpoint string) (*CometBFTRPCClient, error) {
 
 	return &CometBFTRPCClient{
 		client: client,
-		codec:  MakeCodec(),
 	}, nil
 }
 
@@ -122,6 +120,11 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("failed to unmarshal unsigned transaction: %w", err)
 	}
 
+	// Validate AuthInfo structure
+	if err := sdk.validateSignerInfo(&unsignedTx); err != nil {
+		return nil, fmt.Errorf("signer info validation failed: %w", err)
+	}
+
 	// Get the signature
 	var sig tss.KeysignResponse
 	for _, v := range signatures {
@@ -146,6 +149,11 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 	if len(sBytes) != 32 {
 		return nil, fmt.Errorf("s must be 32 bytes, got %d", len(sBytes))
+	}
+
+	// Validate R is in valid curve order range [1, N-1]
+	if err := validateCurveOrderValue("R", rBytes); err != nil {
+		return nil, fmt.Errorf("r validation failed: %w", err)
 	}
 
 	// Enforce low-S to prevent transaction malleability
@@ -249,6 +257,73 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// validateCurveOrderValue validates that a value is in the valid secp256k1 curve order range [1, N-1]
+func validateCurveOrderValue(name string, value []byte) error {
+	if len(value) == 0 {
+		return fmt.Errorf("empty %s", name)
+	}
+	var v big.Int
+	v.SetBytes(value)
+
+	// Check that value is in range [1, N-1] where N is the curve order
+	if v.Sign() <= 0 {
+		return fmt.Errorf("%s must be positive (> 0)", name)
+	}
+	if v.Cmp(secpN) >= 0 {
+		return fmt.Errorf("%s must be less than curve order N", name)
+	}
+
+	return nil
+}
+
+// validateSignerInfo validates that the transaction has proper signer info structure
+func (sdk *SDK) validateSignerInfo(unsignedTx *tx.Tx) error {
+	// Check AuthInfo presence
+	if unsignedTx.AuthInfo == nil {
+		return fmt.Errorf("transaction missing AuthInfo")
+	}
+
+	// Check SignerInfos presence
+	if len(unsignedTx.AuthInfo.SignerInfos) == 0 {
+		return fmt.Errorf("transaction missing SignerInfos")
+	}
+
+	// We expect exactly one signer for THORChain transactions
+	if len(unsignedTx.AuthInfo.SignerInfos) != 1 {
+		return fmt.Errorf("expected exactly 1 signer, got %d", len(unsignedTx.AuthInfo.SignerInfos))
+	}
+
+	signerInfo := unsignedTx.AuthInfo.SignerInfos[0]
+
+	// Check PublicKey presence
+	if signerInfo.PublicKey == nil {
+		return fmt.Errorf("signer missing PublicKey")
+	}
+
+	// Check that it's a secp256k1 public key (33 bytes when compressed)
+	pubKeyAny := signerInfo.PublicKey
+	if pubKeyAny.TypeUrl != "/cosmos.crypto.secp256k1.PubKey" {
+		return fmt.Errorf("expected secp256k1 public key, got type: %s", pubKeyAny.TypeUrl)
+	}
+
+	// Check ModeInfo presence
+	if signerInfo.ModeInfo == nil {
+		return fmt.Errorf("signer missing ModeInfo")
+	}
+
+	// Check that it's SIGN_MODE_DIRECT
+	modeInfo := signerInfo.ModeInfo
+	if single := modeInfo.GetSingle(); single != nil {
+		if single.Mode.String() != "SIGN_MODE_DIRECT" {
+			return fmt.Errorf("expected SIGN_MODE_DIRECT, got: %s", single.Mode.String())
+		}
+	} else {
+		return fmt.Errorf("expected Single mode info, got: %T", modeInfo.Sum)
+	}
+
+	return nil
 }
 
 // normalizeLowS ensures the S value is in the lower half of the curve order to prevent malleability
