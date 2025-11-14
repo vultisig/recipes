@@ -43,6 +43,9 @@ type SDK struct {
 var secpN, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
 var secpHalfN = new(big.Int).Rsh(new(big.Int).Set(secpN), 1)
 
+// THORChain mainnet chain ID for transaction signing
+const thorchainChainID = "thorchain-1"
+
 // NewSDK creates a new THORChain SDK instance
 func NewSDK(rpcClient RPCClient) *SDK {
 	codec := MakeCodec()
@@ -230,13 +233,19 @@ func (sdk *SDK) MessageHash(unsignedTxBytes []byte, accountNumber uint64, sequen
 	}
 
 	// Create the sign document following Cosmos SDK SIGN_MODE_DIRECT
-	bodyBytes := mustMarshalTxBody(sdk.codec, unsignedTx.Body)
-	authInfoBytes := mustMarshalAuthInfo(sdk.codec, unsignedTx.AuthInfo)
+	bodyBytes, err := marshalTxBody(sdk.codec, unsignedTx.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal transaction body: %w", err)
+	}
+	authInfoBytes, err := marshalAuthInfo(sdk.codec, unsignedTx.AuthInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal auth info: %w", err)
+	}
 
 	signDoc := &tx.SignDoc{
 		BodyBytes:     bodyBytes,
 		AuthInfoBytes: authInfoBytes,
-		ChainId:       "thorchain-1", // THORChain mainnet chain ID
+		ChainId:       thorchainChainID,
 		AccountNumber: accountNumber,
 	}
 
@@ -350,26 +359,26 @@ func normalizeLowS(s []byte) ([]byte, error) {
 
 // Helper functions for sign document creation
 
-// mustMarshalTxBody marshals transaction body, panics on error (should not happen with valid tx)
-func mustMarshalTxBody(cdc codec.Codec, body *tx.TxBody) []byte {
+// marshalTxBody marshals transaction body, returns error on failure
+func marshalTxBody(cdc codec.Codec, body *tx.TxBody) ([]byte, error) {
 	if body == nil {
-		panic("nil transaction body")
+		return nil, fmt.Errorf("nil transaction body")
 	}
 	bytes, err := cdc.Marshal(body)
 	if err != nil {
-		panic(fmt.Sprintf("failed to marshal tx body: %v", err))
+		return nil, fmt.Errorf("failed to marshal tx body: %w", err)
 	}
-	return bytes
+	return bytes, nil
 }
 
-// mustMarshalAuthInfo marshals auth info, panics on error (should not happen with valid tx)
-func mustMarshalAuthInfo(cdc codec.Codec, authInfo *tx.AuthInfo) []byte {
+// marshalAuthInfo marshals auth info, returns error on failure
+func marshalAuthInfo(cdc codec.Codec, authInfo *tx.AuthInfo) ([]byte, error) {
 	if authInfo == nil {
-		panic("nil auth info")
+		return nil, fmt.Errorf("nil auth info")
 	}
 	bytes, err := cdc.Marshal(authInfo)
 	if err != nil {
-		panic(fmt.Sprintf("failed to marshal auth info: %v", err))
+		return nil, fmt.Errorf("failed to marshal auth info: %w", err)
 	}
-	return bytes
+	return bytes, nil
 }
