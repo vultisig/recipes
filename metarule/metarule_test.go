@@ -2219,3 +2219,130 @@ func TestTryFormat_THORChain_UnsupportedProtocol(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported protocol id for THORChain: stake")
 }
+
+func TestXRPSend_WithoutMemo(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "ripple.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "rDNhvtTNPjjUfvsTD1dFGcXxRvGHfWZm4z",
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "ripple.xrp.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	// Verify parameters
+	assert.Equal(t, "recipient", result[0].ParameterConstraints[0].ParameterName)
+	assert.Equal(t, "amount", result[0].ParameterConstraints[1].ParameterName)
+}
+
+func TestXRPSend_WithFixedMemo(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "ripple.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "rDNhvtTNPjjUfvsTD1dFGcXxRvGHfWZm4z",
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
+					},
+				},
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "12345678",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "ripple.xrp.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	// Verify parameters
+	assert.Equal(t, "recipient", result[0].ParameterConstraints[0].ParameterName)
+	assert.Equal(t, "amount", result[0].ParameterConstraints[1].ParameterName)
+	assert.Equal(t, "memo", result[0].ParameterConstraints[2].ParameterName)
+	assert.Equal(t, "12345678", result[0].ParameterConstraints[2].Constraint.GetFixedValue())
+}

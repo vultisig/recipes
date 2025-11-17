@@ -160,7 +160,7 @@ type sendConstraints struct {
 	fromAddress *types.Constraint
 	amount      *types.Constraint
 	toAddress   *types.Constraint
-	// memo not supported yet
+	memo        *types.Constraint // optional memo field for CEX transfers and other memo-based chains
 }
 
 func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
@@ -176,7 +176,8 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 			res.amount = c.GetConstraint()
 		case "to_address":
 			res.toAddress = c.GetConstraint()
-			// memo not supported yet
+		case "memo":
+			res.memo = c.GetConstraint()
 		}
 	}
 
@@ -734,7 +735,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}
 
-		out.ParameterConstraints = []*types.ParameterConstraint{
+		constraints := []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
 				Constraint:    c.toAddress,
@@ -744,6 +745,16 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				Constraint:    c.amount,
 			},
 		}
+
+		// Add memo constraint if provided
+		if c.memo != nil {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "memo",
+				Constraint:    c.memo,
+			})
+		}
+
+		out.ParameterConstraints = constraints
 
 		return []*types.Rule{out}, nil
 	case swap:
