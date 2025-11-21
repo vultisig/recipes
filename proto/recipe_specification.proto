@@ -28,6 +28,9 @@ message RecipeSchema {
 
   // Plugin configuration
   google.protobuf.Struct configuration = 9;
+
+  // Plugin configuration_example
+  google.protobuf.Struct configuration_example = 10;
 }
 
 // ResourcePattern defines a specific resource and what constraints its parameters support
