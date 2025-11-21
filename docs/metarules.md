@@ -2,12 +2,12 @@
 
 ## Overview
 
-Vultisig's policy engine supports two rule types that govern how plugins interact with blockchain networks:
+Vultisig's policy engine supports two rule types that govern how apps interact with blockchain networks:
 
 - **MetaRules**: High-level, chain-agnostic abstractions automatically mapped to specific implementations.
 - **Direct Rules**: Low-level, protocol-specific rules that strictly follow blockchain or contract semantics.
 
-All plugin transactions must comply with these rules and be approved by the Verifier before signing.
+All app transactions must comply with these rules and be approved by the Verifier before signing.
 
 ***
 
@@ -50,7 +50,7 @@ func (m *MetaRule) TryFormat(resource string, constraints map[string]*types.Cons
 
 ## Direct Rules: Protocol-Specific Operations
 
-Direct Rules are mapped directly to the target protocol's ABI (EVM) or IDL (Solana), providing fine-grained policy enforcement for plugin calls.
+Direct Rules are mapped directly to the target protocol's ABI (EVM) or IDL (Solana), providing fine-grained policy enforcement for app calls.
 
 ### Rule Structure (`protobuf`)
 
@@ -163,7 +163,7 @@ Based on `constraint.proto`:
 - **Direct Rules**: Apply for advanced protocol features, fine-grained control, or where ABI details matter.
 - **Constraints**: Use principle of least privilege; always review all allowed parameters and document constraints.
 - **Testing**: Validate with protocol ABIs/IDLs and ensure all value constraints are respected before allow.
-- **Magic Constants**: Use system-defined constants for seamless plugin integrations and parameter substitutions.
+- **Magic Constants**: Use system-defined constants for seamless app integrations and parameter substitutions.
 
 This markdown integrates both architectural policy logic and concrete constraint semantics, staying consistent with the system's design and codebase.
 

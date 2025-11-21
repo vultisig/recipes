@@ -2,22 +2,22 @@
 
 ## Overview
 
-This documentation describes the transaction proposing flow for plugin developers in the Vultisig ecosystem. Plugins have the capability to initiate transactions based on their own conditions, which can be triggered by schedules, events, or other conditions.
+This documentation describes the transaction proposing flow for app developers in the Vultisig ecosystem. Apps have the capability to initiate transactions based on their own conditions, which can be triggered by schedules, events, or other conditions.
 
 ## Key Concepts
 
-- **Plugin Policy**: Defines the rules and constraints for transactions that a plugin can propose
+- **App Policy**: Defines the rules and constraints for transactions that a app can propose
 - **Recipe**: Contains the specific transaction rules derived from the policy
 - **Keysign Request**: A request to sign a transaction that meets all policy requirements
 - **Verifier**: A secondary participant that validates proposed transactions against the policy
 
 ## Transaction Flow Sequence
 
-1. **Trigger Event**: A scheduler, event, or condition triggers the plugin
-2. **Policy Retrieval**: The plugin fetches its associated policy
-3. **Transaction Proposal**: The plugin generates unsigned transactions based on policy rules
+1. **Trigger Event**: A scheduler, event, or condition triggers the app
+2. **Policy Retrieval**: The app fetches its associated policy
+3. **Transaction Proposal**: The app generates unsigned transactions based on policy rules
 4. **Transaction Indexing**: Proposed transactions are recorded in the transaction indexer
-5. **Signing Initiation**: The plugin creates keysign requests for each transaction
+5. **Signing Initiation**: The app creates keysign requests for each transaction
 6. **Verification & Signing**: The verifier validates and signs the transactions
 7. **Broadcast**: Signed transactions are broadcast to the network
 
@@ -25,7 +25,7 @@ This documentation describes the transaction proposing flow for plugin developer
 ### Transaction Proposal
 
 You should implement:
-- Plugin policy validation
+- App policy validation
 - Getting pk info from vault
 - Processing each rule in the recipe and generate transactions if it's needed
 - Create transaction records in the indexer
@@ -37,7 +37,7 @@ func (p *Plugin) ProposeTransactions(ctx context.Context, policy vtypes.PluginPo
 	// Plugin policy validation
 	err := p.ValidatePluginPolicy(policy)
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate plugin policy: %w", err)
+		return nil, fmt.Errorf("failed to validate app policy: %w", err)
 	}
     
 	// Getting pk info from vault
@@ -239,7 +239,7 @@ All proposed transactions must pass verification by the verifier service, which 
 
 ## Recipe Specification
 
-The plugin defines its supported transaction types through a recipe specification:
+The app defines its supported transaction types through a recipe specification:
 
 ```go
 func (p *Plugin) GetRecipeSpecification() (*rtypes.RecipeSchema, error)

@@ -193,7 +193,7 @@ sequenceDiagram
 **For Production Deployment:**
 - Only your custom app services (HTTP Server, Worker, Scheduler, TX Indexer) are deployed
 - Verifier and Fee App remain Vultisig-managed infrastructure
-- Submit plugin configuration YAML for review and approval
+- Submit app configuration YAML for review and approval
 
 ### App Proposal Process
 
