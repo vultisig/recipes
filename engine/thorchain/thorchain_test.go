@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	thorchain_sdk "github.com/vultisig/recipes/sdk/thorchain"
 	vtypes "github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
@@ -322,9 +322,8 @@ func TestThorchain_Evaluate_Failure_ThorchainSwap_InvalidMemoFormat(t *testing.T
 
 // Helper function to create valid MsgDeposit transactions for testing thorchain_swap
 func createValidMsgDepositTransaction(t *testing.T, signer, amount, symbol, memo string) []byte {
-	// Use the exact same codec setup as NewThorchain()
-	engine := NewThorchain()
-	cdc := engine.cdc
+	// Use the standardized THORChain codec
+	cdc := thorchain_sdk.MakeCodec()
 
 	// Convert signer address to bytes
 	signerBytes := []byte(signer)
@@ -374,9 +373,8 @@ func createValidMsgDepositTransaction(t *testing.T, signer, amount, symbol, memo
 
 // Helper function to create valid MsgSend transactions for testing
 func createValidMsgSendTransaction(t *testing.T, fromAddr, toAddr, amount, denom, memo string) []byte {
-	// Use the exact same codec setup as NewThorchain()
-	engine := NewThorchain()
-	cdc := engine.cdc
+	// Use the standardized THORChain codec
+	cdc := thorchain_sdk.MakeCodec()
 
 	// Create bank MsgSend
 	amountInt, ok := math.NewIntFromString(amount)
@@ -426,10 +424,8 @@ func TestThorchain_parseTransaction(t *testing.T) {
 		{
 			name: "base64-encoded protobuf transaction with MsgSend",
 			setup: func() []byte {
-				// Create a protobuf-encoded transaction
-				interfaceRegistry := types.NewInterfaceRegistry()
-				banktypes.RegisterInterfaces(interfaceRegistry)
-				cdc := codec.NewProtoCodec(interfaceRegistry)
+				// Create a protobuf-encoded transaction using standardized codec
+				cdc := thorchain_sdk.MakeCodec()
 
 				// Create MsgSend
 				msgSend := &banktypes.MsgSend{
@@ -553,10 +549,8 @@ func TestThorchain_parseTransaction(t *testing.T) {
 func TestThorchain_parseTransaction_Protobuf(t *testing.T) {
 	thorchain := NewThorchain()
 
-	// Create a proper protobuf transaction that we know will work
-	interfaceRegistry := types.NewInterfaceRegistry()
-	banktypes.RegisterInterfaces(interfaceRegistry)
-	cdc := codec.NewProtoCodec(interfaceRegistry)
+	// Create a proper protobuf transaction using standardized codec
+	cdc := thorchain_sdk.MakeCodec()
 
 	// Create MsgSend
 	msgSend := &banktypes.MsgSend{
