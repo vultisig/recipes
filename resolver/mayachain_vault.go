@@ -132,6 +132,8 @@ func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, err
 		return "KUJI", nil
 	case "arbitrum":
 		return "ARB", nil
+	case "radix":
+		return "XRD", nil
 	default:
 		return "", fmt.Errorf("chain %s not supported by MayaChain", chainID)
 	}

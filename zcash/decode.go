@@ -346,8 +346,12 @@ func readVarInt(r *bytes.Reader) (uint64, error) {
 }
 
 func calculateZcashTxHash(rawTx []byte, version int32) (string, error) {
-	// For transparent transactions, hash is double SHA256 of the serialized tx
-	// Note: Zcash v5 uses BLAKE2b for txid, but for v4 it's still double SHA256
+	// For v4 transactions, hash is double SHA256 of the serialized tx
+	// Note: Zcash v5 uses BLAKE2b for txid, but we don't support v5 yet
+	if version >= 5 {
+		return "", fmt.Errorf("v5 transaction hash calculation not implemented")
+	}
+
 	hash := chainhash.DoubleHashH(rawTx)
 	return hash.String(), nil
 }
@@ -389,10 +393,14 @@ func encodeZcashAddress(prefix []byte, hash []byte) string {
 func base58CheckEncode(data []byte) string {
 	// Add 4-byte checksum
 	checksum := chainhash.DoubleHashB(data)[:4]
-	data = append(data, checksum...)
+	
+	// Create new slice to avoid mutating input
+	payload := make([]byte, len(data)+4)
+	copy(payload, data)
+	copy(payload[len(data):], checksum)
 
 	// Base58 encode
-	return base58Encode(data)
+	return base58Encode(payload)
 }
 
 // base58Encode encodes bytes to base58

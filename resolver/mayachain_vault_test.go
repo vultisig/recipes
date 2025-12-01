@@ -90,6 +90,12 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve XRD vault address",
+			chainID: "radix",
+			assetID: "xrd",
+			wantErr: false,
+		},
+		{
 			name:    "unsupported chain should error",
 			chainID: "unsupported_chain",
 			assetID: "token",

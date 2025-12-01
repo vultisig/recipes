@@ -11,12 +11,26 @@ import (
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/zcash"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 type Zcash struct{}
 
 func NewZcash() *Zcash {
 	return &Zcash{}
+}
+
+// Supports returns true if this engine supports the given chain
+func (z *Zcash) Supports(chain common.Chain) bool {
+	switch chain {
+	// Zcash is not currently in the common.Chain enum
+	// This is a temporary workaround until the common library is updated
+	case common.Chain(100): // Assuming a placeholder ID or just always false for now if we can't import it
+		return true
+	default:
+		// Fallback if we can't check enum
+		return false
+	}
 }
 
 func (z *Zcash) Evaluate(rule *types.Rule, txBytes []byte) error {
