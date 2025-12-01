@@ -10,7 +10,6 @@ import (
 
 	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/metarule"
-	enginezcash "github.com/vultisig/recipes/engine/zcash"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -94,21 +93,6 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 
 			e.logger.Printf("Tx validated for %s", chain.String())
 			return rule, nil
-		}
-
-		// 	return rule, nil
-		// }
-
-		if ruleRaw.GetResource() == "zcash.zec.transfer" {
-			er := enginezcash.NewZcash().Evaluate(ruleRaw, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", ruleRaw.GetResource(), er))
-				e.logger.Printf("Failed to evaluate ZEC tx: %s: %v", chain.String(), er)
-				continue
-			}
-
-			e.logger.Printf("ZEC tx validated: %s", chain.String())
-			return ruleRaw, nil
 		}
 	}
 	if len(errs) == 0 {
