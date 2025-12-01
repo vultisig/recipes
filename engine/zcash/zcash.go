@@ -3,12 +3,11 @@ package zcash
 import (
 	"fmt"
 	"math/big"
-	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/vultisig/recipes/engine/compare"
-	"github.com/vultisig/recipes/resolver"
+	"github.com/btcsuite/btcd/txscript"
+	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/zcash"
 	"github.com/vultisig/vultisig-go/common"
@@ -86,7 +85,7 @@ func (z *Zcash) validateOutputs(rule *types.Rule, tx *zcash.ZcashTransaction) er
 		return fmt.Errorf("failed to validate output constraint counts: %w", err)
 	}
 
-	return z.validateOutputConstraints(outputs, tx)
+	return z.validateOutputConstraints(rule.GetParameterConstraints(), outputs, tx)
 }
 
 type constraintType string
@@ -180,55 +179,34 @@ func (z *Zcash) validateOutputConstraintCounts(outputConstraints map[int]*output
 	return nil
 }
 
-func (z *Zcash) validateOutputConstraints(outputConstraints map[int]*outputConstraints, tx *zcash.ZcashTransaction) error {
+func (z *Zcash) validateOutputConstraints(
+	constraintList []*types.ParameterConstraint,
+	outputConstraints map[int]*outputConstraints,
+	tx *zcash.ZcashTransaction,
+) error {
+	const chainID = "zcash"
+
 	for i, txOut := range tx.Outputs {
 		constraints := outputConstraints[i]
 
 		if constraints.data != nil {
 			// Data constraint validation - validate against OP_RETURN data
-			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != 0x6a {
+			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != txscript.OP_RETURN {
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script
-			// Handle different PUSHDATA opcodes:
-			// OP_RETURN (0x6a)
-			// - 0x01-0x4b: The following bytes are the data (length is the opcode itself)
-			// - 0x4c (OP_PUSHDATA1): Next 1 byte is length
-			// - 0x4d (OP_PUSHDATA2): Next 2 bytes are length
-			// - 0x4e (OP_PUSHDATA4): Next 4 bytes are length
-
+			// Extract data from OP_RETURN script using txscript.PushedData
+			// which handles all PUSHDATA variants (OP_DATA_1-75, OP_PUSHDATA1/2/4)
+			pushedData, _ := txscript.PushedData(txOut.PkScript[1:]) // Skip OP_RETURN
 			var dataBytes []byte
-			if len(txOut.PkScript) > 1 {
-				script := txOut.PkScript
-				// offset 1 because script[0] is OP_RETURN
-				op := script[1]
-				var length int
-				var dataStart int
-
-				if op <= 0x4b {
-					length = int(op)
-					dataStart = 2
-				} else if op == 0x4c && len(script) >= 3 {
-					length = int(script[2])
-					dataStart = 3
-				} else if op == 0x4d && len(script) >= 4 {
-					length = int(script[2]) | int(script[3])<<8
-					dataStart = 4
-				} else if op == 0x4e && len(script) >= 6 {
-					length = int(script[2]) | int(script[3])<<8 | int(script[4])<<16 | int(script[5])<<24
-					dataStart = 6
-				}
-
-				if length > 0 && len(script) >= dataStart+length {
-					dataBytes = script[dataStart : dataStart+length]
-				}
+			if len(pushedData) > 0 {
+				dataBytes = pushedData[0]
 			}
 
 			// Use raw bytes as string for regexp matching (ASCII data)
 			dataStr := string(dataBytes)
 
-			if er := validateConstraint(constraints.data, dataStr, compare.NewString); er != nil {
+			if er := stdcompare.AssertArg(chainID, constraintList, fmt.Sprintf("output_data_%d", i), dataStr, stdcompare.NewString); er != nil {
 				return fmt.Errorf("output %d data validation failed: %w", i, er)
 			}
 		} else {
@@ -240,11 +218,11 @@ func (z *Zcash) validateOutputConstraints(outputConstraints map[int]*outputConst
 
 			outputAmount := big.NewInt(txOut.Value)
 
-			if er := validateConstraint(constraints.address, outputAddress, compare.NewString); er != nil {
+			if er := stdcompare.AssertArg(chainID, constraintList, fmt.Sprintf("output_address_%d", i), outputAddress, stdcompare.NewString); er != nil {
 				return fmt.Errorf("output %d address validation failed: %w", i, er)
 			}
 
-			if er := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); er != nil {
+			if er := stdcompare.AssertArg(chainID, constraintList, fmt.Sprintf("output_value_%d", i), outputAmount, stdcompare.NewBigInt); er != nil {
 				return fmt.Errorf("output %d value validation failed: %w", i, er)
 			}
 		}
@@ -258,108 +236,4 @@ func (z *Zcash) extractAddress(txOut *zcash.ZcashOutput) (string, error) {
 		return "", fmt.Errorf("failed to extract address from script: %w", err)
 	}
 	return addr, nil
-}
-
-func validateConstraint[T any](
-	constraint *types.ParameterConstraint,
-	actual T,
-	makeComparer compare.Constructor[T],
-) error {
-	kind := constraint.GetConstraint().GetType()
-
-	switch kind {
-	case types.ConstraintType_CONSTRAINT_TYPE_ANY:
-		return nil
-
-	case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-		comparer, err := makeComparer(constraint.GetConstraint().GetFixedValue())
-		if err != nil {
-			return fmt.Errorf("failed to build fixed comparer: %w", err)
-		}
-		if comparer.Fixed(actual) {
-			return nil
-		}
-		return fmt.Errorf("fixed value constraint failed: expected=%v, actual=%v",
-			constraint.GetConstraint().GetFixedValue(), actual)
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MIN:
-		comparer, err := makeComparer(constraint.GetConstraint().GetMinValue())
-		if err != nil {
-			return fmt.Errorf("failed to build min comparer: %w", err)
-		}
-		if comparer.Min(actual) {
-			return nil
-		}
-		return fmt.Errorf("min value constraint failed: expected>=%v, actual=%v",
-			constraint.GetConstraint().GetMinValue(), actual)
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAX:
-		comparer, err := makeComparer(constraint.GetConstraint().GetMaxValue())
-		if err != nil {
-			return fmt.Errorf("failed to build max comparer: %w", err)
-		}
-		if comparer.Max(actual) {
-			return nil
-		}
-		return fmt.Errorf("max value constraint failed: expected<=%v, actual=%v",
-			constraint.GetConstraint().GetMaxValue(), actual)
-
-	case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(
-			constraint.GetConstraint().GetMagicConstantValue(),
-		)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to get magic const resolver: magic_const=%s",
-				constraint.GetConstraint().GetMagicConstantValue().String(),
-			)
-		}
-
-		resolvedValue, _, err := resolve.Resolve(
-			constraint.GetConstraint().GetMagicConstantValue(),
-			"zcash",
-			"default",
-		)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to resolve magic const: magic_const=%s",
-				constraint.GetConstraint().GetMagicConstantValue().String(),
-			)
-		}
-
-		comparer, err := makeComparer(resolvedValue)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to build magic comparer: resolved=%s",
-				resolvedValue,
-			)
-		}
-		if comparer.Fixed(actual) {
-			return nil
-		}
-		return fmt.Errorf(
-			"magic value constraint failed: expected(resolved)=%v, actual=%v",
-			resolvedValue,
-			actual,
-		)
-
-	case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
-		strVal := fmt.Sprintf("%v", actual)
-		ok, err := regexp.MatchString(
-			constraint.GetConstraint().GetRegexpValue(),
-			strVal,
-		)
-		if err != nil {
-			return fmt.Errorf("regexp match failed: expected=%v, actual=%v",
-				constraint.GetConstraint().GetRegexpValue(), actual)
-		}
-		if ok {
-			return nil
-		}
-		return fmt.Errorf("regexp value constraint failed: expected=%v, actual=%v",
-			constraint.GetConstraint().GetRegexpValue(), actual)
-
-	default:
-		return fmt.Errorf("unknown constraint type: %s", kind.String())
-	}
 }

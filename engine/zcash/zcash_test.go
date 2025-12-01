@@ -272,7 +272,7 @@ func TestZcash_Evaluate_MaxConstraints_ShouldFail(t *testing.T) {
 		ParameterConstraints: params,
 	}, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "max value constraint failed")
+	assert.Contains(t, err.Error(), "failed to compare max values")
 }
 
 func TestZcash_Evaluate_MinConstraints(t *testing.T) {
@@ -325,7 +325,7 @@ func TestZcash_Evaluate_MinConstraints_ShouldFail(t *testing.T) {
 		ParameterConstraints: params,
 	}, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "min value constraint failed")
+	assert.Contains(t, err.Error(), "failed to compare min values")
 }
 
 func TestZcash_Evaluate_WrongAddress_ShouldFail(t *testing.T) {
@@ -349,7 +349,7 @@ func TestZcash_Evaluate_WrongAddress_ShouldFail(t *testing.T) {
 		ParameterConstraints: params,
 	}, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "fixed value constraint failed")
+	assert.Contains(t, err.Error(), "failed to compare fixed values")
 }
 
 func TestZcash_Evaluate_WrongValue_ShouldFail(t *testing.T) {
@@ -376,7 +376,7 @@ func TestZcash_Evaluate_WrongValue_ShouldFail(t *testing.T) {
 		ParameterConstraints: params,
 	}, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "fixed value constraint failed")
+	assert.Contains(t, err.Error(), "failed to compare fixed values")
 }
 
 func TestZcash_Evaluate_MismatchedOutputCounts_ShouldFail(t *testing.T) {

@@ -25,6 +25,64 @@ func TestZcash_ChainMethods(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestZcash_RejectLegacyTransactionVersions(t *testing.T) {
+	// Test that legacy v1-v3 transactions are rejected
+	// These formats could potentially contain hidden JoinSplits that bypass our checks
+
+	tests := []struct {
+		name    string
+		txHex   string
+		wantErr string
+	}{
+		{
+			name: "v1 transaction (non-overwintered)",
+			txHex: "01000000" + // Version 1, no overwintered flag
+				"01" + // Inputs count
+				"0000000000000000000000000000000000000000000000000000000000000000" + // PrevHash
+				"00000000" + // PrevIndex
+				"00" + // ScriptLen
+				"ffffffff" + // Sequence
+				"00" + // Outputs count
+				"00000000", // LockTime
+			wantErr: "unsupported transaction version 1",
+		},
+		{
+			name: "v2 transaction (non-overwintered, Sprout era - could have JoinSplits)",
+			txHex: "02000000" + // Version 2, no overwintered flag
+				"01" + // Inputs count
+				"0000000000000000000000000000000000000000000000000000000000000000" + // PrevHash
+				"00000000" + // PrevIndex
+				"00" + // ScriptLen
+				"ffffffff" + // Sequence
+				"00" + // Outputs count
+				"00000000", // LockTime
+			wantErr: "unsupported transaction version 2",
+		},
+		{
+			name: "v3 transaction (overwintered, Overwinter era - could have JoinSplits)",
+			txHex: "03000080" + // Version 3 + overwintered flag (0x80000000)
+				"70b4d009" + // Overwinter version group ID
+				"01" + // Inputs count
+				"0000000000000000000000000000000000000000000000000000000000000000" + // PrevHash
+				"00000000" + // PrevIndex
+				"00" + // ScriptLen
+				"ffffffff" + // Sequence
+				"00" + // Outputs count
+				"00000000" + // LockTime
+				"00000000", // ExpiryHeight
+			wantErr: "unsupported transaction version 3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseZcashTransaction(tt.txHex)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
 func TestZcash_ComputeTxHash(t *testing.T) {
 	// Create a simple transaction to test ComputeTxHash
 	// We'll manually construct a v4 transaction bytes

@@ -157,6 +157,21 @@ func deserializeZcashTransaction(data []byte) (*ZcashTransaction, error) {
 	isOverwintered := (header >> 31) == 1
 	tx.Version = int32(header & 0x7FFFFFFF)
 
+	// Reject legacy v1-v3 transactions:
+	// - v1: Original Bitcoin-like format (pre-Sprout)
+	// - v2: Can contain JoinSplits (Sprout era) which could hide shielded transfers
+	// - v3: Overwinter era, can also contain JoinSplits
+	// Only v4+ transactions have proper shielded spend/output/JoinSplit fields that we can validate.
+	// Most modern wallets only produce v4 or v5 transactions.
+	if tx.Version < 4 {
+		return nil, fmt.Errorf("unsupported transaction version %d: only v4+ transactions are supported (v1-v3 are legacy formats that may contain undetectable shielded transfers)", tx.Version)
+	}
+
+	// v4+ transactions must be overwintered
+	if !isOverwintered {
+		return nil, fmt.Errorf("invalid transaction: v4+ transactions must have overwintered flag set")
+	}
+
 	if isOverwintered {
 		// Read version group ID (4 bytes)
 		if err := binary.Read(r, binary.LittleEndian, &tx.VersionGroupID); err != nil {
@@ -242,11 +257,13 @@ func deserializeZcashTransaction(data []byte) (*ZcashTransaction, error) {
 			}
 		}
 
-		// For v5 transactions (NU5), the format is slightly different
-		if tx.Version == 5 {
-			// Read consensus branch ID (4 bytes) - already read as VersionGroupID
-			// v5 transactions have a different structure for orchard actions
-			// For transparent-only, we skip these
+		// V5 transactions (NU5) are not supported.
+		// V5 has orchard actions which are shielded transactions that we cannot parse.
+		// Allowing v5 without parsing orchard actions would be a security risk since
+		// hidden fund movements could bypass the engine's validation checks.
+		// We explicitly reject v5 transactions to ensure all fund movements are validated.
+		if tx.Version >= 5 {
+			return nil, fmt.Errorf("v5 (NU5) transactions not supported: orchard actions cannot be validated")
 		}
 	}
 
@@ -347,9 +364,10 @@ func readVarInt(r *bytes.Reader) (uint64, error) {
 
 func calculateZcashTxHash(rawTx []byte, version int32) (string, error) {
 	// For v4 transactions, hash is double SHA256 of the serialized tx
-	// Note: Zcash v5 uses BLAKE2b for txid, but we don't support v5 yet
+	// V5 transactions use BLAKE2b for txid, but we don't support v5 as it contains
+	// orchard actions (shielded transactions) that cannot be validated by the engine.
 	if version >= 5 {
-		return "", fmt.Errorf("v5 transaction hash calculation not implemented")
+		return "", fmt.Errorf("v5 (NU5) transactions not supported: orchard actions cannot be validated")
 	}
 
 	hash := chainhash.DoubleHashH(rawTx)
