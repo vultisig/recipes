@@ -198,13 +198,13 @@ func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Pay
 // ExtractMemoFromXRPPayment extracts memo data from XRPL Payment transaction
 func ExtractMemoFromXRPPayment(payment *transactions.Payment) (string, error) {
 	if len(payment.Memos) == 0 {
-		return "", fmt.Errorf("no memo found in payment transaction")
+		return "", fmt.Errorf("memo required but not found in payment transaction")
 	}
 
 	// XRPL memos are typically hex-encoded, need to decode
 	memo := payment.Memos[0]
 	if memo.Memo.MemoData == "" {
-		return "", fmt.Errorf("empty memo data")
+		return "", fmt.Errorf("memo field present but empty")
 	}
 
 	// Decode hex to string (THORChain memos are text)
