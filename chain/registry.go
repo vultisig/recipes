@@ -7,6 +7,7 @@ import (
 	"github.com/vultisig/recipes/bitcoin"
 	"github.com/vultisig/recipes/ethereum"
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/recipes/zcash"
 )
 
 // Registry maintains a registry of available blockchain chains
@@ -79,4 +80,5 @@ func init() {
 	// Register Bitcoin chain
 	RegisterChain(bitcoin.NewChain())
 	RegisterChain(ethereum.NewEthereum())
+	RegisterChain(zcash.NewChain())
 }

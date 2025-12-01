@@ -11,6 +11,7 @@ import (
 	"github.com/kaptinlin/jsonschema"
 	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
+	enginezcash "github.com/vultisig/recipes/engine/zcash"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
@@ -98,6 +99,18 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			}
 
 			e.logger.Printf("BTC tx validated: %s", chain.String())
+			return rule, nil
+		}
+
+		if rule.GetResource() == "zcash.zec.transfer" {
+			er := enginezcash.NewZcash().Evaluate(rule, txBytes)
+			if er != nil {
+				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
+				e.logger.Printf("Failed to evaluate ZEC tx: %s: %v", chain.String(), er)
+				continue
+			}
+
+			e.logger.Printf("ZEC tx validated: %s", chain.String())
 			return rule, nil
 		}
 	}
