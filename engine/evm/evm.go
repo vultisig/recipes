@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"path"
-	"regexp"
+	"reflect"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -18,6 +18,7 @@ import (
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
+	vultisigcommon "github.com/vultisig/vultisig-go/common"
 )
 
 type Evm struct {
@@ -35,6 +36,13 @@ func NewEvm(nativeSymbol string) (*Evm, error) {
 		nativeSymbol: strings.ToLower(nativeSymbol),
 		abi:          abis,
 	}, nil
+}
+
+// Supports returns true if this engine supports the given chain (all EVM chains)
+func (e *Evm) Supports(chain vultisigcommon.Chain) bool {
+	nativeSymbol, _ := chain.NativeSymbol()
+
+	return chain.IsEvm() && e.nativeSymbol == strings.ToLower(nativeSymbol)
 }
 
 func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
@@ -66,13 +74,6 @@ func (e *Evm) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return nil
 	}
 
-	if tx.Value() != nil && tx.Value().Sign() != 0 {
-		return fmt.Errorf(
-			"tx value must be zero for non-native: abi=%s, tx_value=%s",
-			r.ProtocolId,
-			tx.Value().String(),
-		)
-	}
 	er := e.assertArgsAbi(r, rule, tx.Data())
 	if er != nil {
 		return fmt.Errorf("failed to Evaluate ABI: %w", er)
@@ -93,7 +94,7 @@ func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes
 		return fmt.Errorf("expected 1 parameter constraint, got: %d", len(rule.GetParameterConstraints()))
 	}
 
-	err := assertArg(
+	err := stdcompare.AssertArg(
 		resource.ChainId,
 		rule.GetParameterConstraints(),
 		"amount",
@@ -211,110 +212,30 @@ func (e *Evm) assertArgsAbi(resource *types.ResourcePath, rule *types.Rule, data
 	}
 
 	const dataOffset = 4
+	if len(data) < dataOffset {
+		return fmt.Errorf("calldata too short: expected at least %d bytes, got %d", dataOffset, len(data))
+	}
+
+	actualMethodDescriptor := data[:dataOffset]
+	expectedMethodDescriptor := method.ID
+	if !bytes.Equal(actualMethodDescriptor, expectedMethodDescriptor) {
+		return fmt.Errorf(
+			"method descriptor mismatch: expected %x, got %x",
+			expectedMethodDescriptor,
+			actualMethodDescriptor,
+		)
+	}
+
 	args, err := method.Inputs.Unpack(data[dataOffset:])
 	if err != nil {
 		return fmt.Errorf("failed to unpack abi args: %w", err)
 	}
 
-	if len(rule.GetParameterConstraints()) != len(args) {
-		// if some arg not found by name, assertArg returns the error below during assertion,
-		// so there 2 (len check and get later) it's enough to determine that lists are equal
-		return fmt.Errorf(
-			"constraints must be same list as ABI args: constraints_len=%d, abi_args_len=%d",
-			len(rule.GetParameterConstraints()),
-			len(args),
-		)
-	}
-
 	for i, arg := range args {
 		input := method.Inputs[i]
-		switch actual := arg.(type) {
-		case string:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				stdcompare.NewString,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case common.Address:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				compare.NewAddress,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case []common.Address:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				compare.NewAddressSlice,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case *big.Int:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				stdcompare.NewBigInt,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case uint8:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				stdcompare.NewUint8,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case bool:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				stdcompare.NewBool,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		case [32]byte:
-			er := assertArg(
-				resource.GetChainId(),
-				rule.GetParameterConstraints(),
-				input.Name,
-				actual,
-				stdcompare.NewBytes32,
-			)
-			if er != nil {
-				return fmt.Errorf("failed to assert: %w", er)
-			}
-
-		default:
-			return fmt.Errorf("unsupported arg type: %s", input.Type.String())
+		err = assertArgsByType(resource.GetChainId(), input.Name, arg, rule.GetParameterConstraints(), &input)
+		if err != nil {
+			return fmt.Errorf("failed to assert args by type: %w", err)
 		}
 	}
 	return nil
@@ -324,133 +245,143 @@ func addrEqual(a, b common.Address) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
-func assertArg[T any](
-	chain string,
-	expectedList []*types.ParameterConstraint,
-	expectedName string,
-	actual T,
-	makeComparer stdcompare.Constructor[T],
-) error {
-	const magicAssetIdDefault = "default"
-
-	for _, constraint := range expectedList {
-		if constraint.GetParameterName() == expectedName {
-			kind := constraint.GetConstraint().GetType()
-
-			switch kind {
-			case types.ConstraintType_CONSTRAINT_TYPE_ANY:
-				return nil
-
-			case types.ConstraintType_CONSTRAINT_TYPE_FIXED:
-				comparer, err := makeComparer(constraint.GetConstraint().GetFixedValue())
-				if err != nil {
-					return fmt.Errorf(
-						"failed to build exact fixed type from constraint: %s",
-						constraint.GetConstraint().GetFixedValue(),
-					)
-				}
-				if comparer.Fixed(actual) {
-					return nil
-				}
-				return fmt.Errorf(
-					"failed to compare fixed values: expected=%v, actual=%v",
-					constraint.GetConstraint().GetFixedValue(),
-					actual,
-				)
-
-			case types.ConstraintType_CONSTRAINT_TYPE_MIN:
-				comparer, err := makeComparer(constraint.GetConstraint().GetMinValue())
-				if err != nil {
-					return fmt.Errorf(
-						"failed to build exact min type from constraint: %s",
-						constraint.GetConstraint().GetMinValue(),
-					)
-				}
-				if comparer.Min(actual) {
-					return nil
-				}
-				return fmt.Errorf(
-					"failed to compare min values: expected=%v, actual=%v",
-					constraint.GetConstraint().GetMinValue(),
-					actual,
-				)
-
-			case types.ConstraintType_CONSTRAINT_TYPE_MAX:
-				comparer, err := makeComparer(constraint.GetConstraint().GetMaxValue())
-				if err != nil {
-					return fmt.Errorf(
-						"failed to build exact max type from constraint: %s",
-						constraint.GetConstraint().GetMaxValue(),
-					)
-				}
-				if comparer.Max(actual) {
-					return nil
-				}
-				return fmt.Errorf(
-					"failed to compare max values: expected=%v, actual=%v",
-					constraint.GetConstraint().GetMaxValue(),
-					actual,
-				)
-
-			case types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT:
-				resolve, err := resolver.NewMagicConstantRegistry().GetResolver(
-					constraint.GetConstraint().GetMagicConstantValue(),
-				)
-				if err != nil {
-					return fmt.Errorf(
-						"failed to get magic const resolver: magic_const=%s",
-						constraint.GetConstraint().GetMagicConstantValue().String(),
-					)
-				}
-
-				resolvedAddr, _, err := resolve.Resolve(
-					constraint.GetConstraint().GetMagicConstantValue(),
-					chain,
-					magicAssetIdDefault,
-				)
-				if err != nil {
-					return fmt.Errorf(
-						"failed to resolve magic const: magic_const=%s",
-						constraint.GetConstraint().GetMagicConstantValue().String(),
-					)
-				}
-
-				comparer, err := makeComparer(resolvedAddr)
-				if err != nil {
-					return fmt.Errorf(
-						"failed to build exact type from magic_const: resolved=%s",
-						resolvedAddr,
-					)
-				}
-				if comparer.Magic(actual) {
-					return nil
-				}
-				return fmt.Errorf(
-					"failed to compare magic values: expected(resolved magic addr)=%v, actual(in tx)=%v",
-					resolvedAddr,
-					actual,
-				)
-
-			case types.ConstraintType_CONSTRAINT_TYPE_REGEXP:
-				strVal := fmt.Sprintf("%v", actual)
-				ok, err := regexp.MatchString(
-					constraint.GetConstraint().GetRegexpValue(),
-					strVal,
-				)
-				if err != nil {
-					return fmt.Errorf("regexp match failed: expected=%v, actual=%v",
-						constraint.GetConstraint().GetRegexpValue(), actual)
-				}
-				if ok {
-					return nil
-				}
-				return fmt.Errorf("regexp value constraint failed: expected=%v, actual=%v",
-					constraint.GetConstraint().GetRegexpValue(), actual)
-
-			default:
-				return fmt.Errorf("unknown constraint type: %s", constraint.GetConstraint().GetType())
-			}
+func getNestedConstraints(name string, cnstr []*types.ParameterConstraint) []*types.ParameterConstraint {
+	res := make([]*types.ParameterConstraint, 0)
+	for _, c := range cnstr {
+		if strings.HasPrefix(c.GetParameterName(), name+".") {
+			c.ParameterName = strings.TrimPrefix(c.GetParameterName(), name+".")
+			res = append(res, c)
 		}
 	}
-	return fmt.Errorf("arg not found: %s", expectedName)
+	return res
+}
+
+func assertArgsByType(chainId, inputName string, arg any, constraints []*types.ParameterConstraint, input *abi.Argument) error {
+	switch actual := arg.(type) {
+	case string:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewString,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case common.Address:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			compare.NewAddress,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case []common.Address:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			compare.NewAddressSlice,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case *big.Int:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBigInt,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case uint8:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewUint8,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case bool:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBool,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+
+	case [32]byte:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBytes32,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+	case []byte:
+		er := stdcompare.AssertArg(
+			chainId,
+			constraints,
+			inputName,
+			actual,
+			stdcompare.NewBytes,
+		)
+		if er != nil {
+			return fmt.Errorf("failed to assert: %w", er)
+		}
+	case interface{}:
+		if input == nil {
+			return fmt.Errorf("unsopported nil input")
+		}
+		v := reflect.ValueOf(actual)
+		switch v.Kind() {
+		case reflect.Struct:
+			cnstr := getNestedConstraints(inputName, constraints)
+			if len(cnstr) != v.NumField() || len(cnstr) != len(input.Type.TupleElems) {
+				return fmt.Errorf(
+					"nested constraints for %s must be same list as ABI args: constraints_len=%d, abi_args_len=%d",
+					inputName,
+					len(cnstr),
+					v.NumField(),
+				)
+			}
+
+			elems := input.Type.TupleRawNames
+
+			for j := 0; j < v.NumField(); j++ {
+				err := assertArgsByType(chainId, elems[j], v.Field(j).Interface(), cnstr, nil)
+				if err != nil {
+					return fmt.Errorf("failed to assert: %w", err)
+				}
+			}
+		default:
+			return fmt.Errorf("unsupported arg type: %s", input.Type.String())
+		}
+	default:
+		return fmt.Errorf("unsupported arg type: %s", input.Type.String())
+	}
+	return nil
 }

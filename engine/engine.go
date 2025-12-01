@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
-	"github.com/vultisig/recipes/engine/btc"
-	"github.com/vultisig/recipes/engine/evm"
+	"github.com/vultisig/recipes/metarule"
 	enginezcash "github.com/vultisig/recipes/engine/zcash"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
@@ -19,14 +18,20 @@ import (
 )
 
 type Engine struct {
-	logger *log.Logger
+	logger   *log.Logger
+	registry *ChainEngineRegistry
 }
 
-func NewEngine() *Engine {
-	// Turn off logging by default
-	return &Engine{
-		logger: log.New(io.Discard, "", 0),
+func NewEngine() (*Engine, error) {
+	reg, err := NewChainEngineRegistry()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create registry: %w", err)
 	}
+
+	return &Engine{
+		logger:   log.New(io.Discard, "", 0),
+		registry: reg,
+	}, nil
 }
 
 func (e *Engine) SetLogger(log *log.Logger) {
@@ -35,70 +40,59 @@ func (e *Engine) SetLogger(log *log.Logger) {
 
 func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []byte) (*types.Rule, error) {
 	var errs []error
-	for _, rule := range policy.GetRules() {
-		if rule == nil {
+	for _, ruleRaw := range policy.GetRules() {
+		if ruleRaw == nil {
 			continue
 		}
 
-		resourcePathString := rule.GetResource()
-		resourcePath, err := util.ParseResource(resourcePathString)
+		rules, err := metarule.NewMetaRule().TryFormat(ruleRaw)
 		if err != nil {
-			e.logger.Printf(
-				"Skipping rule %s: invalid resource path %s: %v",
-				rule.GetId(),
-				resourcePathString,
-				err,
-			)
-			continue
+			return nil, fmt.Errorf("failed to format rule: %w", err)
 		}
 
-		if resourcePath.ChainId != strings.ToLower(chain.String()) {
-			e.logger.Printf(
-				"Skipping rule %s: target chain %s is not '%s'",
-				rule.GetId(),
-				resourcePath.ChainId,
-				chain.String(),
-			)
-			continue
-		}
-
-		e.logger.Printf("Evaluating rule: %s: %s", rule.GetId(), resourcePathString)
-		e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
-			resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
-
-		if chain.IsEvm() {
-			nativeSymbol, er := chain.NativeSymbol()
+		for _, rule := range rules {
+			resourcePathString := rule.GetResource()
+			resourcePath, er := util.ParseResource(resourcePathString)
 			if er != nil {
-				e.logger.Printf("Error getting native symbol for chain: %s: %v", chain.String(), er)
+				e.logger.Printf(
+					"Skipping rule %s: invalid resource path %s: %v",
+					rule.GetId(),
+					resourcePathString,
+					er,
+				)
 				continue
 			}
 
-			evmEng, er := evm.NewEvm(nativeSymbol)
-			if er != nil {
-				e.logger.Printf("Failed to create EVM engine: %s: %v", chain.String(), er)
+			if resourcePath.ChainId != strings.ToLower(chain.String()) {
+				e.logger.Printf(
+					"Skipping rule %s: target chain %s is not '%s'",
+					rule.GetId(),
+					resourcePath.ChainId,
+					chain.String(),
+				)
 				continue
 			}
 
-			er = evmEng.Evaluate(rule, txBytes)
+			e.logger.Printf("Evaluating rule: %s: %s", rule.GetId(), resourcePathString)
+			e.logger.Printf("Targeting: Chain='%s', Asset='%s', Function='%s'",
+				resourcePath.ChainId, resourcePath.ProtocolId, resourcePath.FunctionId)
+
+			// Get the appropriate engine for this chain
+			chainEngine, er := e.registry.GetEngine(chain)
+			if er != nil {
+				e.logger.Printf("No engine available for chain %s: %v", chain.String(), er)
+				continue
+			}
+
+			// Evaluate using the chain-specific engine
+			er = chainEngine.Evaluate(rule, txBytes)
 			if er != nil {
 				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
-				e.logger.Printf("Failed to evaluate EVM tx: %s: %v", chain.String(), er)
+				e.logger.Printf("Failed to evaluate tx for %s: %v", chain.String(), er)
 				continue
 			}
 
-			e.logger.Printf("EVM tx validated: %s", chain.String())
-			return rule, nil
-		}
-
-		if rule.GetResource() == "bitcoin.btc.transfer" {
-			er := btc.NewBtc().Evaluate(rule, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", resourcePathString, er))
-				e.logger.Printf("Failed to evaluate BTC tx: %s: %v", chain.String(), er)
-				continue
-			}
-
-			e.logger.Printf("BTC tx validated: %s", chain.String())
+			e.logger.Printf("Tx validated for %s", chain.String())
 			return rule, nil
 		}
 

@@ -33,3 +33,5 @@ cmd/worker
 .devenv/
 
 bin/*
+
+.serena

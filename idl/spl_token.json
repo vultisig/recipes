@@ -1,0 +1,188 @@
+{
+  "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "metadata": {
+    "name": "spl_token",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "transfer",
+      "discriminator": [3],
+      "accounts": [
+        {
+          "name": "source",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "authority",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "transferChecked",
+      "discriminator": [12],
+      "accounts": [
+        {
+          "name": "source",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "authority",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "approve",
+      "discriminator": [4],
+      "accounts": [
+        {
+          "name": "source",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "delegate",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "owner",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "mintTo",
+      "discriminator": [7],
+      "accounts": [
+        {
+          "name": "mint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "authority",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "burn",
+      "discriminator": [8],
+      "accounts": [
+        {
+          "name": "source",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "authority",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "syncNative",
+      "discriminator": [17],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true,
+          "signer": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closeAccount",
+      "discriminator": [9],
+      "accounts": [
+        {
+          "name": "account",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "owner",
+          "writable": false,
+          "signer": true
+        }
+      ],
+      "args": []
+    }
+  ]
+}

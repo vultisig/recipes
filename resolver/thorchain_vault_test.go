@@ -79,6 +79,12 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve XRP vault address",
+			chainID: "ripple",
+			assetID: "xrp",
+			wantErr: false,
+		},
+		{
 			name:    "resolve using uppercase chain",
 			chainID: "bitcoin",
 			assetID: "btc",
@@ -120,6 +126,10 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			}
 
 			if err != nil {
+				if strings.Contains(err.Error(), "is currently halted") {
+					t.Skipf("Chain %s is currently halted on THORChain, skipping test", tt.chainID)
+					return
+				}
 				t.Errorf("Unexpected error for chainID %s: %v", tt.chainID, err)
 				return
 			}
@@ -200,6 +210,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 		{"ethereum", "ETH"},
 		{"bitcoin", "BTC"},
 		{"base", "BASE"},
+		{"ripple", "XRP"},
 	}
 
 	for _, chain := range supportedChains {
@@ -211,6 +222,10 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 				"asset", // assetID doesn't matter for vault resolution
 			)
 			if err != nil {
+				if strings.Contains(err.Error(), "is currently halted") {
+					t.Skipf("Chain %s is currently halted on THORChain, skipping test", chain.chainID)
+					return
+				}
 				t.Fatalf("Resolver failed for %s: %v", chain.chainID, err)
 			}
 
@@ -218,12 +233,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 			var apiAddress string
 			for _, addr := range apiAddresses {
 				if strings.ToUpper(addr.Chain) == chain.thorchainName {
-					// For EVM chains, expect router address if available, otherwise vault address
-					if (chain.chainID == "ethereum" || chain.chainID == "base") && addr.Router != "" {
-						apiAddress = addr.Router
-					} else {
-						apiAddress = addr.Address
-					}
+					apiAddress = addr.Address
 					break
 				}
 			}

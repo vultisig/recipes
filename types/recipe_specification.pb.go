@@ -38,8 +38,10 @@ type RecipeSchema struct {
 	Requirements *PluginRequirements `protobuf:"bytes,8,opt,name=requirements,proto3" json:"requirements,omitempty"`
 	// Plugin configuration
 	Configuration *structpb.Struct `protobuf:"bytes,9,opt,name=configuration,proto3" json:"configuration,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Plugin configuration_example
+	ConfigurationExample *structpb.Struct `protobuf:"bytes,10,opt,name=configuration_example,json=configurationExample,proto3" json:"configuration_example,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *RecipeSchema) Reset() {
@@ -117,6 +119,13 @@ func (x *RecipeSchema) GetRequirements() *PluginRequirements {
 func (x *RecipeSchema) GetConfiguration() *structpb.Struct {
 	if x != nil {
 		return x.Configuration
+	}
+	return nil
+}
+
+func (x *RecipeSchema) GetConfigurationExample() *structpb.Struct {
+	if x != nil {
+		return x.ConfigurationExample
 	}
 	return nil
 }
@@ -318,7 +327,7 @@ var File_recipe_specification_proto protoreflect.FileDescriptor
 const file_recipe_specification_proto_rawDesc = "" +
 	"\n" +
 	"\x1arecipe_specification.proto\x12\x05types\x1a\x10constraint.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x0eresource.proto\x1a\n" +
-	"rule.proto\"\xd4\x02\n" +
+	"rule.proto\"\xa2\x03\n" +
 	"\fRecipeSchema\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x12\x1b\n" +
 	"\tplugin_id\x18\x03 \x01(\tR\bpluginId\x12\x1f\n" +
@@ -327,7 +336,9 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\x0eplugin_version\x18\x05 \x01(\x05R\rpluginVersion\x12G\n" +
 	"\x13supported_resources\x18\x06 \x03(\v2\x16.types.ResourcePatternR\x12supportedResources\x12=\n" +
 	"\frequirements\x18\b \x01(\v2\x19.types.PluginRequirementsR\frequirements\x12=\n" +
-	"\rconfiguration\x18\t \x01(\v2\x17.google.protobuf.StructR\rconfiguration\"\xef\x01\n" +
+	"\rconfiguration\x18\t \x01(\v2\x17.google.protobuf.StructR\rconfiguration\x12L\n" +
+	"\x15configuration_example\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\x14configurationExample\"\xef\x01\n" +
 	"\x0fResourcePattern\x128\n" +
 	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
 	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
@@ -368,15 +379,16 @@ var file_recipe_specification_proto_depIdxs = []int32{
 	1, // 0: types.RecipeSchema.supported_resources:type_name -> types.ResourcePattern
 	3, // 1: types.RecipeSchema.requirements:type_name -> types.PluginRequirements
 	4, // 2: types.RecipeSchema.configuration:type_name -> google.protobuf.Struct
-	5, // 3: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
-	2, // 4: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
-	6, // 5: types.ResourcePattern.target:type_name -> types.TargetType
-	7, // 6: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	4, // 3: types.RecipeSchema.configuration_example:type_name -> google.protobuf.Struct
+	5, // 4: types.ResourcePattern.resource_path:type_name -> types.ResourcePath
+	2, // 5: types.ResourcePattern.parameter_capabilities:type_name -> types.ParameterConstraintCapability
+	6, // 6: types.ResourcePattern.target:type_name -> types.TargetType
+	7, // 7: types.ParameterConstraintCapability.supported_types:type_name -> types.ConstraintType
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_recipe_specification_proto_init() }

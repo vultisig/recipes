@@ -9,13 +9,20 @@ import (
 
 func ParseResource(resource string) (*types.ResourcePath, error) {
 	parts := strings.Split(resource, ".")
-	if len(parts) != 3 {
+	switch len(parts) {
+	case 3:
+		return &types.ResourcePath{
+			ChainId:    parts[0],
+			ProtocolId: parts[1],
+			FunctionId: parts[2],
+		}, nil
+	case 2:
+		return &types.ResourcePath{
+			ChainId:    parts[0],
+			ProtocolId: parts[1],
+			FunctionId: "",
+		}, nil
+	default:
 		return nil, fmt.Errorf("invalid resource format: %s", resource)
 	}
-
-	return &types.ResourcePath{
-		ChainId:    parts[0],
-		ProtocolId: parts[1],
-		FunctionId: parts[2],
-	}, nil
 }

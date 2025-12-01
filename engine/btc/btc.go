@@ -14,6 +14,7 @@ import (
 	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
+	"github.com/vultisig/vultisig-go/common"
 )
 
 type Btc struct{}
@@ -22,12 +23,23 @@ func NewBtc() *Btc {
 	return &Btc{}
 }
 
+// Supports returns true if this engine supports the given chain (Bitcoin and Bitcoin-like chains)
+func (b *Btc) Supports(chain common.Chain) bool {
+	switch chain {
+	// To expand to other UTXo based chains in the future
+	case common.Bitcoin:
+		return true
+	default:
+		return false
+	}
+}
+
 func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
-	if rule.GetTarget() != nil {
-		return fmt.Errorf("target must be nil for BTC, got: %s", rule.GetTarget().String())
+	if rule.GetTarget().GetTargetType() != types.TargetType_TARGET_TYPE_UNSPECIFIED {
+		return fmt.Errorf("target type must be nil for BTC, got: %s", rule.GetTarget().GetTargetType().String())
 	}
 
 	tx, err := b.parseTx(txBytes)
@@ -301,7 +313,7 @@ func validateConstraint[T any](
 				resolvedValue,
 			)
 		}
-		if comparer.Magic(actual) {
+		if comparer.Fixed(actual) {
 			return nil
 		}
 		return fmt.Errorf(

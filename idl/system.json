@@ -1,0 +1,62 @@
+{
+  "address": "11111111111111111111111111111111",
+  "metadata": {
+    "name": "system",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "transfer",
+      "discriminator": [2, 0, 0, 0],
+      "accounts": [
+        {
+          "name": "from",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "to",
+          "writable": true,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "create_account",
+      "discriminator": [0, 0, 0, 0],
+      "accounts": [
+        {
+          "name": "from",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "to",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "lamports",
+          "type": "u64"
+        },
+        {
+          "name": "space",
+          "type": "u64"
+        },
+        {
+          "name": "owner",
+          "type": "publicKey"
+        }
+      ]
+    }
+  ]
+}

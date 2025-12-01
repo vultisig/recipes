@@ -98,7 +98,7 @@ func (r *THORChainVaultResolver) findAddressForChain(addresses []InboundAddress,
 	}
 
 	// Get ThorChain's native symbol for this chain
-	thorchainSymbol, err := r.getThorChainSymbol(chain)
+	thorchainSymbol, err := getThorChainSymbol(chain)
 	if err != nil {
 		return "", fmt.Errorf("chain %s not supported: %w", chainID, err)
 	}
@@ -109,38 +109,10 @@ func (r *THORChainVaultResolver) findAddressForChain(addresses []InboundAddress,
 			if addr.Halted {
 				return "", fmt.Errorf("inbound address for chain %s is currently halted", chainID)
 			}
-			
-			// For EVM chains, use router if available, otherwise use vault address
-			if chain.IsEvm() && addr.Router != "" {
-				return addr.Router, nil
-			}
+
 			return addr.Address, nil
 		}
 	}
 
 	return "", fmt.Errorf("no inbound address found for chain %s", chainID)
-}
-
-// getThorChainSymbol maps our Chain enum to ThorChain's expected symbols
-func (r *THORChainVaultResolver) getThorChainSymbol(chain common.Chain) (string, error) {
-	switch chain {
-	case common.Bitcoin:
-		return "BTC", nil
-	case common.Ethereum:
-		return "ETH", nil
-	case common.Avalanche:
-		return "AVAX", nil
-	case common.BscChain:
-		return "BSC", nil
-	case common.Base:
-		return "BASE", nil
-	case common.Litecoin:
-		return "LTC", nil
-	case common.Dogecoin:
-		return "DOGE", nil
-	case common.BitcoinCash:
-		return "BCH", nil
-	default:
-		return "", fmt.Errorf("chain %s not supported by ThorChain", chain.String())
-	}
 }

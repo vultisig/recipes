@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/stretchr/testify/require"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"github.com/vultisig/vultisig-go/common"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -78,7 +79,9 @@ var testVectors = []struct {
 }
 
 func TestEngine(t *testing.T) {
-	engine := NewEngine()
+	engine, err := NewEngine()
+	require.NoError(t, err)
+
 	engine.SetLogger(log.Default())
 
 	for _, testVector := range testVectors {
