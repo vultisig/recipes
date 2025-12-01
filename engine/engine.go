@@ -96,17 +96,9 @@ func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []by
 			return rule, nil
 		}
 
-		if ruleRaw.GetResource() == "zcash.zec.transfer" {
-			er := enginezcash.NewZcash().Evaluate(ruleRaw, txBytes)
-			if er != nil {
-				errs = append(errs, fmt.Errorf("%s(%w)", ruleRaw.GetResource(), er))
-				e.logger.Printf("Failed to evaluate ZEC tx: %s: %v", chain.String(), er)
-				continue
-			}
+		// 	return rule, nil
+		// }
 
-			e.logger.Printf("ZEC tx validated: %s", chain.String())
-			return ruleRaw, nil
-		}
 	}
 	if len(errs) == 0 {
 		return nil, errors.New("no matching rule")

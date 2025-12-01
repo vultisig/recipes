@@ -184,12 +184,38 @@ func (z *Zcash) validateOutputConstraints(outputConstraints map[int]*outputConst
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script: 0x6a <data_len> <data>
+			// Extract data from OP_RETURN script
+			// Handle different PUSHDATA opcodes:
+			// OP_RETURN (0x6a)
+			// - 0x01-0x4b: The following bytes are the data (length is the opcode itself)
+			// - 0x4c (OP_PUSHDATA1): Next 1 byte is length
+			// - 0x4d (OP_PUSHDATA2): Next 2 bytes are length
+			// - 0x4e (OP_PUSHDATA4): Next 4 bytes are length
+
 			var dataBytes []byte
-			if len(txOut.PkScript) > 2 {
-				dataLen := int(txOut.PkScript[1])
-				if len(txOut.PkScript) >= 2+dataLen {
-					dataBytes = txOut.PkScript[2 : 2+dataLen]
+			if len(txOut.PkScript) > 1 {
+				script := txOut.PkScript
+				// offset 1 because script[0] is OP_RETURN
+				op := script[1]
+				var length int
+				var dataStart int
+
+				if op <= 0x4b {
+					length = int(op)
+					dataStart = 2
+				} else if op == 0x4c && len(script) >= 3 {
+					length = int(script[2])
+					dataStart = 3
+				} else if op == 0x4d && len(script) >= 4 {
+					length = int(script[2]) | int(script[3])<<8
+					dataStart = 4
+				} else if op == 0x4e && len(script) >= 6 {
+					length = int(script[2]) | int(script[3])<<8 | int(script[4])<<16 | int(script[5])<<24
+					dataStart = 6
+				}
+
+				if length > 0 && len(script) >= dataStart+length {
+					dataBytes = script[dataStart : dataStart+length]
 				}
 			}
 
