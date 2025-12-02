@@ -14,7 +14,7 @@ func main() {
 	// Define command-line flags
 	outputPath := flag.String("output", "RESOURCES.md", "Output file path")
 	tokenListPath := flag.String("tokenlist", "tokenlist.json", "Path to token list JSON file")
-	abiDirPath := flag.String("abi", "abi", "Path to directory containing ABI JSON files")
+	abiDirPath := flag.String("abi", "chain/evm/abi", "Path to directory containing ABI JSON files")
 	flag.Parse()
 
 	// Register chains and protocols
