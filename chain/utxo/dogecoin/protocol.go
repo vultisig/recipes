@@ -148,8 +148,7 @@ func (d *DOGE) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatch
 			}
 
 		default:
-			// Skip unsupported constraint types for now
-			continue
+			return false, nil, fmt.Errorf("unsupported constraint type %v for parameter %q", constraint.GetType(), paramName)
 		}
 	}
 

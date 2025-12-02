@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
+	"github.com/vultisig/recipes/chain/utxo"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -71,17 +72,26 @@ func (l *Litecoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) 
 			return "", fmt.Errorf("hex.DecodeString(selectedSig.S): %w", er)
 		}
 
-		var sig []byte
-		sig = append(sig, r...)
-		sig = append(sig, s...)
-		sig = append(sig, byte(txscript.SigHashAll))
+		// Encode signature in DER format as required by BIP66
+		derSig := utxo.EncodeDERSignature(r, s)
+		derSig = append(derSig, byte(txscript.SigHashAll))
 
 		if witness {
+			if len(in.Witness) < 2 {
+				return "", fmt.Errorf("invalid witness structure for input %d: expected at least 2 elements, got %d", i, len(in.Witness))
+			}
 			witnessPubKey := in.Witness[1] // must be set by tx proposer
-			in.Witness = wire.TxWitness{sig, witnessPubKey}
+			in.Witness = wire.TxWitness{derSig, witnessPubKey}
 			in.SignatureScript = nil
 		} else {
-			scriptSig, er2 := txscript.NewScriptBuilder().AddData(sig).Script()
+			// For legacy P2PKH, extract the public key from the pre-populated scriptSig
+			pubKey, er2 := utxo.ExtractPubKeyFromScriptSig(in.SignatureScript)
+			if er2 != nil {
+				return "", fmt.Errorf("failed to extract pubkey from scriptSig for input %d: %w", i, er2)
+			}
+
+			// Build scriptSig with DER signature and public key
+			scriptSig, er2 := txscript.NewScriptBuilder().AddData(derSig).AddData(pubKey).Script()
 			if er2 != nil {
 				return "", fmt.Errorf("txscript.NewScriptBuilder: %w", er2)
 			}

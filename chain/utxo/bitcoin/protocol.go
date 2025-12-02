@@ -148,8 +148,7 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 			}
 
 		default:
-			// Skip unsupported constraint types for now
-			continue
+			return false, nil, fmt.Errorf("unsupported constraint type %v for parameter %q", constraint.GetType(), paramName)
 		}
 	}
 

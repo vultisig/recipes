@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 
 	bchchain "github.com/vultisig/recipes/chain/utxo/bitcoincash"
@@ -183,17 +184,16 @@ func (b *BitcoinCash) validateOutputConstraints(outputConstraints map[int]*outpu
 
 		if constraints.data != nil {
 			// Data constraint validation - validate against OP_RETURN data
-			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != 0x6a {
+			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != txscript.OP_RETURN {
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script: 0x6a <data_len> <data>
+			// Extract data from OP_RETURN script using txscript.PushedData
+			// which handles all PUSHDATA variants (OP_DATA_1-75, OP_PUSHDATA1/2/4)
+			pushedData, _ := txscript.PushedData(txOut.PkScript[1:]) // Skip OP_RETURN
 			var dataBytes []byte
-			if len(txOut.PkScript) > 2 {
-				dataLen := int(txOut.PkScript[1])
-				if len(txOut.PkScript) >= 2+dataLen {
-					dataBytes = txOut.PkScript[2 : 2+dataLen]
-				}
+			if len(pushedData) > 0 {
+				dataBytes = pushedData[0]
 			}
 
 			// Use raw bytes as string for regexp matching (ASCII data)

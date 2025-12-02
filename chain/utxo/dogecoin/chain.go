@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
+	"github.com/vultisig/recipes/chain/utxo"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -70,12 +71,18 @@ func (d *Dogecoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) 
 			return "", fmt.Errorf("hex.DecodeString(selectedSig.S): %w", er)
 		}
 
-		var sig []byte
-		sig = append(sig, r...)
-		sig = append(sig, s...)
-		sig = append(sig, byte(txscript.SigHashAll))
+		// Encode signature in DER format as required by BIP66
+		derSig := utxo.EncodeDERSignature(r, s)
+		derSig = append(derSig, byte(txscript.SigHashAll))
 
-		scriptSig, er := txscript.NewScriptBuilder().AddData(sig).Script()
+		// For legacy P2PKH, extract the public key from the pre-populated scriptSig
+		pubKey, er := utxo.ExtractPubKeyFromScriptSig(in.SignatureScript)
+		if er != nil {
+			return "", fmt.Errorf("failed to extract pubkey from scriptSig for input %d: %w", i, er)
+		}
+
+		// Build scriptSig with DER signature and public key
+		scriptSig, er := txscript.NewScriptBuilder().AddData(derSig).AddData(pubKey).Script()
 		if er != nil {
 			return "", fmt.Errorf("txscript.NewScriptBuilder: %w", er)
 		}
