@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/vultisig/recipes/chain"
-	"github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/chain/evm/ethereum"
 	"github.com/vultisig/recipes/internal/generator"
 )
 

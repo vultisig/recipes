@@ -169,3 +169,14 @@ func (p *ParsedBitcoinTransaction) GetVersion() int32 {
 func (p *ParsedBitcoinTransaction) IsSegWit() bool {
 	return p.tx.HasWitness()
 }
+
+// GetTransaction returns the underlying wire.MsgTx
+func (p *ParsedBitcoinTransaction) GetTransaction() *wire.MsgTx {
+	return p.tx
+}
+
+// GetNetwork returns the network parameters
+func (p *ParsedBitcoinTransaction) GetNetwork() *chaincfg.Params {
+	return p.network
+}
+

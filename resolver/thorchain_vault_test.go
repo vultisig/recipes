@@ -85,6 +85,24 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve BCH vault address",
+			chainID: "bitcoincash",
+			assetID: "bch",
+			wantErr: false,
+		},
+		{
+			name:    "resolve LTC vault address",
+			chainID: "litecoin",
+			assetID: "ltc",
+			wantErr: false,
+		},
+		{
+			name:    "resolve DOGE vault address",
+			chainID: "dogecoin",
+			assetID: "doge",
+			wantErr: false,
+		},
+		{
 			name:    "resolve using uppercase chain",
 			chainID: "bitcoin",
 			assetID: "btc",
@@ -211,6 +229,9 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 		{"bitcoin", "BTC"},
 		{"base", "BASE"},
 		{"ripple", "XRP"},
+		{"bitcoincash", "BCH"},
+		{"litecoin", "LTC"},
+		{"dogecoin", "DOGE"},
 	}
 
 	for _, chain := range supportedChains {

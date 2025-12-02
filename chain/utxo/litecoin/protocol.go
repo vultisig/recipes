@@ -1,4 +1,4 @@
-package bitcoin
+package litecoin
 
 import (
 	"fmt"
@@ -8,46 +8,46 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// BTC implements the Protocol interface for the Bitcoin protocol
-type BTC struct{}
+// LTC implements the Protocol interface for the Litecoin protocol
+type LTC struct{}
 
-// ID returns the unique identifier for the BTC protocol
-func (b *BTC) ID() string {
-	return "btc"
+// ID returns the unique identifier for the LTC protocol
+func (l *LTC) ID() string {
+	return "ltc"
 }
 
-// Name returns a human-readable name for the BTC protocol
-func (b *BTC) Name() string {
-	return "Bitcoin"
+// Name returns a human-readable name for the LTC protocol
+func (l *LTC) Name() string {
+	return "Litecoin"
 }
 
 // ChainID returns the ID of the chain this protocol belongs to
-func (b *BTC) ChainID() string {
-	return "bitcoin"
+func (l *LTC) ChainID() string {
+	return "litecoin"
 }
 
-// Description returns a detailed description of the BTC protocol
-func (b *BTC) Description() string {
-	return "The native cryptocurrency of the Bitcoin blockchain, used for transactions and value transfer."
+// Description returns a detailed description of the LTC protocol
+func (l *LTC) Description() string {
+	return "The native cryptocurrency of the Litecoin blockchain, used for transactions and value transfer."
 }
 
 // Functions returns a list of available functions for this protocol
-func (b *BTC) Functions() []*types.Function {
+func (l *LTC) Functions() []*types.Function {
 	return []*types.Function{
 		{
 			ID:          "transfer",
-			Name:        "Transfer BTC",
-			Description: "Transfer Bitcoin to another address",
+			Name:        "Transfer LTC",
+			Description: "Transfer Litecoin to another address",
 			Parameters: []*types.FunctionParam{
 				{
 					Name:        "recipient",
 					Type:        "address",
-					Description: "The Bitcoin address of the recipient",
+					Description: "The Litecoin address of the recipient",
 				},
 				{
 					Name:        "amount",
 					Type:        "decimal",
-					Description: "The amount of Bitcoin to transfer",
+					Description: "The amount of Litecoin to transfer",
 				},
 			},
 		},
@@ -55,19 +55,19 @@ func (b *BTC) Functions() []*types.Function {
 }
 
 // GetFunction retrieves a specific function by ID
-func (b *BTC) GetFunction(id string) (*types.Function, error) {
-	for _, fn := range b.Functions() {
+func (l *LTC) GetFunction(id string) (*types.Function, error) {
+	for _, fn := range l.Functions() {
 		if fn.ID == id {
 			return fn, nil
 		}
 	}
-	return nil, fmt.Errorf("function %q not found for protocol BTC", id)
+	return nil, fmt.Errorf("function %q not found for protocol LTC", id)
 }
 
-func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
-	// Check if this is a Bitcoin transaction
-	if decodedTx.ChainIdentifier() != "bitcoin" {
-		return false, nil, fmt.Errorf("expected Bitcoin transaction, got %s", decodedTx.ChainIdentifier())
+func (l *LTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
+	// Check if this is a Litecoin transaction
+	if decodedTx.ChainIdentifier() != "litecoin" {
+		return false, nil, fmt.Errorf("expected Litecoin transaction, got %s", decodedTx.ChainIdentifier())
 	}
 
 	// Only support transfer function
@@ -78,12 +78,12 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	// Extract parameters from the transaction
 	params := make(map[string]interface{})
 	params["recipient"] = decodedTx.To()
-	params["amount"] = decodedTx.Value() // Amount as *big.Int in satoshis
+	params["amount"] = decodedTx.Value() // Amount as *big.Int in litoshi
 
 	// Also store a string representation for display
 	displayParams := make(map[string]interface{})
 	displayParams["recipient"] = decodedTx.To()
-	displayParams["amount"] = decodedTx.Value().String() // Amount in satoshis as string
+	displayParams["amount"] = decodedTx.Value().String() // Amount in litoshi as string
 
 	// Check constraints
 	for _, pc := range policyMatcher.Constraints {
@@ -156,7 +156,8 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	return true, displayParams, nil
 }
 
-// NewBTC creates a new BTC protocol instance
-func NewBTC() types.Protocol {
-	return &BTC{}
+// NewLTC creates a new LTC protocol instance
+func NewLTC() types.Protocol {
+	return &LTC{}
 }
+

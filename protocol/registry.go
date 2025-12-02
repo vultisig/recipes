@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/vultisig/recipes/bitcoin"
+	"github.com/vultisig/recipes/chain/utxo/bitcoin"
+	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
+	"github.com/vultisig/recipes/chain/utxo/dogecoin"
+	"github.com/vultisig/recipes/chain/utxo/litecoin"
+	"github.com/vultisig/recipes/chain/utxo/zcash"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -105,6 +109,10 @@ func ListProtocolsByChain(chainID string) []types.Protocol {
 
 // init registers built-in protocols
 func init() {
-	// Register BTC protocol
+	// Register UTXO protocols
 	RegisterProtocol(bitcoin.NewBTC())
+	RegisterProtocol(bitcoincash.NewBCH())
+	RegisterProtocol(dogecoin.NewDOGE())
+	RegisterProtocol(litecoin.NewLTC())
+	RegisterProtocol(zcash.NewZEC())
 }

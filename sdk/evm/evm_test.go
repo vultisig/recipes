@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	reth "github.com/vultisig/recipes/ethereum"
+	reth "github.com/vultisig/recipes/chain/evm/ethereum"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 )
 

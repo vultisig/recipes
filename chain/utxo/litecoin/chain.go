@@ -1,4 +1,4 @@
-package bitcoin
+package litecoin
 
 import (
 	"bytes"
@@ -12,42 +12,42 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// Bitcoin implements the Chain interface for the Bitcoin blockchain
-type Bitcoin struct{}
+// Litecoin implements the Chain interface for the Litecoin blockchain.
+// Litecoin supports SegWit like Bitcoin.
+type Litecoin struct{}
 
-// ID returns the unique identifier for the Bitcoin chain
-func (b *Bitcoin) ID() string {
-	return "bitcoin"
+// ID returns the unique identifier for the Litecoin chain
+func (l *Litecoin) ID() string {
+	return "litecoin"
 }
 
-// Name returns a human-readable name for the Bitcoin chain
-func (b *Bitcoin) Name() string {
-	return "Bitcoin"
+// Name returns a human-readable name for the Litecoin chain
+func (l *Litecoin) Name() string {
+	return "Litecoin"
 }
 
-// SupportedProtocols returns the list of protocol IDs supported by the Bitcoin chain
-func (b *Bitcoin) SupportedProtocols() []string {
-	return []string{"btc"}
+// SupportedProtocols returns the list of protocol IDs supported by the Litecoin chain
+func (l *Litecoin) SupportedProtocols() []string {
+	return []string{"ltc"}
 }
 
-// Description returns a human-readable description for the Bitcoin chain
-func (b *Bitcoin) Description() string {
-	return "Bitcoin is a digital currency that is not controlled by any government or financial institution."
+// Description returns a human-readable description for the Litecoin chain
+func (l *Litecoin) Description() string {
+	return "Litecoin is a peer-to-peer cryptocurrency created as a lighter, faster alternative to Bitcoin."
 }
 
-func (b *Bitcoin) GetProtocol(id string) (types.Protocol, error) {
-	if id == "btc" {
-		return NewBTC(), nil
+func (l *Litecoin) GetProtocol(id string) (types.Protocol, error) {
+	if id == "ltc" {
+		return NewLTC(), nil
 	}
-	return nil, fmt.Errorf("protocol %q not found or not supported on Bitcoin", id)
+	return nil, fmt.Errorf("protocol %q not found or not supported on Litecoin", id)
 }
 
-func (b *Bitcoin) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
-	return ParseBitcoinTransaction(txHex)
+func (l *Litecoin) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
+	return ParseLitecoinTransaction(txHex)
 }
 
-func (b *Bitcoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
-	// TODO: @webpiratt: check and add unit tests for witness and non-witness transactions
+func (l *Litecoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
 	var tx wire.MsgTx
 	err := tx.Deserialize(bytes.NewReader(proposedTx))
 	if err != nil {
@@ -93,7 +93,8 @@ func (b *Bitcoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (
 	return tx.TxHash().String(), nil
 }
 
-// NewBitcoin creates a new Bitcoin chain instance
+// NewChain creates a new Litecoin chain instance
 func NewChain() types.Chain {
-	return &Bitcoin{}
+	return &Litecoin{}
 }
+

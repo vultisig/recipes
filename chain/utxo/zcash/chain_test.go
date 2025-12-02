@@ -128,7 +128,7 @@ func TestZcash_ComputeTxHash(t *testing.T) {
 		},
 	}
 
-	z := NewChain()
+	z := NewChain().(*Zcash)
 	hash, err := z.ComputeTxHash(txBytes, sigs)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, hash)
