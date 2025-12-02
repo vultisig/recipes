@@ -221,9 +221,12 @@ func (e *Engine) validateOutputConstraints(outputConstraints map[int]*outputCons
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script using txscript.PushedData
-			// which handles all PUSHDATA variants (OP_DATA_1-75, OP_PUSHDATA1/2/4)
-			pushedData, _ := txscript.PushedData(txOut.PkScript[1:]) // Skip OP_RETURN
+		// Extract data from OP_RETURN script using txscript.PushedData
+		// which handles all PUSHDATA variants (OP_DATA_1-75, OP_PUSHDATA1/2/4)
+		pushedData, err := txscript.PushedData(txOut.PkScript[1:]) // Skip OP_RETURN
+		if err != nil {
+			return fmt.Errorf("output %d failed to parse OP_RETURN data: %w", i, err)
+		}
 			var dataBytes []byte
 			if len(pushedData) > 0 {
 				dataBytes = pushedData[0]
