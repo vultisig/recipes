@@ -83,6 +83,27 @@ validator.RegisterValidator("my-protocol", &MyValidator{})
 
 ## Development
 
+### Pre-Commit Checklist
+
+Before committing changes, run the following commands to ensure CI will pass:
+
+```bash
+# 1. Build
+go build ./...
+
+# 2. Run tests
+go test ./...
+
+# 3. Run linter (optional, but recommended)
+golangci-lint run ./...
+
+# 4. Generate documentation (required if chain/protocol changes)
+go run cmd/generator/main.go --output RESOURCES.md
+
+# 5. Generate protobuf (only if .proto files changed, requires protoc)
+go generate ./...
+```
+
 ### Running Tests
 
 Run all tests:
