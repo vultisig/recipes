@@ -104,27 +104,28 @@ func (c *Chain) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (st
 
 	// Assemble and add signatures
 	for i, sig := range sigs {
-		// Parse R and S from hex
-		rBytes, err := hex.DecodeString(sig.R)
+		// Parse R and S from hex (strip 0x prefix if present)
+		rBytes, err := hex.DecodeString(cleanHex(sig.R))
 		if err != nil {
 			return "", fmt.Errorf("failed to decode R for signature %d: %w", i, err)
 		}
-		sBytes, err := hex.DecodeString(sig.S)
+		sBytes, err := hex.DecodeString(cleanHex(sig.S))
 		if err != nil {
 			return "", fmt.Errorf("failed to decode S for signature %d: %w", i, err)
 		}
 
-		// Solana uses Ed25519 signatures which are 64 bytes (R || S)
-		// Pad R and S to 32 bytes each if needed
-		rPadded := make([]byte, 32)
-		sPadded := make([]byte, 32)
-		copy(rPadded[32-len(rBytes):], rBytes)
-		copy(sPadded[32-len(sBytes):], sBytes)
+		// Validate R and S are exactly 32 bytes for Ed25519
+		if len(rBytes) != 32 {
+			return "", fmt.Errorf("r must be 32 bytes for signature %d, got %d", i, len(rBytes))
+		}
+		if len(sBytes) != 32 {
+			return "", fmt.Errorf("s must be 32 bytes for signature %d, got %d", i, len(sBytes))
+		}
 
-		// Concatenate R || S to form the 64-byte signature
+		// Solana uses Ed25519 signatures which are 64 bytes (R || S)
 		var solSig solana.Signature
-		copy(solSig[:32], rPadded)
-		copy(solSig[32:], sPadded)
+		copy(solSig[:32], rBytes)
+		copy(solSig[32:], sBytes)
 
 		tx.Signatures[i] = solSig
 	}
@@ -139,5 +140,14 @@ func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
 		return NewSOL(), nil
 	}
 	return nil, fmt.Errorf("protocol %q not found on Solana", id)
+}
+
+// cleanHex strips 0x/0X prefix and whitespace from a hex string.
+func cleanHex(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		return s[2:]
+	}
+	return s
 }
 
