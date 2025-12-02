@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/chain/evm/ethereum"
-	"github.com/vultisig/recipes/chain/solana"
 	"github.com/vultisig/recipes/chain/thorchain"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
@@ -94,7 +93,6 @@ func init() {
 	RegisterChain(ethereum.NewEthereum())
 
 	// Register other chains
-	RegisterChain(solana.NewChain())
 	RegisterChain(thorchain.NewChain())
 	RegisterChain(xrpl.NewChain())
 }

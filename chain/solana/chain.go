@@ -3,7 +3,6 @@ package solana
 import (
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strings"
 
 	bin "github.com/gagliardetto/binary"
@@ -12,7 +11,7 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// Chain implements the types.Chain interface for Solana.
+// Chain represents the Solana blockchain.
 type Chain struct{}
 
 // NewChain creates a new Solana chain instance.
@@ -40,63 +39,9 @@ func (c *Chain) SupportedProtocols() []string {
 	return []string{"sol"}
 }
 
-// ParsedSolanaTransaction implements the types.DecodedTransaction interface for Solana.
+// ParsedSolanaTransaction wraps a decoded Solana transaction.
 type ParsedSolanaTransaction struct {
 	tx *solana.Transaction
-}
-
-// ChainIdentifier returns "solana".
-func (p *ParsedSolanaTransaction) ChainIdentifier() string {
-	return "solana"
-}
-
-// Hash returns the transaction signature (first signature).
-func (p *ParsedSolanaTransaction) Hash() string {
-	if len(p.tx.Signatures) > 0 {
-		return p.tx.Signatures[0].String()
-	}
-	return ""
-}
-
-// From returns the fee payer address.
-func (p *ParsedSolanaTransaction) From() string {
-	if len(p.tx.Message.AccountKeys) > 0 {
-		return p.tx.Message.AccountKeys[0].String()
-	}
-	return ""
-}
-
-// To returns empty string - Solana transactions don't have a single recipient.
-// Recipients are determined by the instructions within the transaction.
-func (p *ParsedSolanaTransaction) To() string {
-	return ""
-}
-
-// Value returns nil - Solana transactions don't have a single transfer value.
-// Value transfers are handled via instructions (e.g., SystemProgram.Transfer).
-func (p *ParsedSolanaTransaction) Value() *big.Int {
-	return nil
-}
-
-// Data returns nil - Solana transaction data is instruction-based.
-// Use GetInstructions() to access the transaction's instruction data.
-func (p *ParsedSolanaTransaction) Data() []byte {
-	return nil
-}
-
-// Nonce returns 0 - Solana uses recent blockhash instead of nonces.
-func (p *ParsedSolanaTransaction) Nonce() uint64 {
-	return 0
-}
-
-// GasPrice returns nil - Solana uses compute units and priority fees instead.
-func (p *ParsedSolanaTransaction) GasPrice() *big.Int {
-	return nil
-}
-
-// GasLimit returns 0 - Solana uses compute unit limits instead.
-func (p *ParsedSolanaTransaction) GasLimit() uint64 {
-	return 0
 }
 
 // GetTransaction returns the underlying Solana transaction.
@@ -115,7 +60,7 @@ func (p *ParsedSolanaTransaction) GetAccountKeys() []solana.PublicKey {
 }
 
 // ParseTransaction decodes a raw Solana transaction from hex string.
-func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
+func (c *Chain) ParseTransaction(txHex string) (*ParsedSolanaTransaction, error) {
 	txBytes, err := hex.DecodeString(strings.TrimPrefix(txHex, "0x"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex: %w", err)
@@ -130,7 +75,7 @@ func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error)
 }
 
 // ParseTransactionBytes decodes a raw Solana transaction from bytes.
-func (c *Chain) ParseTransactionBytes(txBytes []byte) (types.DecodedTransaction, error) {
+func (c *Chain) ParseTransactionBytes(txBytes []byte) (*ParsedSolanaTransaction, error) {
 	tx, err := solana.TransactionFromDecoder(bin.NewBorshDecoder(txBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode Solana transaction: %w", err)

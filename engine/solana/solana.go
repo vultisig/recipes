@@ -41,14 +41,9 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	// Use chain package to parse transaction (using bytes directly)
-	decodedTx, err := s.chain.ParseTransactionBytes(txBytes)
+	parsedTx, err := s.chain.ParseTransactionBytes(txBytes)
 	if err != nil {
 		return fmt.Errorf("failed to decode tx payload: %w", err)
-	}
-
-	parsedTx, ok := decodedTx.(*chainsolana.ParsedSolanaTransaction)
-	if !ok {
-		return fmt.Errorf("unexpected transaction type: %T", decodedTx)
 	}
 
 	tx := parsedTx.GetTransaction()
