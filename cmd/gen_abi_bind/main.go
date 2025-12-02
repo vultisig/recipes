@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	abiPath       = "abi"
+	abiPath       = "chain/evm/abi"
 	codegenFolder = "codegen"
 	outPath       = path.Join("sdk", "evm", codegenFolder)
 )

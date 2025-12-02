@@ -28,10 +28,16 @@ type Config struct {
 	SupportedChains []common.Chain
 
 	// NetworkParams is the btcd network parameters for address extraction.
+	// Used by the default address extractor if ExtractAddress is nil.
 	NetworkParams *chaincfg.Params
 
 	// ParseTx is an optional custom transaction parser. If nil, uses standard Bitcoin parsing.
 	ParseTx func(txBytes []byte) (*wire.MsgTx, error)
+
+	// ExtractAddress is an optional custom address extractor. If nil, uses standard
+	// btcd address extraction with NetworkParams. Use this for chains with custom
+	// address formats (e.g., Bitcoin Cash CashAddr).
+	ExtractAddress func(pkScript []byte) (string, error)
 }
 
 // Engine is a generic UTXO engine that can be configured for different chains.
@@ -251,6 +257,12 @@ func (e *Engine) validateOutputConstraints(outputConstraints map[int]*outputCons
 }
 
 func (e *Engine) extractAddress(txOut *wire.TxOut) (string, error) {
+	// Use custom address extractor if provided
+	if e.config.ExtractAddress != nil {
+		return e.config.ExtractAddress(txOut.PkScript)
+	}
+
+	// Default: use btcd address extraction with network params
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, e.config.NetworkParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract address from script: %w", err)
