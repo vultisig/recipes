@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package types;
+
+import "policy.proto";
+
+option go_package = "github.com/vultisig/recipes/types";
+
+// RecipeTemplate provides example policy configurations for developers
+// This allows plugin developers to showcase different use cases and configurations
+message RecipeTemplate {
+  // Unique identifier for this template
+  string id = 1;
+
+  // Human-readable title for the template
+  string title = 2;
+
+  // Detailed description of what this template does
+  string description = 3;
+
+  // The example policy payload that demonstrates this template
+  Policy policy_payload = 4;
+
+  // Optional tags for categorizing templates
+  repeated string tags = 5;
+}
+
+// Collection of recipe templates for a plugin
+message RecipeTemplateCollection {
+  // Plugin identification
+  string plugin_id = 1;
+
+  // Collection of templates provided by this plugin
+  repeated RecipeTemplate templates = 2;
+}
