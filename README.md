@@ -25,6 +25,11 @@ This repository contains a set of tools and utilities for integrating various bl
 
 - Go 1.24 or later
 - Git
+- For protobuf generation (only needed if modifying `.proto` files):
+  - protoc v30.2+
+  - protoc-gen-go: `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`
+  - protoc-gen-go-grpc: `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`
+  - Or use buf (see `buf.gen.yaml`)
 
 ### Installation
 
