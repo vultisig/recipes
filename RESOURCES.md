@@ -43,6 +43,80 @@ Transfer Bitcoin to another address
 ```
 
 
+### bitcoincash.bch.transfer
+
+**Chain:** Bitcoin Cash  
+**Protocol:** Bitcoin Cash  
+**Function:** Transfer BCH  
+
+Transfer Bitcoin Cash to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Bitcoin Cash address of the recipient |
+| amount | decimal | The amount of Bitcoin Cash to transfer |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "bitcoincash.bch.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### dogecoin.doge.transfer
+
+**Chain:** Dogecoin  
+**Protocol:** Dogecoin  
+**Function:** Transfer DOGE  
+
+Transfer Dogecoin to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Dogecoin address of the recipient |
+| amount | decimal | The amount of Dogecoin to transfer |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "dogecoin.doge.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.dai.allowance
 
 **Chain:** Ethereum  
@@ -5310,6 +5384,80 @@ Transfer Wrapped Ether tokens from one address to another
       "type": "fixed",
       "value": "example_value"
     },
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### litecoin.ltc.transfer
+
+**Chain:** Litecoin  
+**Protocol:** Litecoin  
+**Function:** Transfer LTC  
+
+Transfer Litecoin to another address
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Litecoin address of the recipient |
+| amount | decimal | The amount of Litecoin to transfer |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "litecoin.ltc.transfer",
+  "effect": "ALLOW",
+  "constraints": {
+    "recipient": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### zcash.zec.transfer
+
+**Chain:** Zcash  
+**Protocol:** Zcash  
+**Function:** Transfer ZEC  
+
+Transfer Zcash to another address (transparent transaction)
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| recipient | address | The Zcash transparent address of the recipient |
+| amount | decimal | The amount of Zcash to transfer (in zatoshis) |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "zcash.zec.transfer",
+  "effect": "ALLOW",
+  "constraints": {
     "recipient": {
       "type": "fixed",
       "value": "example_value"

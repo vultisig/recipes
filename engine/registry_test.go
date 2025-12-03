@@ -35,6 +35,30 @@ func TestChainEngineRegistry(t *testing.T) {
 			description: "Bitcoin should be supported by BTC engine",
 		},
 		{
+			name:        "Bitcoin Cash",
+			chain:       common.BitcoinCash,
+			shouldFind:  true,
+			description: "Bitcoin Cash should be supported by BCH engine",
+		},
+		{
+			name:        "Dogecoin",
+			chain:       common.Dogecoin,
+			shouldFind:  true,
+			description: "Dogecoin should be supported by DOGE engine",
+		},
+		{
+			name:        "Litecoin",
+			chain:       common.Litecoin,
+			shouldFind:  true,
+			description: "Litecoin should be supported by LTC engine",
+		},
+		{
+			name:        "Zcash",
+			chain:       common.Zcash,
+			shouldFind:  true,
+			description: "Zcash should be supported by ZEC engine",
+		},
+		{
 			name:        "XRP",
 			chain:       common.XRP,
 			shouldFind:  true,
@@ -89,10 +113,14 @@ func TestChainEngineInterface(t *testing.T) {
 	// Test that all registered engines implement the interface correctly
 	supportedChains := []common.Chain{
 		common.Ethereum, common.BscChain, common.Arbitrum, // EVM chains
-		common.Bitcoin, // BTC chains
-		common.XRP, // XRPL chains
-		common.Solana,  // Solana
-		common.THORChain, // Thorchain
+		common.Bitcoin,     // BTC
+		common.BitcoinCash, // BCH
+		common.Dogecoin,    // DOGE
+		common.Litecoin,    // LTC
+		common.Zcash,       // ZEC
+		common.XRP,         // XRPL chains
+		common.Solana,      // Solana
+		common.THORChain,   // Thorchain
 	}
 
 	for _, chain := range supportedChains {

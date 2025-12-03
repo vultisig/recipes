@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/vultisig/recipes/chain/utxo/zcash"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/types"
-	"github.com/vultisig/recipes/zcash"
 	"github.com/vultisig/vultisig-go/common"
 )
 

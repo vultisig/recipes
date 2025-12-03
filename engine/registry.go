@@ -3,12 +3,15 @@ package engine
 import (
 	"fmt"
 
-	"github.com/vultisig/recipes/engine/btc"
 	"github.com/vultisig/recipes/engine/evm"
-	"github.com/vultisig/recipes/engine/thorchain"
-	"github.com/vultisig/recipes/engine/xrpl"
-	"github.com/vultisig/recipes/engine/zcash"
 	"github.com/vultisig/recipes/engine/solana"
+	"github.com/vultisig/recipes/engine/thorchain"
+	"github.com/vultisig/recipes/engine/utxo/bitcoin"
+	"github.com/vultisig/recipes/engine/utxo/bitcoincash"
+	"github.com/vultisig/recipes/engine/utxo/dogecoin"
+	"github.com/vultisig/recipes/engine/utxo/litecoin"
+	"github.com/vultisig/recipes/engine/utxo/zcash"
+	"github.com/vultisig/recipes/engine/xrpl"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
@@ -54,8 +57,18 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 		registry.Register(evmEngine)
 	}
 
-	registry.Register(&btc.Btc{})
-	
+	// Register Bitcoin engine
+	registry.Register(bitcoin.NewBtc())
+
+	// Register Bitcoin Cash engine
+	registry.Register(bitcoincash.NewBitcoinCash())
+
+	// Register Dogecoin engine
+	registry.Register(dogecoin.NewDogecoin())
+
+	// Register Litecoin engine
+	registry.Register(litecoin.NewLitecoin())
+
 	// Register XRPL engine
 	registry.Register(xrpl.NewXRPL())
 
@@ -65,6 +78,7 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 	// Register Zcash engine
 	registry.Register(zcash.NewZcash())
 
+	// Register Solana engine
 	solEng, err := solana.NewSolana()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create solana engine: %s", err)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vultisig/recipes/types"
-	"github.com/vultisig/recipes/zcash"
+	"github.com/vultisig/recipes/chain/utxo/zcash"
 )
 
 // Sample Zcash v4 transparent transaction (2 inputs, 2 outputs)
@@ -574,4 +574,3 @@ func TestZcash_Evaluate_MayaChainSwapStructure(t *testing.T) {
 	}, txBytes)
 	assert.NoError(t, err)
 }
-

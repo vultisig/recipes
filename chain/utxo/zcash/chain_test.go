@@ -92,7 +92,7 @@ func TestZcash_ComputeTxHash(t *testing.T) {
 	//   Input 0:
 	//     PrevHash: [32 bytes 00]
 	//     PrevIndex: 00000000
-	//     ScriptLen: 00
+	//     ScriptSig: placeholder with dummy sig + pubkey (for pubkey extraction)
 	//     Sequence: ffffffff
 	// Outputs: 0
 	// LockTime: 00000000
@@ -102,12 +102,27 @@ func TestZcash_ComputeTxHash(t *testing.T) {
 	// ShieldedOutputs: 00
 	// Joinsplits: 00
 
+	// Placeholder scriptSig for P2PKH (must contain pubkey for extraction):
+	// - 0x47 push 71 bytes (DER signature + sighash byte)
+	// - DER sig: 30 44 02 20 [32 bytes r] 02 20 [32 bytes s] + 01 (sighash)
+	// - 0x21 push 33 bytes (compressed pubkey)
+	// - compressed pubkey: 02 + [32 bytes x]
+	placeholderScriptSig := "47" + // push 71 bytes
+		"3044" + // DER SEQUENCE, 68 bytes
+		"0220" + "0000000000000000000000000000000000000000000000000000000000000001" + // INTEGER r
+		"0220" + "0000000000000000000000000000000000000000000000000000000000000001" + // INTEGER s
+		"01" + // SIGHASH_ALL
+		"21" + // push 33 bytes (compressed pubkey)
+		"02" + "0000000000000000000000000000000000000000000000000000000000000001" // compressed pubkey
+
+	scriptSigLen := "6a" // 106 bytes = 0x6a (1 + 71 + 1 + 33)
+
 	txHex := "04000080" + // Version
 		"85202f89" + // GroupID
 		"01" + // Inputs count
 		"0000000000000000000000000000000000000000000000000000000000000000" + // PrevHash
 		"00000000" + // PrevIndex
-		"00" + // ScriptLen
+		scriptSigLen + placeholderScriptSig + // ScriptSig with placeholder
 		"ffffffff" + // Sequence
 		"00" + // Outputs count
 		"00000000" + // LockTime
@@ -128,7 +143,7 @@ func TestZcash_ComputeTxHash(t *testing.T) {
 		},
 	}
 
-	z := NewChain()
+	z := NewChain().(*Zcash)
 	hash, err := z.ComputeTxHash(txBytes, sigs)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, hash)

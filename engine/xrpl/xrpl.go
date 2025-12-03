@@ -1,27 +1,29 @@
 package xrpl
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
+	chainxrpl "github.com/vultisig/recipes/chain/xrpl"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
-	xrpgo "github.com/xyield/xrpl-go/binary-codec"
 	"github.com/xyield/xrpl-go/model/transactions"
 	xrptypes "github.com/xyield/xrpl-go/model/transactions/types"
 )
 
 // XRPL represents the XRP Ledger engine implementation
-type XRPL struct{}
+type XRPL struct {
+	chain *chainxrpl.Chain
+}
 
 // NewXRPL creates a new XRPL engine instance
 func NewXRPL() *XRPL {
-	return &XRPL{}
+	return &XRPL{
+		chain: chainxrpl.NewChain(),
+	}
 }
 
 // Supports returns true if this engine supports the given chain
@@ -43,65 +45,35 @@ func (x *XRPL) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	// Parse XRPL transaction from txBytes using binary codec
-	tx, err := x.parseTransaction(txBytes)
+	// Use chain package to parse XRPL transaction
+	decodedTx, err := x.chain.ParseTransactionBytes(txBytes)
 	if err != nil {
 		return fmt.Errorf("failed to parse XRPL transaction: %w", err)
 	}
 
+	parsedTx, ok := decodedTx.(*chainxrpl.ParsedXRPLTransaction)
+	if !ok {
+		return fmt.Errorf("unexpected transaction type: %T", decodedTx)
+	}
+
+	payment := parsedTx.GetPayment()
+
 	// Validate it's a Payment transaction
-	if tx.TransactionType != transactions.PaymentTx {
-		return fmt.Errorf("only Payment transactions are supported, got: %s", tx.TransactionType)
+	if payment.TransactionType != transactions.PaymentTx {
+		return fmt.Errorf("only Payment transactions are supported, got: %s", payment.TransactionType)
 	}
 
 	// Validate target if specified
-	if err := x.validateTarget(r, rule.GetTarget(), tx); err != nil {
+	if err := x.validateTarget(r, rule.GetTarget(), payment); err != nil {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
 	// Validate parameter constraints for XRP payments
-	if err := x.validateParameterConstraints(r, rule.GetParameterConstraints(), tx); err != nil {
+	if err := x.validateParameterConstraints(r, rule.GetParameterConstraints(), payment); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
 	return nil
-}
-
-// parseTransaction parses XRPL transaction bytes into a Payment transaction
-func (x *XRPL) parseTransaction(txBytes []byte) (*transactions.Payment, error) {
-	// Convert bytes to hex string for binary codec
-	hexStr := hex.EncodeToString(txBytes)
-
-	// Use XRPL binary codec to decode hex to JSON
-	jsonData, err := xrpgo.Decode(hexStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode XRPL binary format: %w", err)
-	}
-
-	// Convert map to JSON bytes for unmarshaling
-	jsonBytes, err := json.Marshal(jsonData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal decoded JSON: %w", err)
-	}
-
-	// Unmarshal into Payment struct
-	var payment transactions.Payment
-	if err := json.Unmarshal(jsonBytes, &payment); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal XRPL Payment transaction: %w", err)
-	}
-
-	// Validate required fields for Payment transactions
-	if string(payment.Account) == "" {
-		return nil, fmt.Errorf("account field is required")
-	}
-	if string(payment.Destination) == "" {
-		return nil, fmt.Errorf("destination field is required")
-	}
-	if payment.Amount == nil {
-		return nil, fmt.Errorf("amount field is required")
-	}
-
-	return &payment, nil
 }
 
 // validateTarget validates the transaction target against the rule target
@@ -189,32 +161,10 @@ func (x *XRPL) extractParameterValue(paramName string, payment *transactions.Pay
 		// Return amount as *big.Int for numeric comparisons
 		return x.extractCurrencyAmountAsBigInt(payment.Amount)
 	case "memo":
-		return ExtractMemoFromXRPPayment(payment)
+		return chainxrpl.ExtractMemoFromXRPPayment(payment)
 	default:
 		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}
-}
-
-// ExtractMemoFromXRPPayment extracts memo data from XRPL Payment transaction
-func ExtractMemoFromXRPPayment(payment *transactions.Payment) (string, error) {
-	if len(payment.Memos) == 0 {
-		return "", fmt.Errorf("no memo found in payment transaction")
-	}
-
-	// XRPL memos are typically hex-encoded, need to decode
-	memo := payment.Memos[0]
-	if memo.Memo.MemoData == "" {
-		return "", fmt.Errorf("empty memo data")
-	}
-
-	// Decode hex to string (THORChain memos are text)
-	memoBytes, err := hex.DecodeString(memo.Memo.MemoData)
-	if err != nil {
-		// If not hex, treat as plain string
-		return memo.Memo.MemoData, nil
-	}
-
-	return string(memoBytes), nil
 }
 
 // extractCurrencyAmountAsBigInt converts a CurrencyAmount to *big.Int for numeric comparisons

@@ -15,7 +15,7 @@ const (
 	// MsgSend TypeUrls - both standard Cosmos and THORChain custom formats
 	TypeUrlCosmosMsgSend    = "/cosmos.bank.v1beta1.MsgSend"
 	TypeUrlThorchainMsgSend = "/types.MsgSend"
-	
+
 	// MsgDeposit TypeUrls
 	TypeUrlThorchainMsgDeposit = "/types.MsgDeposit"
 )
@@ -55,3 +55,4 @@ func (mt MessageType) String() string {
 		return "Unknown"
 	}
 }
+

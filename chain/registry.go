@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/vultisig/recipes/bitcoin"
-	"github.com/vultisig/recipes/ethereum"
+	"github.com/vultisig/recipes/chain/evm/ethereum"
+	"github.com/vultisig/recipes/chain/thorchain"
+	"github.com/vultisig/recipes/chain/utxo/bitcoin"
+	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
+	"github.com/vultisig/recipes/chain/utxo/dogecoin"
+	"github.com/vultisig/recipes/chain/utxo/litecoin"
+	"github.com/vultisig/recipes/chain/utxo/zcash"
+	"github.com/vultisig/recipes/chain/xrpl"
 	"github.com/vultisig/recipes/types"
-	"github.com/vultisig/recipes/zcash"
 )
 
 // Registry maintains a registry of available blockchain chains
@@ -77,8 +82,17 @@ func GetChain(id string) (types.Chain, error) {
 
 // init registers built-in chains
 func init() {
-	// Register Bitcoin chain
+	// Register UTXO chains
 	RegisterChain(bitcoin.NewChain())
-	RegisterChain(ethereum.NewEthereum())
+	RegisterChain(bitcoincash.NewChain())
+	RegisterChain(dogecoin.NewChain())
+	RegisterChain(litecoin.NewChain())
 	RegisterChain(zcash.NewChain())
+
+	// Register EVM chains
+	RegisterChain(ethereum.NewEthereum())
+
+	// Register other chains
+	RegisterChain(thorchain.NewChain())
+	RegisterChain(xrpl.NewChain())
 }

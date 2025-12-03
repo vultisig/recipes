@@ -15,10 +15,10 @@ import (
 
 // ZcashNetworkParams holds Zcash-specific network parameters
 type ZcashNetworkParams struct {
-	Name            string
-	AddressPrefix   []byte // t1 for mainnet transparent
-	ScriptPrefix    []byte // t3 for mainnet P2SH
-	Bech32HRP       string // not used for transparent, but for future
+	Name          string
+	AddressPrefix []byte // t1 for mainnet transparent
+	ScriptPrefix  []byte // t3 for mainnet P2SH
+	Bech32HRP     string // not used for transparent, but for future
 }
 
 var (
@@ -32,10 +32,10 @@ var (
 
 // ParsedZcashTransaction implements the types.DecodedTransaction interface for Zcash.
 type ParsedZcashTransaction struct {
-	tx         *ZcashTransaction
-	txHash     string
-	rawData    []byte
-	network    *ZcashNetworkParams
+	tx      *ZcashTransaction
+	txHash  string
+	rawData []byte
+	network *ZcashNetworkParams
 }
 
 // ZcashTransaction represents a Zcash transparent transaction (v4 or v5)
@@ -411,7 +411,7 @@ func encodeZcashAddress(prefix []byte, hash []byte) string {
 func base58CheckEncode(data []byte) string {
 	// Add 4-byte checksum
 	checksum := chainhash.DoubleHashB(data)[:4]
-	
+
 	// Create new slice to avoid mutating input
 	payload := make([]byte, len(data)+4)
 	copy(payload, data)

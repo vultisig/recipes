@@ -1,4 +1,5 @@
-package btc
+// Package utxo provides a shared engine for UTXO-based blockchains.
+package utxo
 
 import (
 	"bytes"
@@ -11,50 +12,80 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+
 	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
 
-type Btc struct{}
+// Config holds chain-specific configuration for the UTXO engine.
+type Config struct {
+	// ChainID is the identifier used for magic constant resolution (e.g., "bitcoin", "litecoin").
+	ChainID string
 
-func NewBtc() *Btc {
-	return &Btc{}
+	// SupportedChains is the list of common.Chain values this engine supports.
+	SupportedChains []common.Chain
+
+	// NetworkParams is the btcd network parameters for address extraction.
+	// Used by the default address extractor if ExtractAddress is nil.
+	NetworkParams *chaincfg.Params
+
+	// ParseTx is an optional custom transaction parser. If nil, uses standard Bitcoin parsing.
+	ParseTx func(txBytes []byte) (*wire.MsgTx, error)
+
+	// ExtractAddress is an optional custom address extractor. If nil, uses standard
+	// btcd address extraction with NetworkParams. Use this for chains with custom
+	// address formats (e.g., Bitcoin Cash CashAddr).
+	ExtractAddress func(pkScript []byte) (string, error)
 }
 
-// Supports returns true if this engine supports the given chain (Bitcoin and Bitcoin-like chains)
-func (b *Btc) Supports(chain common.Chain) bool {
-	switch chain {
-	// To expand to other UTXo based chains in the future
-	case common.Bitcoin:
-		return true
-	default:
-		return false
+// Engine is a generic UTXO engine that can be configured for different chains.
+type Engine struct {
+	config Config
+}
+
+// NewEngine creates a new UTXO engine with the given configuration.
+func NewEngine(config Config) *Engine {
+	return &Engine{config: config}
+}
+
+// Supports returns true if this engine supports the given chain.
+func (e *Engine) Supports(chain common.Chain) bool {
+	for _, c := range e.config.SupportedChains {
+		if c == chain {
+			return true
+		}
 	}
+	return false
 }
 
-func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
+// Evaluate validates a transaction against the given rule.
+func (e *Engine) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
 	if rule.GetTarget().GetTargetType() != types.TargetType_TARGET_TYPE_UNSPECIFIED {
-		return fmt.Errorf("target type must be nil for BTC, got: %s", rule.GetTarget().GetTargetType().String())
+		return fmt.Errorf("target type must be nil for %s, got: %s", e.config.ChainID, rule.GetTarget().GetTargetType().String())
 	}
 
-	tx, err := b.parseTx(txBytes)
+	tx, err := e.parseTx(txBytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse bitcoin transaction: %w", err)
+		return fmt.Errorf("failed to parse %s transaction: %w", e.config.ChainID, err)
 	}
 
-	if err := b.validateOutputs(rule, tx); err != nil {
+	if err := e.validateOutputs(rule, tx); err != nil {
 		return fmt.Errorf("failed to validate outputs: %w", err)
 	}
 
 	return nil
 }
 
-func (b *Btc) parseTx(txBytes []byte) (*wire.MsgTx, error) {
+func (e *Engine) parseTx(txBytes []byte) (*wire.MsgTx, error) {
+	if e.config.ParseTx != nil {
+		return e.config.ParseTx(txBytes)
+	}
+
 	tx := &wire.MsgTx{}
 	err := tx.Deserialize(bytes.NewReader(txBytes))
 	if err != nil {
@@ -69,24 +100,24 @@ type outputConstraints struct {
 	data    *types.ParameterConstraint
 }
 
-func (b *Btc) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
+func (e *Engine) validateOutputs(rule *types.Rule, tx *wire.MsgTx) error {
 	outputs := make(map[int]*outputConstraints)
 
 	for _, constraint := range rule.GetParameterConstraints() {
 		name := constraint.GetParameterName()
 
-		if index, constrType, err := b.parseConstraintName(name); err != nil {
+		if index, constrType, err := e.parseConstraintName(name); err != nil {
 			return fmt.Errorf("failed to parse constraint name: %w", err)
 		} else {
-			b.setConstraint(outputs, index, constraint, constrType)
+			e.setConstraint(outputs, index, constraint, constrType)
 		}
 	}
 
-	if err := b.validateOutputConstraintCounts(outputs, tx); err != nil {
+	if err := e.validateOutputConstraintCounts(outputs, tx); err != nil {
 		return fmt.Errorf("failed to validate output constraint counts: %w", err)
 	}
 
-	return b.validateOutputConstraints(outputs, tx)
+	return e.validateOutputConstraints(outputs, tx)
 }
 
 type constraintType string
@@ -97,7 +128,7 @@ const (
 	data    constraintType = "data"
 )
 
-func (b *Btc) parseConstraintName(name string) (index int, constraintType constraintType, err error) {
+func (e *Engine) parseConstraintName(name string) (index int, cType constraintType, err error) {
 	if strings.HasPrefix(name, "output_address_") {
 		indexStr := strings.TrimPrefix(name, "output_address_")
 		ind, er := strconv.Atoi(indexStr)
@@ -128,17 +159,17 @@ func (b *Btc) parseConstraintName(name string) (index int, constraintType constr
 	return 0, "", fmt.Errorf("unsupported constraint parameter name (only output_* supported): %s", name)
 }
 
-func (b *Btc) setConstraint(
+func (e *Engine) setConstraint(
 	constraints map[int]*outputConstraints,
 	index int,
 	constraint *types.ParameterConstraint,
-	constraintType constraintType,
+	cType constraintType,
 ) {
 	if constraints[index] == nil {
 		constraints[index] = &outputConstraints{}
 	}
 
-	switch constraintType {
+	switch cType {
 	case address:
 		constraints[index].address = constraint
 	case value:
@@ -148,7 +179,7 @@ func (b *Btc) setConstraint(
 	}
 }
 
-func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
+func (e *Engine) validateOutputConstraintCounts(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
 	if len(outputConstraints) != len(tx.TxOut) {
 		return fmt.Errorf("output count mismatch: rule has %d outputs, tx has %d outputs", len(outputConstraints), len(tx.TxOut))
 	}
@@ -180,45 +211,47 @@ func (b *Btc) validateOutputConstraintCounts(outputConstraints map[int]*outputCo
 	return nil
 }
 
-func (b *Btc) validateOutputConstraints(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
+func (e *Engine) validateOutputConstraints(outputConstraints map[int]*outputConstraints, tx *wire.MsgTx) error {
 	for i, txOut := range tx.TxOut {
 		constraints := outputConstraints[i]
 
 		if constraints.data != nil {
 			// Data constraint validation - validate against OP_RETURN data
-			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != 0x6a {
+			if len(txOut.PkScript) < 2 || txOut.PkScript[0] != txscript.OP_RETURN {
 				return fmt.Errorf("output %d is not an OP_RETURN script", i)
 			}
 
-			// Extract data from OP_RETURN script: 0x6a <data_len> <data>
+		// Extract data from OP_RETURN script using txscript.PushedData
+		// which handles all PUSHDATA variants (OP_DATA_1-75, OP_PUSHDATA1/2/4)
+		pushedData, err := txscript.PushedData(txOut.PkScript[1:]) // Skip OP_RETURN
+		if err != nil {
+			return fmt.Errorf("output %d failed to parse OP_RETURN data: %w", i, err)
+		}
 			var dataBytes []byte
-			if len(txOut.PkScript) > 2 {
-				dataLen := int(txOut.PkScript[1])
-				if len(txOut.PkScript) >= 2+dataLen {
-					dataBytes = txOut.PkScript[2 : 2+dataLen]
-				}
+			if len(pushedData) > 0 {
+				dataBytes = pushedData[0]
 			}
 
 			// Use raw bytes as string for regexp matching (ASCII data)
 			dataStr := string(dataBytes)
 
-			if er := validateConstraint(constraints.data, dataStr, compare.NewString); er != nil {
+			if er := validateConstraint(e.config.ChainID, constraints.data, dataStr, compare.NewString); er != nil {
 				return fmt.Errorf("output %d data validation failed: %w", i, er)
 			}
 		} else {
 			// Address+value constraint validation
-			outputAddress, err := b.extractAddress(txOut)
+			outputAddress, err := e.extractAddress(txOut)
 			if err != nil {
 				return fmt.Errorf("failed to extract address from output %d: %w", i, err)
 			}
 
 			outputAmount := big.NewInt(txOut.Value)
 
-			if er := validateConstraint(constraints.address, outputAddress, compare.NewString); er != nil {
+			if er := validateConstraint(e.config.ChainID, constraints.address, outputAddress, compare.NewString); er != nil {
 				return fmt.Errorf("output %d address validation failed: %w", i, er)
 			}
 
-			if er := validateConstraint(constraints.value, outputAmount, compare.NewBigInt); er != nil {
+			if er := validateConstraint(e.config.ChainID, constraints.value, outputAmount, compare.NewBigInt); er != nil {
 				return fmt.Errorf("output %d value validation failed: %w", i, er)
 			}
 		}
@@ -226,8 +259,14 @@ func (b *Btc) validateOutputConstraints(outputConstraints map[int]*outputConstra
 	return nil
 }
 
-func (b *Btc) extractAddress(txOut *wire.TxOut) (string, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, &chaincfg.MainNetParams)
+func (e *Engine) extractAddress(txOut *wire.TxOut) (string, error) {
+	// Use custom address extractor if provided
+	if e.config.ExtractAddress != nil {
+		return e.config.ExtractAddress(txOut.PkScript)
+	}
+
+	// Default: use btcd address extraction with network params
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, e.config.NetworkParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract address from script: %w", err)
 	}
@@ -239,7 +278,9 @@ func (b *Btc) extractAddress(txOut *wire.TxOut) (string, error) {
 	return addrs[0].EncodeAddress(), nil
 }
 
+// validateConstraint is a package-level generic function for constraint validation
 func validateConstraint[T any](
+	chainID string,
 	constraint *types.ParameterConstraint,
 	actual T,
 	makeComparer compare.Constructor[T],
@@ -296,7 +337,7 @@ func validateConstraint[T any](
 
 		resolvedValue, _, err := resolve.Resolve(
 			constraint.GetConstraint().GetMagicConstantValue(),
-			"bitcoin",
+			chainID,
 			"default",
 		)
 		if err != nil {
