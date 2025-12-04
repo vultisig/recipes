@@ -119,6 +119,11 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			}
 
 			if err != nil {
+				// Skip if chain is halted - this is a transient network condition
+				if strings.Contains(err.Error(), "halted") {
+					t.Skipf("Skipping %s: chain is currently halted on MayaChain", tt.chainID)
+					return
+				}
 				t.Errorf("Unexpected error for chainID %s: %v", tt.chainID, err)
 				return
 			}
@@ -211,6 +216,11 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 				"asset", // assetID doesn't matter for vault resolution
 			)
 			if err != nil {
+				// Skip if chain is halted - this is a transient network condition
+				if strings.Contains(err.Error(), "halted") {
+					t.Skipf("Skipping %s: chain is currently halted on MayaChain", chain.chainID)
+					return
+				}
 				t.Fatalf("Resolver failed for %s: %v", chain.chainID, err)
 			}
 
@@ -251,7 +261,7 @@ func queryMayaChainAPIDirect() ([]MayaInboundAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
