@@ -55,7 +55,7 @@ func (g *Generator) Generate() error {
 	if err != nil {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Collect resource documentation
 	resources := make([]*ResourceDoc, 0)

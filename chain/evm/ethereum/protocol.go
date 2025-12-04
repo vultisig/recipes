@@ -379,9 +379,7 @@ func (p *ABIProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, poli
 	for _, input := range abiMethod.Inputs {
 		paramName := input.Name
 		// If param name from ABI starts with _, trim it for matching against policy constraints (e.g. _to -> to)
-		if strings.HasPrefix(paramName, "_") {
-			paramName = strings.TrimPrefix(paramName, "_")
-		}
+		paramName = strings.TrimPrefix(paramName, "_")
 
 		// The unpackedParamsMap uses original names from ABI. We need to handle this. Input.Name is reliable.
 		val, valOk := unpackedParamsMap[input.Name]
