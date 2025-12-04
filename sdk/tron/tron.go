@@ -217,7 +217,10 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		recIDHex := cleanHex(sig.RecoveryID)
 		if len(recIDHex) > 0 {
 			recIDBytes, err := hex.DecodeString(recIDHex)
-			if err == nil && len(recIDBytes) > 0 {
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode recovery ID: %w", err)
+			}
+			if len(recIDBytes) > 0 {
 				recoveryID = recIDBytes[0]
 			}
 		}
@@ -227,10 +230,12 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	sigHex := hex.EncodeToString(sigBytes)
 
 	// Create signed transaction JSON
-	signedTx := map[string]interface{}{
-		"txID":         txIDHex,
-		"raw_data_hex": hex.EncodeToString(unsignedTxBytes),
-		"signature":    []string{sigHex},
+	// Note: TRON nodes accept either raw_data (JSON object) or raw_data_hex (serialized protobuf).
+	// Using raw_data_hex is simpler and sufficient for broadcast - the node will deserialize it.
+	signedTx := &SignedTransaction{
+		TxID:       txIDHex,
+		RawDataHex: hex.EncodeToString(unsignedTxBytes),
+		Signature:  []string{sigHex},
 	}
 
 	signedTxBytes, err := json.Marshal(signedTx)
