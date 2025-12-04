@@ -11,11 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
-	"github.com/vultisig/recipes/chain/evm/arbitrum"
-	"github.com/vultisig/recipes/chain/evm/avalanche"
-	"github.com/vultisig/recipes/chain/evm/base"
-	"github.com/vultisig/recipes/chain/evm/bsc"
-	"github.com/vultisig/recipes/chain/evm/ethereum"
+	"github.com/vultisig/recipes/chain/evm"
 	vultisigTypes "github.com/vultisig/recipes/types"
 )
 
@@ -35,57 +31,70 @@ type DynamicFeeTxWithoutSignature struct {
 // chainTestCase defines test parameters for each EVM chain
 type chainTestCase struct {
 	name           string
-	chainID        int64
-	newChain       func() vultisigTypes.Chain
-	expectedID     string
+	config         evm.ChainConfig
 	nativeProtocol string
 }
 
 var evmChains = []chainTestCase{
 	{
 		name:           "Ethereum",
-		chainID:        1,
-		newChain:       ethereum.NewEthereum,
-		expectedID:     "ethereum",
+		config:         evm.EthereumConfig,
 		nativeProtocol: "eth",
 	},
 	{
 		name:           "Arbitrum",
-		chainID:        42161,
-		newChain:       arbitrum.NewArbitrum,
-		expectedID:     "arbitrum",
+		config:         evm.ArbitrumConfig,
 		nativeProtocol: "eth",
 	},
 	{
 		name:           "Avalanche",
-		chainID:        43114,
-		newChain:       avalanche.NewAvalanche,
-		expectedID:     "avalanche",
+		config:         evm.AvalancheConfig,
 		nativeProtocol: "avax",
 	},
 	{
 		name:           "Base",
-		chainID:        8453,
-		newChain:       base.NewBase,
-		expectedID:     "base",
+		config:         evm.BaseConfig,
 		nativeProtocol: "eth",
 	},
 	{
 		name:           "BSC",
-		chainID:        56,
-		newChain:       bsc.NewBsc,
-		expectedID:     "bsc",
+		config:         evm.BSCConfig,
 		nativeProtocol: "bnb",
+	},
+	{
+		name:           "Blast",
+		config:         evm.BlastConfig,
+		nativeProtocol: "eth",
+	},
+	{
+		name:           "Cronos",
+		config:         evm.CronosConfig,
+		nativeProtocol: "cro",
+	},
+	{
+		name:           "Optimism",
+		config:         evm.OptimismConfig,
+		nativeProtocol: "eth",
+	},
+	{
+		name:           "Polygon",
+		config:         evm.PolygonConfig,
+		nativeProtocol: "matic",
+	},
+	{
+		name:           "zkSync",
+		config:         evm.ZksyncConfig,
+		nativeProtocol: "eth",
 	},
 }
 
 func TestEVMChains_BasicProperties(t *testing.T) {
 	for _, tc := range evmChains {
 		t.Run(tc.name, func(t *testing.T) {
-			chain := tc.newChain()
+			chain := evm.NewChain(tc.config)
 
 			// Test ID
-			require.Equal(t, tc.expectedID, chain.ID(), "Chain ID mismatch")
+			require.Equal(t, tc.config.ID, chain.ID(), "Chain ID mismatch")
 
 			// Test Name is non-empty
 			require.NotEmpty(t, chain.Name(), "Chain name should not be empty")
@@ -103,7 +112,7 @@ func TestEVMChains_BasicProperties(t *testing.T) {
 func TestEVMChains_GetNativeProtocol(t *testing.T) {
 	for _, tc := range evmChains {
 		t.Run(tc.name, func(t *testing.T) {
-			chain := tc.newChain()
+			chain := evm.NewChain(tc.config)
 
 			protocol, err := chain.GetProtocol(tc.nativeProtocol)
 			require.NoError(t, err, "Should get native protocol")
@@ -121,11 +130,11 @@ func TestEVMChains_GetNativeProtocol(t *testing.T) {
 func TestEVMChains_ParseTransaction(t *testing.T) {
 	for _, tc := range evmChains {
 		t.Run(tc.name, func(t *testing.T) {
-			chain := tc.newChain()
+			chain := evm.NewChain(tc.config)
 
 			// Build a test transaction
 			to := common.HexToAddress("0x1111111111111111111111111111111111111111")
-			txBytes := buildTestTx(t, tc.chainID, &to, big.NewInt(1000000000000000000), nil)
+			txBytes := buildTestTx(t, tc.config.EVMChainID, &to, big.NewInt(1000000000000000000), nil)
 
 			// Parse the transaction
 			decodedTx, err := chain.ParseTransaction(common.Bytes2Hex(txBytes))
@@ -140,7 +149,7 @@ func TestEVMChains_ComputeTxHash(t *testing.T) {
 	// Test vectors for each chain - using real-world verified transactions where possible
 	testCases := []struct {
 		name           string
-		chainID        int64
+		config         evm.ChainConfig
 		newChain       func() vultisigTypes.Chain
 		nonce          uint64
 		gasTipCap      *big.Int
@@ -156,8 +165,7 @@ func TestEVMChains_ComputeTxHash(t *testing.T) {
 		{
 			// Real Ethereum mainnet tx: https://etherscan.io/tx/0xfb58176cf444f9887751a07f749549799b9e6e0a398faa4e29a5cd9a90fa295a
 			name:           "Ethereum",
-			chainID:        1,
-			newChain:       ethereum.NewEthereum,
+			config:         evm.EthereumConfig,
 			nonce:          2553547,
 			gasTipCap:      big.NewInt(0),
 			gasFeeCap:      big.NewInt(5714758749),
@@ -173,7 +181,7 @@ func TestEVMChains_ComputeTxHash(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			chain := tc.newChain()
+			chain := evm.NewChain(tc.config)
 
 			buf := &bytes.Buffer{}
 			err := buf.WriteByte(types.DynamicFeeTxType)
@@ -181,7 +189,7 @@ func TestEVMChains_ComputeTxHash(t *testing.T) {
 
 			to := common.HexToAddress(tc.to)
 			err = rlp.Encode(buf, &DynamicFeeTxWithoutSignature{
-				ChainID:   big.NewInt(tc.chainID),
+				ChainID:   big.NewInt(tc.config.EVMChainID),
 				Nonce:     tc.nonce,
 				GasTipCap: tc.gasTipCap,
 				GasFeeCap: tc.gasFeeCap,
@@ -205,10 +213,10 @@ func TestEVMChains_ComputeTxHash(t *testing.T) {
 func TestEVMChains_ComputeTxHash_MultipleSignaturesError(t *testing.T) {
 	for _, tc := range evmChains {
 		t.Run(tc.name, func(t *testing.T) {
-			chain := tc.newChain()
+			chain := evm.NewChain(tc.config)
 
 			to := common.HexToAddress("0x1111111111111111111111111111111111111111")
-			txBytes := buildTestTx(t, tc.chainID, &to, big.NewInt(1000000000000000000), nil)
+			txBytes := buildTestTx(t, tc.config.EVMChainID, &to, big.NewInt(1000000000000000000), nil)
 
 			// Try with multiple signatures - should error
 			_, err := chain.ComputeTxHash(txBytes, []tss.KeysignResponse{
@@ -218,6 +226,20 @@ func TestEVMChains_ComputeTxHash_MultipleSignaturesError(t *testing.T) {
 			require.Error(t, err, "Should error with multiple signatures")
 			require.Contains(t, err.Error(), "expected exactly one signature")
 		})
+	}
+}
+
+func TestAllEVMChainConfigs(t *testing.T) {
+	configs := evm.AllEVMChainConfigs()
+	require.Len(t, configs, 10, "Should have 10 EVM chain configs")
+
+	// Verify all configs have required fields
+	for _, config := range configs {
+		require.NotEmpty(t, config.ID, "Config ID should not be empty")
+		require.NotEmpty(t, config.Name, "Config Name should not be empty")
+		require.NotEmpty(t, config.Description, "Config Description should not be empty")
+		require.NotZero(t, config.EVMChainID, "Config EVMChainID should not be zero")
+		require.NotEmpty(t, config.NativeProtocol, "Config NativeProtocol should not be empty")
 	}
 }
 
@@ -244,4 +266,3 @@ func buildTestTx(t *testing.T, chainID int64, to *common.Address, value *big.Int
 
 	return buf.Bytes()
 }
-

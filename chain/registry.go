@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/vultisig/recipes/chain/evm/arbitrum"
-	"github.com/vultisig/recipes/chain/evm/avalanche"
-	"github.com/vultisig/recipes/chain/evm/base"
-	"github.com/vultisig/recipes/chain/evm/bsc"
-	"github.com/vultisig/recipes/chain/evm/ethereum"
+	"github.com/vultisig/recipes/chain/evm"
+	"github.com/vultisig/recipes/chain/solana"
 	"github.com/vultisig/recipes/chain/thorchain"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
@@ -93,14 +90,13 @@ func init() {
 	RegisterChain(litecoin.NewChain())
 	RegisterChain(zcash.NewChain())
 
-	// Register EVM chains
-	RegisterChain(ethereum.NewEthereum())
-	RegisterChain(avalanche.NewAvalanche()) // Avalanche - ThorChain swaps
-	RegisterChain(base.NewBase())           // Base - ThorChain swaps
-	RegisterChain(arbitrum.NewArbitrum())   // Arbitrum - MayaChain swaps
-	RegisterChain(bsc.NewBsc())             // BNB Chain - ThorChain swaps
+	// Register all EVM chains using the generic implementation
+	for _, config := range evm.AllEVMChainConfigs() {
+		RegisterChain(evm.NewChainFromConfig(config))
+	}
 
 	// Register other chains
 	RegisterChain(thorchain.NewChain())
 	RegisterChain(xrpl.NewChain())
+	RegisterChain(solana.NewChain())
 }
