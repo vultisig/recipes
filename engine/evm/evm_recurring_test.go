@@ -120,9 +120,10 @@ func TestRecurringSend_Native(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedAmount := big.NewInt(1_000_000_000_000_000_000).String() // Expected 1 unit
-			if tc.chain == vgcommon.Avalanche {
+			switch tc.chain {
+			case vgcommon.Avalanche:
 				expectedAmount = "2000000000000000000" // 2 AVAX for Avalanche test
-			} else if tc.chain == vgcommon.Arbitrum {
+			case vgcommon.Arbitrum:
 				expectedAmount = "500000000000000000" // 0.5 ETH for Arbitrum test
 			}
 
