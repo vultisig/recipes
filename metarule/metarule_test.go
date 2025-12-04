@@ -1802,6 +1802,1109 @@ func TestDeriveATA_WSOLDestination(t *testing.T) {
 	assert.Equal(t, expectedATA, ata)
 }
 
+// ==================== TRON TESTS ====================
+
+const testTronAddress = "41a614f803b6fd780986a42c78ec9c7f77e6ded13c"
+const testTronRecipient = "41b614f803b6fd780986a42c78ec9c7f77e6ded13d"
+
+func TestTryFormat_TronSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "tron.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testTronRecipient,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "tron.trx.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, testTronRecipient, paramByName["recipient"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, "1000000", paramByName["amount"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_TronSwap(t *testing.T) {
+	const (
+		fromAddress      = testTronAddress
+		fromAmount       = "10000000" // 10 TRX in SUN
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "tron.swap"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "tron.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Native TRX
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_MAGIC_CONSTANT, result[0].Target.TargetType)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, result[0].Target.GetMagicConstant())
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["recipient"].Constraint.GetMagicConstantValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "memo")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
+	regexpValue := paramByName["memo"].Constraint.GetRegexpValue()
+	assert.Equal(t, fmt.Sprintf("^=:ETH\\.USDC:%s:.*", toAddress), regexpValue)
+}
+
+// ==================== LITECOIN TESTS ====================
+
+func TestTryFormat_LitecoinSend(t *testing.T) {
+	const (
+		changeAddress    = "LTC1changeaddress123456789abcdef"
+		recipientAddress = "LTC1recipientaddress123456789abc"
+		amount           = "500000"
+		expectedResource = "litecoin.ltc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "litecoin.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "LTC",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 4)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, recipientAddress, paramByName["output_address_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, amount, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, changeAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
+}
+
+func TestTryFormat_LitecoinSwap(t *testing.T) {
+	const (
+		fromAddress      = "ltc1qsenderfromaddress"
+		fromAmount       = "1000000"
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		toAddress        = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
+		expectedResource = "litecoin.ltc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "litecoin.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 5)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, fromAmount, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_data_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["output_data_2"].Constraint.Type)
+}
+
+// ==================== DOGECOIN TESTS ====================
+
+func TestTryFormat_DogecoinSend(t *testing.T) {
+	const (
+		changeAddress    = "DDogeChangeAddress123456789"
+		recipientAddress = "DDogeRecipientAddress12345"
+		amount           = "100000000"
+		expectedResource = "dogecoin.doge.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "dogecoin.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "DOGE",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 4)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, recipientAddress, paramByName["output_address_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, amount, paramByName["output_value_0"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_DogecoinSwap(t *testing.T) {
+	const (
+		fromAddress      = "DDogeAddress123456789abcdef"
+		fromAmount       = "100000000"
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		toAddress        = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
+		expectedResource = "dogecoin.doge.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "dogecoin.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	require.Len(t, result[0].ParameterConstraints, 5)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
+}
+
+// ==================== BITCOIN CASH TESTS ====================
+
+func TestTryFormat_BitcoinCashSend(t *testing.T) {
+	const (
+		changeAddress    = "bitcoincash:qchange123456789abcdef"
+		recipientAddress = "bitcoincash:qrecipient123456789ab"
+		amount           = "500000"
+		expectedResource = "bitcoincash.bch.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoincash.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "BCH",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	require.Len(t, result[0].ParameterConstraints, 4)
+}
+
+func TestTryFormat_BitcoinCashSwap(t *testing.T) {
+	const (
+		fromAddress      = "bitcoincash:qfromaddress1234"
+		fromAmount       = "1000000"
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+		toAddress        = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
+		expectedResource = "bitcoincash.bch.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoincash.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	require.Len(t, result[0].ParameterConstraints, 5)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
+}
+
+// ==================== ZCASH TESTS ====================
+
+func TestTryFormat_ZcashSend(t *testing.T) {
+	const (
+		changeAddress    = "t1ZcashChangeAddress12345678"
+		recipientAddress = "t1ZcashRecipientAddress1234"
+		amount           = "500000"
+		expectedResource = "zcash.zec.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "ZEC",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	require.Len(t, result[0].ParameterConstraints, 4)
+}
+
+func TestTryFormat_ZcashSwap_Unsupported(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "t1ZcashAddress",
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "ethereum",
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "0x1234567890abcdef",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported protocol id for Zcash: swap")
+}
+
+// ==================== GAIA (COSMOS) TESTS ====================
+
+const testGaiaAddress = "cosmos1abc123def456ghi789"
+
+func TestTryFormat_GaiaSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "cosmos.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testGaiaAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "cosmos.atom.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["recipient"].Constraint.Type)
+	assert.Equal(t, testGaiaAddress, paramByName["recipient"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["amount"].Constraint.Type)
+	assert.Equal(t, "1000000", paramByName["amount"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_GaiaSwap(t *testing.T) {
+	const (
+		fromAddress      = testGaiaAddress
+		fromAmount       = "2000000" // 2 ATOM
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "cosmos.atom.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "cosmos.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Native ATOM
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_MAGIC_CONSTANT, result[0].Target.TargetType)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, result[0].Target.GetMagicConstant())
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["recipient"].Constraint.Type)
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "memo")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
+}
+
+// ==================== MAYA TESTS ====================
+
+const testMayaAddress = "maya1abc123def456ghi789"
+
+func TestTryFormat_MayaSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "mayachain.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testMayaAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "mayachain.cacao.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 2)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "recipient")
+	assert.Equal(t, testMayaAddress, paramByName["recipient"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, "1000000", paramByName["amount"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_MayaSwap(t *testing.T) {
+	const (
+		fromAddress      = testMayaAddress
+		fromAmount       = "2000000" // 2 CACAO
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "mayachain.mayachain_swap.swap"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "mayachain.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Native CACAO
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 3)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Contains(t, paramByName, "from_asset")
+	assert.Equal(t, "CACAO", paramByName["from_asset"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "amount")
+	assert.Equal(t, fromAmount, paramByName["amount"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "memo")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["memo"].Constraint.Type)
+}
+
 func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	metaRule := NewMetaRule()
 

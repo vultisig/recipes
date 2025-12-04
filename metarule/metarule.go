@@ -95,6 +95,48 @@ func (m *MetaRule) TryFormat(in *types.Rule) ([]*types.Rule, error) {
 			return nil, fmt.Errorf("failed to handle thorchain: %w", er)
 		}
 		return out, nil
+	case chain == common.Tron:
+		out, er := m.handleTron(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle tron: %w", er)
+		}
+		return out, nil
+	case chain == common.Litecoin:
+		out, er := m.handleLitecoin(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle litecoin: %w", er)
+		}
+		return out, nil
+	case chain == common.Dogecoin:
+		out, er := m.handleDogecoin(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle dogecoin: %w", er)
+		}
+		return out, nil
+	case chain == common.BitcoinCash:
+		out, er := m.handleBitcoinCash(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle bitcoin cash: %w", er)
+		}
+		return out, nil
+	case chain == common.Zcash:
+		out, er := m.handleZcash(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle zcash: %w", er)
+		}
+		return out, nil
+	case chain == common.GaiaChain:
+		out, er := m.handleGaia(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle gaia: %w", er)
+		}
+		return out, nil
+	case chain == common.MayaChain:
+		out, er := m.handleMaya(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle maya: %w", er)
+		}
+		return out, nil
 	default:
 		return nil, fmt.Errorf(
 			"got meta format (%s) but chain not supported: %s",
@@ -1299,6 +1341,622 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 	rules = append(rules, jupiterRouteRule, jupiterSharedAccountsRouteRule)
 
 	return rules, nil
+}
+
+func (m *MetaRule) handleTron(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse send constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "tron.trx.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint:    c.toAddress,
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.amount,
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "tron.swap"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_THORCHAIN_VAULT,
+			},
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+		}
+
+		// Create asset pattern that accepts both full form and shortform
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id for Tron: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleLitecoin(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "litecoin.ltc.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.amount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}}
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "litecoin.ltc.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+		}
+
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+				},
+			},
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "output_data_2",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+				Value: &types.Constraint_RegexpValue{
+					RegexpValue: fmt.Sprintf(
+						"^=:%s:%s:.*",
+						assetPattern,
+						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+					),
+				},
+			},
+		}}
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleDogecoin(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "dogecoin.doge.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.amount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}}
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "dogecoin.doge.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+		}
+
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+				},
+			},
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "output_data_2",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+				Value: &types.Constraint_RegexpValue{
+					RegexpValue: fmt.Sprintf(
+						"^=:%s:%s:.*",
+						assetPattern,
+						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+					),
+				},
+			},
+		}}
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleBitcoinCash(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "bitcoincash.bch.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.amount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}}
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "bitcoincash.bch.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+		}
+
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+				},
+			},
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "output_data_2",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+				Value: &types.Constraint_RegexpValue{
+					RegexpValue: fmt.Sprintf(
+						"^=:%s:%s:.*",
+						assetPattern,
+						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+					),
+				},
+			},
+		}}
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleZcash(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "zcash.zec.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.amount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}}
+		return []*types.Rule{out}, nil
+	default:
+		// Zcash doesn't support THORChain swaps currently
+		return nil, fmt.Errorf("unsupported protocol id for Zcash: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleGaia(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse send constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "cosmos.atom.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint:    c.toAddress,
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.amount,
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "cosmos.atom.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_THORCHAIN_VAULT,
+			},
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+		}
+
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id for Gaia: %s", r.GetProtocolId())
+	}
+}
+
+func (m *MetaRule) handleMaya(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse send constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "mayachain.cacao.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "recipient",
+				Constraint:    c.toAddress,
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.amount,
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "mayachain.mayachain_swap.swap"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		// For Maya, we need to handle the asset differently
+		// Maya uses its own asset notation similar to THORChain
+		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make asset: %w", err)
+		}
+
+		shortCode := thorchain.ShortCode(thorAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(thorAsset)
+		}
+
+		// Extract from_asset value, default to CACAO if empty (native token)
+		fromAssetValue := c.fromAsset.GetFixedValue()
+		if fromAssetValue == "" {
+			fromAssetValue = "CACAO"
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAssetValue,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+		}
+
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id for Maya: %s", r.GetProtocolId())
+	}
 }
 
 func fixed(in string) *types.Constraint {
