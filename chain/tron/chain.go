@@ -215,70 +215,67 @@ func parseProtobufRawData(data []byte) (*TronRawData, error) {
 	}
 
 	rawData := &TronRawData{}
-	
+
 	// Parse protobuf fields
 	pos := 0
 	for pos < len(data) {
-		if pos >= len(data) {
-			break
+		// Read field tag as varint (supports field numbers > 15)
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return nil, fmt.Errorf("failed to read tag at position %d", pos)
 		}
-		
-		// Read field tag
-		tag := data[pos]
-		fieldNum := tag >> 3
-		wireType := tag & 0x7
-		pos++
-		
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		var err error
 		switch fieldNum {
 		case 1: // ref_block_bytes (bytes)
 			if wireType != 2 {
 				return nil, fmt.Errorf("unexpected wire type for ref_block_bytes")
 			}
-			length, n := readVarint(data[pos:])
-			pos += n
-			if pos+int(length) > len(data) {
-				return nil, fmt.Errorf("ref_block_bytes length exceeds data")
+			rawData.RefBlockBytes, pos, err = readBytesField(data, pos)
+			if err != nil {
+				return nil, fmt.Errorf("ref_block_bytes: %w", err)
 			}
-			rawData.RefBlockBytes = hex.EncodeToString(data[pos : pos+int(length)])
-			pos += int(length)
-			
+
 		case 4: // ref_block_hash (bytes)
 			if wireType != 2 {
 				return nil, fmt.Errorf("unexpected wire type for ref_block_hash")
 			}
-			length, n := readVarint(data[pos:])
-			pos += n
-			if pos+int(length) > len(data) {
-				return nil, fmt.Errorf("ref_block_hash length exceeds data")
+			rawData.RefBlockHash, pos, err = readBytesField(data, pos)
+			if err != nil {
+				return nil, fmt.Errorf("ref_block_hash: %w", err)
 			}
-			rawData.RefBlockHash = hex.EncodeToString(data[pos : pos+int(length)])
-			pos += int(length)
-			
+
 		case 8: // expiration (int64)
 			if wireType != 0 {
 				return nil, fmt.Errorf("unexpected wire type for expiration")
 			}
 			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return nil, fmt.Errorf("failed to read expiration")
+			}
 			pos += n
 			rawData.Expiration = int64(val)
-			
+
 		case 10: // data (bytes) - memo
 			if wireType != 2 {
 				return nil, fmt.Errorf("unexpected wire type for data")
 			}
-			length, n := readVarint(data[pos:])
-			pos += n
-			if pos+int(length) > len(data) {
-				return nil, fmt.Errorf("data length exceeds data")
+			rawData.Data, pos, err = readBytesField(data, pos)
+			if err != nil {
+				return nil, fmt.Errorf("data: %w", err)
 			}
-			rawData.Data = hex.EncodeToString(data[pos : pos+int(length)])
-			pos += int(length)
-			
+
 		case 11: // contract (repeated message)
 			if wireType != 2 {
 				return nil, fmt.Errorf("unexpected wire type for contract")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return nil, fmt.Errorf("failed to read contract length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return nil, fmt.Errorf("contract length exceeds data")
@@ -289,35 +286,34 @@ func parseProtobufRawData(data []byte) (*TronRawData, error) {
 			}
 			rawData.Contract = append(rawData.Contract, contract)
 			pos += int(length)
-			
+
 		case 14: // timestamp (int64)
 			if wireType != 0 {
 				return nil, fmt.Errorf("unexpected wire type for timestamp")
 			}
 			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return nil, fmt.Errorf("failed to read timestamp")
+			}
 			pos += n
 			rawData.Timestamp = int64(val)
-			
+
 		case 18: // fee_limit (int64)
 			if wireType != 0 {
 				return nil, fmt.Errorf("unexpected wire type for fee_limit")
 			}
 			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return nil, fmt.Errorf("failed to read fee_limit")
+			}
 			pos += n
 			rawData.FeeLimit = int64(val)
-			
+
 		default:
-			// Skip unknown fields
-			switch wireType {
-			case 0: // Varint
-				_, n := readVarint(data[pos:])
-				pos += n
-			case 2: // Length-delimited
-				length, n := readVarint(data[pos:])
-				pos += n
-				pos += int(length)
-			default:
-				return nil, fmt.Errorf("unknown wire type %d at position %d", wireType, pos)
+			// Skip unknown fields based on wire type
+			pos, err = skipField(data, pos, wireType)
+			if err != nil {
+				return nil, fmt.Errorf("failed to skip field %d: %w", fieldNum, err)
 			}
 		}
 	}
@@ -325,31 +321,89 @@ func parseProtobufRawData(data []byte) (*TronRawData, error) {
 	return rawData, nil
 }
 
+// readBytesField reads a length-delimited bytes field and returns hex-encoded string
+func readBytesField(data []byte, pos int) (string, int, error) {
+	length, n := readVarint(data[pos:])
+	if n == 0 {
+		return "", pos, fmt.Errorf("failed to read length")
+	}
+	pos += n
+	if pos+int(length) > len(data) {
+		return "", pos, fmt.Errorf("length %d exceeds data bounds", length)
+	}
+	result := hex.EncodeToString(data[pos : pos+int(length)])
+	return result, pos + int(length), nil
+}
+
+// skipField skips over a protobuf field based on its wire type
+func skipField(data []byte, pos int, wireType uint64) (int, error) {
+	switch wireType {
+	case 0: // Varint
+		_, n := readVarint(data[pos:])
+		if n == 0 {
+			return pos, fmt.Errorf("failed to read varint")
+		}
+		return pos + n, nil
+	case 1: // 64-bit (fixed64, sfixed64, double)
+		if pos+8 > len(data) {
+			return pos, fmt.Errorf("not enough data for 64-bit field")
+		}
+		return pos + 8, nil
+	case 2: // Length-delimited (string, bytes, embedded messages)
+		length, n := readVarint(data[pos:])
+		if n == 0 {
+			return pos, fmt.Errorf("failed to read length")
+		}
+		pos += n
+		if pos+int(length) > len(data) {
+			return pos, fmt.Errorf("length exceeds data")
+		}
+		return pos + int(length), nil
+	case 5: // 32-bit (fixed32, sfixed32, float)
+		if pos+4 > len(data) {
+			return pos, fmt.Errorf("not enough data for 32-bit field")
+		}
+		return pos + 4, nil
+	default:
+		return pos, fmt.Errorf("unsupported wire type %d", wireType)
+	}
+}
+
 // parseContract parses a single contract from protobuf
 func parseContract(data []byte) (TronContract, error) {
 	contract := TronContract{}
 	pos := 0
-	
+
 	for pos < len(data) {
-		tag := data[pos]
-		fieldNum := tag >> 3
-		wireType := tag & 0x7
-		pos++
-		
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return contract, fmt.Errorf("failed to read tag at position %d", pos)
+		}
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		var err error
 		switch fieldNum {
 		case 1: // type (enum)
 			if wireType != 0 {
 				return contract, fmt.Errorf("unexpected wire type for type")
 			}
 			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return contract, fmt.Errorf("failed to read contract type")
+			}
 			pos += n
 			contract.Type = contractTypeToString(int(val))
-			
+
 		case 2: // parameter (Any)
 			if wireType != 2 {
 				return contract, fmt.Errorf("unexpected wire type for parameter")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return contract, fmt.Errorf("failed to read parameter length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return contract, fmt.Errorf("parameter length exceeds data")
@@ -360,20 +414,15 @@ func parseContract(data []byte) (TronContract, error) {
 			}
 			contract.Parameter = param
 			pos += int(length)
-			
+
 		default:
-			switch wireType {
-			case 0:
-				_, n := readVarint(data[pos:])
-				pos += n
-			case 2:
-				length, n := readVarint(data[pos:])
-				pos += n
-				pos += int(length)
+			pos, err = skipField(data, pos, wireType)
+			if err != nil {
+				return contract, fmt.Errorf("failed to skip field %d: %w", fieldNum, err)
 			}
 		}
 	}
-	
+
 	return contract, nil
 }
 
@@ -381,31 +430,41 @@ func parseContract(data []byte) (TronContract, error) {
 func parseParameter(data []byte) (TronParameter, error) {
 	param := TronParameter{}
 	pos := 0
-	
+
 	for pos < len(data) {
-		tag := data[pos]
-		fieldNum := tag >> 3
-		wireType := tag & 0x7
-		pos++
-		
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return param, fmt.Errorf("failed to read tag at position %d", pos)
+		}
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		var err error
 		switch fieldNum {
 		case 1: // type_url (string)
 			if wireType != 2 {
 				return param, fmt.Errorf("unexpected wire type for type_url")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return param, fmt.Errorf("failed to read type_url length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return param, fmt.Errorf("type_url length exceeds data")
 			}
 			param.TypeUrl = string(data[pos : pos+int(length)])
 			pos += int(length)
-			
+
 		case 2: // value (bytes)
 			if wireType != 2 {
 				return param, fmt.Errorf("unexpected wire type for value")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return param, fmt.Errorf("failed to read value length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return param, fmt.Errorf("value length exceeds data")
@@ -416,20 +475,15 @@ func parseParameter(data []byte) (TronParameter, error) {
 			}
 			param.Value = value
 			pos += int(length)
-			
+
 		default:
-			switch wireType {
-			case 0:
-				_, n := readVarint(data[pos:])
-				pos += n
-			case 2:
-				length, n := readVarint(data[pos:])
-				pos += n
-				pos += int(length)
+			pos, err = skipField(data, pos, wireType)
+			if err != nil {
+				return param, fmt.Errorf("failed to skip field %d: %w", fieldNum, err)
 			}
 		}
 	}
-	
+
 	return param, nil
 }
 
@@ -437,62 +491,67 @@ func parseParameter(data []byte) (TronParameter, error) {
 func parseTransferContractValue(data []byte) (TronValue, error) {
 	value := TronValue{}
 	pos := 0
-	
+
 	for pos < len(data) {
-		if pos >= len(data) {
-			break
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return value, fmt.Errorf("failed to read tag at position %d", pos)
 		}
-		tag := data[pos]
-		fieldNum := tag >> 3
-		wireType := tag & 0x7
-		pos++
-		
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		var err error
 		switch fieldNum {
 		case 1: // owner_address (bytes)
 			if wireType != 2 {
 				return value, fmt.Errorf("unexpected wire type for owner_address")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read owner_address length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return value, fmt.Errorf("owner_address length exceeds data")
 			}
 			value.OwnerAddress = encodeAddress(data[pos : pos+int(length)])
 			pos += int(length)
-			
+
 		case 2: // to_address (bytes)
 			if wireType != 2 {
 				return value, fmt.Errorf("unexpected wire type for to_address")
 			}
 			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read to_address length")
+			}
 			pos += n
 			if pos+int(length) > len(data) {
 				return value, fmt.Errorf("to_address length exceeds data")
 			}
 			value.ToAddress = encodeAddress(data[pos : pos+int(length)])
 			pos += int(length)
-			
+
 		case 3: // amount (int64)
 			if wireType != 0 {
 				return value, fmt.Errorf("unexpected wire type for amount")
 			}
 			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read amount")
+			}
 			pos += n
 			value.Amount = int64(val)
-			
+
 		default:
-			switch wireType {
-			case 0:
-				_, n := readVarint(data[pos:])
-				pos += n
-			case 2:
-				length, n := readVarint(data[pos:])
-				pos += n
-				pos += int(length)
+			pos, err = skipField(data, pos, wireType)
+			if err != nil {
+				return value, fmt.Errorf("failed to skip field %d: %w", fieldNum, err)
 			}
 		}
 	}
-	
+
 	return value, nil
 }
 
