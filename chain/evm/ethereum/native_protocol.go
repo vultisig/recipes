@@ -12,6 +12,7 @@ import (
 type NativeEVMProtocol struct {
 	BaseProtocol
 	nativeSymbol string // e.g., "eth", "bnb"
+	chainID      string // e.g., "ethereum", "arbitrum", "bsc"
 }
 
 // NewNativeEVMProtocol creates a native currency protocol for any EVM chain.
@@ -39,12 +40,13 @@ func NewNativeEVMProtocol(chainID, nativeSymbol, name, description string) types
 			},
 		},
 		nativeSymbol: strings.ToLower(nativeSymbol),
+		chainID:      chainID,
 	}
 }
 
-// ChainID returns the chain identifier - override in embedding struct if needed
+// ChainID returns the chain identifier
 func (p *NativeEVMProtocol) ChainID() string {
-	return p.BaseProtocol.ChainID()
+	return p.chainID
 }
 
 // MatchFunctionCall implements the matching logic for native EVM transfers.
