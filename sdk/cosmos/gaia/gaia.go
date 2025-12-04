@@ -3,8 +3,8 @@ package gaia
 import (
 	"context"
 
-	cosmossdk "github.com/vultisig/recipes/sdk/cosmos"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	cosmossdk "github.com/vultisig/recipes/sdk/cosmos"
 )
 
 // Cosmos mainnet endpoints (REST API)
@@ -59,4 +59,3 @@ var GetPubKeyFromBytes = cosmossdk.GetPubKeyFromBytes
 func (s *SDK) Send(ctx context.Context, unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse, pubKey []byte) (*BroadcastTxResponse, error) {
 	return s.SDK.Send(ctx, unsignedTxBytes, signatures, pubKey)
 }
-

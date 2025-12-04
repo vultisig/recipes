@@ -1,41 +1,41 @@
-package maya
+package thorchain
 
 import (
 	"context"
 
-	"github.com/vultisig/mobile-tss-lib/tss"
 	cosmossdk "github.com/vultisig/recipes/sdk/cosmos"
+	"github.com/vultisig/mobile-tss-lib/tss"
 )
 
-// MAYAChain mainnet endpoints (REST API)
+// THORChain mainnet endpoints (REST API)
 var MainnetEndpoints = []string{
-	"https://mayanode.mayachain.info",
-	"https://maya-api.polkachu.com",
+	"https://thornode.ninerealms.com",
+	"https://thornode.thorchain.info",
 }
 
-// MAYAChain stagenet endpoints
+// THORChain stagenet endpoints
 var StagenetEndpoints = []string{
-	"https://stagenet.mayanode.mayachain.info",
+	"https://stagenet-thornode.ninerealms.com",
 }
 
-// SDK represents the MAYAChain SDK for transaction signing and broadcasting
+// SDK represents the THORChain SDK for transaction signing and broadcasting
 type SDK struct {
 	*cosmossdk.SDK
 }
 
-// NewSDK creates a new MAYAChain SDK instance with the given RPC client
+// NewSDK creates a new THORChain SDK instance with the given RPC client
 func NewSDK(rpcClient cosmossdk.RPCClient) *SDK {
 	return &SDK{
 		SDK: cosmossdk.NewSDK(rpcClient),
 	}
 }
 
-// NewMainnetSDK creates a new MAYAChain SDK instance configured for mainnet
+// NewMainnetSDK creates a new THORChain SDK instance configured for mainnet
 func NewMainnetSDK() *SDK {
 	return NewSDK(cosmossdk.NewHTTPRPCClient(MainnetEndpoints))
 }
 
-// NewStagenetSDK creates a new MAYAChain SDK instance configured for stagenet
+// NewStagenetSDK creates a new THORChain SDK instance configured for stagenet
 func NewStagenetSDK() *SDK {
 	return NewSDK(cosmossdk.NewHTTPRPCClient(StagenetEndpoints))
 }
@@ -58,3 +58,4 @@ var GetPubKeyFromBytes = cosmossdk.GetPubKeyFromBytes
 func (s *SDK) Send(ctx context.Context, unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse, pubKey []byte) (*BroadcastTxResponse, error) {
 	return s.SDK.Send(ctx, unsignedTxBytes, signatures, pubKey)
 }
+
