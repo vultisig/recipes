@@ -49,6 +49,7 @@ func (p *NativeEVMProtocol) ChainID() string {
 
 // MatchFunctionCall implements the matching logic for native EVM transfers.
 // This is shared across all EVM chains.
+// Note: policyMatcher.ResourcePath must be non-nil for this function to work correctly.
 func (p *NativeEVMProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
 	if policyMatcher.FunctionID != "transfer" {
 		return false, nil, fmt.Errorf("%s protocol only supports 'transfer' function for matching, got %s", strings.ToUpper(p.nativeSymbol), policyMatcher.FunctionID)
@@ -57,6 +58,10 @@ func (p *NativeEVMProtocol) MatchFunctionCall(decodedTx types.DecodedTransaction
 	// For native transfer, transaction data should be empty.
 	if len(decodedTx.Data()) > 0 {
 		return false, nil, nil // Not a simple native transfer if data is present
+	}
+
+	if policyMatcher.ResourcePath == nil {
+		return false, nil, fmt.Errorf("policy matcher ResourcePath must be set for %s native transfer matching", strings.ToUpper(p.nativeSymbol))
 	}
 
 	extractedParams := map[string]interface{}{
