@@ -3,11 +3,11 @@ package engine
 import (
 	"fmt"
 
+	"github.com/vultisig/recipes/engine/cosmos/gaia"
+	"github.com/vultisig/recipes/engine/cosmos/maya"
+	"github.com/vultisig/recipes/engine/cosmos/thorchain"
 	"github.com/vultisig/recipes/engine/evm"
-	"github.com/vultisig/recipes/engine/gaia"
-	"github.com/vultisig/recipes/engine/maya"
 	"github.com/vultisig/recipes/engine/solana"
-	"github.com/vultisig/recipes/engine/thorchain"
 	"github.com/vultisig/recipes/engine/tron"
 	"github.com/vultisig/recipes/engine/utxo/bitcoin"
 	"github.com/vultisig/recipes/engine/utxo/bitcoincash"

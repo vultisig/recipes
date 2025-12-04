@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/vultisig/recipes/chain/cosmos/gaia"
+	"github.com/vultisig/recipes/chain/cosmos/maya"
+	"github.com/vultisig/recipes/chain/cosmos/thorchain"
 	"github.com/vultisig/recipes/chain/evm/ethereum"
-	"github.com/vultisig/recipes/chain/gaia"
-	"github.com/vultisig/recipes/chain/maya"
-	"github.com/vultisig/recipes/chain/thorchain"
 	"github.com/vultisig/recipes/chain/tron"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"

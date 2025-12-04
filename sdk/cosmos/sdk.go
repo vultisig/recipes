@@ -1,18 +1,11 @@
-package gaia
+package cosmos
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
-	"math/big"
-	"net/http"
 	"strings"
-	"time"
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -25,59 +18,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/vultisig/mobile-tss-lib/tss"
+
+	chainCosmos "github.com/vultisig/recipes/chain/cosmos"
 )
 
-// RPCClient interface for Cosmos JSON-RPC calls
-type RPCClient interface {
-	BroadcastTx(ctx context.Context, txBytes []byte) (*BroadcastTxResponse, error)
-}
-
-// HTTPRPCClient implements RPCClient using HTTP
-type HTTPRPCClient struct {
-	endpoints []string
-	client    *http.Client
-}
-
-// SDK represents the Cosmos (GAIA) SDK for transaction signing and broadcasting
+// SDK represents the Cosmos SDK for transaction signing and broadcasting
 type SDK struct {
 	rpcClient RPCClient
 	cdc       codec.Codec
 }
-
-// BroadcastTxRequest is the request payload for broadcasting transactions
-type BroadcastTxRequest struct {
-	TxBytes []byte `json:"tx_bytes"`
-	Mode    string `json:"mode"`
-}
-
-// BroadcastTxResponse is the response from broadcasting a transaction
-type BroadcastTxResponse struct {
-	TxResponse *TxResponse `json:"tx_response"`
-}
-
-// TxResponse contains the result of a transaction broadcast
-type TxResponse struct {
-	Code      uint32 `json:"code"`
-	Codespace string `json:"codespace"`
-	Data      string `json:"data"`
-	RawLog    string `json:"raw_log"`
-	TxHash    string `json:"txhash"`
-}
-
-// Cosmos mainnet endpoints (REST API)
-var MainnetEndpoints = []string{
-	"https://cosmos-rest.publicnode.com",
-	"https://rest.cosmos.directory/cosmoshub",
-	"https://lcd-cosmoshub.keplr.app",
-}
-
-// Cosmos testnet endpoints
-var TestnetEndpoints = []string{
-	"https://rest.sentry-01.theta-testnet.polypore.xyz",
-}
-
-var secpN, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
-var secpHalfN = new(big.Int).Rsh(new(big.Int).Set(secpN), 1)
 
 // NewSDK creates a new Cosmos SDK instance
 func NewSDK(rpcClient RPCClient) *SDK {
@@ -89,77 +38,6 @@ func NewSDK(rpcClient RPCClient) *SDK {
 		rpcClient: rpcClient,
 		cdc:       codec.NewProtoCodec(ir),
 	}
-}
-
-// NewHTTPRPCClient creates a new HTTP RPC client with the given endpoints
-func NewHTTPRPCClient(endpoints []string) *HTTPRPCClient {
-	return &HTTPRPCClient{
-		endpoints: endpoints,
-		client:    &http.Client{Timeout: 30 * time.Second},
-	}
-}
-
-// BroadcastTx broadcasts a signed transaction to the Cosmos network
-func (c *HTTPRPCClient) BroadcastTx(ctx context.Context, txBytes []byte) (*BroadcastTxResponse, error) {
-	// Encode transaction bytes as base64
-	txBase64 := base64.StdEncoding.EncodeToString(txBytes)
-
-	requestBody := map[string]interface{}{
-		"tx_bytes": txBase64,
-		"mode":     "BROADCAST_MODE_SYNC",
-	}
-
-	requestJSON, err := json.Marshal(requestBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	var lastErr error
-	for _, endpoint := range c.endpoints {
-		url := endpoint + "/cosmos/tx/v1beta1/txs"
-
-		req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(requestJSON))
-		if reqErr != nil {
-			lastErr = fmt.Errorf("failed to create request for %s: %w", endpoint, reqErr)
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := c.client.Do(req)
-		if err != nil {
-			lastErr = fmt.Errorf("failed to send request to %s: %w", endpoint, err)
-			continue
-		}
-
-		body, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-
-		if readErr != nil {
-			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, readErr)
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("HTTP error from %s: %d, body: %s", endpoint, resp.StatusCode, string(body))
-			continue
-		}
-
-		var broadcastResp BroadcastTxResponse
-		if err := json.Unmarshal(body, &broadcastResp); err != nil {
-			lastErr = fmt.Errorf("failed to parse response from %s: %w", endpoint, err)
-			continue
-		}
-
-		if broadcastResp.TxResponse != nil && broadcastResp.TxResponse.Code != 0 {
-			lastErr = fmt.Errorf("broadcast failed at %s: code=%d, log=%s",
-				endpoint, broadcastResp.TxResponse.Code, broadcastResp.TxResponse.RawLog)
-			continue
-		}
-
-		return &broadcastResp, nil
-	}
-
-	return nil, fmt.Errorf("all endpoints failed, last error: %w", lastErr)
 }
 
 // Sign applies TSS signatures to an unsigned Cosmos transaction
@@ -179,12 +57,12 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 
 	// Decode R and S from hex strings
-	rHex := cleanHex(sig.R)
+	rHex := chainCosmos.CleanHex(sig.R)
 	rBytes, err := hex.DecodeString(rHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode R: %w", err)
 	}
-	sHex := cleanHex(sig.S)
+	sHex := chainCosmos.CleanHex(sig.S)
 	sBytes, err := hex.DecodeString(sHex)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode S: %w", err)
@@ -198,7 +76,7 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 
 	// Normalize S to low-S form
-	sLow, err := normalizeLowS(sBytes)
+	sLow, err := chainCosmos.NormalizeLowS(sBytes)
 	if err != nil {
 		return nil, fmt.Errorf("low-S normalization failed: %w", err)
 	}
@@ -223,6 +101,12 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("failed to create pubkey any: %w", err)
 	}
 
+	// Extract sequence from existing SignerInfos if available
+	var sequence uint64
+	if unsignedTx.AuthInfo != nil && len(unsignedTx.AuthInfo.SignerInfos) > 0 {
+		sequence = unsignedTx.AuthInfo.SignerInfos[0].Sequence
+	}
+
 	signerInfo := &tx.SignerInfo{
 		PublicKey: pubKeyAny,
 		ModeInfo: &tx.ModeInfo{
@@ -232,14 +116,18 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 				},
 			},
 		},
-		Sequence: 0, // This should come from the unsigned tx or be provided
+		Sequence: sequence,
 	}
 
 	// Preserve existing AuthInfo or create new one
 	if unsignedTx.AuthInfo == nil {
+		defaultCoins, err := sdk.sdkCoins(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create default coins: %w", err)
+		}
 		unsignedTx.AuthInfo = &tx.AuthInfo{
 			Fee: &tx.Fee{
-				Amount:   sdk.sdkCoins(nil),
+				Amount:   defaultCoins,
 				GasLimit: 200000,
 			},
 		}
@@ -259,19 +147,19 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 }
 
 // sdkCoins converts coins or returns empty coins
-func (s *SDK) sdkCoins(coins []struct{ Denom, Amount string }) cosmostypes.Coins {
+func (s *SDK) sdkCoins(coins []struct{ Denom, Amount string }) (cosmostypes.Coins, error) {
 	if len(coins) == 0 {
-		return cosmostypes.NewCoins()
+		return cosmostypes.NewCoins(), nil
 	}
 	result := make(cosmostypes.Coins, 0, len(coins))
 	for _, c := range coins {
 		amount, ok := math.NewIntFromString(c.Amount)
 		if !ok {
-			continue
+			return nil, fmt.Errorf("invalid amount %q for denom %s", c.Amount, c.Denom)
 		}
 		result = append(result, cosmostypes.NewCoin(c.Denom, amount))
 	}
-	return result
+	return result, nil
 }
 
 // Broadcast submits a signed transaction to the Cosmos network
@@ -307,32 +195,4 @@ func GetPubKeyFromBytes(pubKeyBytes []byte) (cryptotypes.PubKey, error) {
 	return &secp256k1.PubKey{Key: pubKeyBytes}, nil
 }
 
-func normalizeLowS(s []byte) ([]byte, error) {
-	if len(s) == 0 {
-		return nil, fmt.Errorf("empty s")
-	}
-	var sb big.Int
-	sb.SetBytes(s)
-	if sb.Sign() <= 0 || sb.Cmp(secpN) >= 0 {
-		return nil, fmt.Errorf("s not in [1, N-1]")
-	}
-	if sb.Cmp(secpHalfN) > 0 {
-		sb.Sub(secpN, &sb)
-	}
-	out := sb.Bytes()
-	// left-pad to 32 bytes
-	if len(out) < 32 {
-		pad := make([]byte, 32-len(out))
-		out = append(pad, out...)
-	}
-	return out, nil
-}
-
-func cleanHex(s string) string {
-	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
-		return s[2:]
-	}
-	return s
-}
 

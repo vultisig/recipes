@@ -288,8 +288,8 @@ func TestTron_Evaluate_Failure_AmountConstraintViolation(t *testing.T) {
 
 	ownerAddr, _ := hex.DecodeString("41a614f803b6fd780986a42c78ec9c7f77e6ded13c")
 	toAddr, _ := hex.DecodeString("41b614f803b6fd780986a42c78ec9c7f77e6ded13d")
-	actualAmount := int64(5000000)   // 5 TRX
-	expectedAmount := "1000000"      // 1 TRX
+	actualAmount := int64(5000000) // 5 TRX
+	expectedAmount := "1000000"    // 1 TRX
 
 	txBytes := buildTronTransferTx(ownerAddr, toAddr, actualAmount)
 

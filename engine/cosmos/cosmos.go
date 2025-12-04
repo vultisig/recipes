@@ -1,9 +1,9 @@
-package maya
+// Package cosmos provides a shared engine for Cosmos SDK-based blockchains.
+package cosmos
 
 import (
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -11,22 +11,45 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	chainmaya "github.com/vultisig/recipes/chain/maya"
-	stdcompare "github.com/vultisig/recipes/engine/compare"
+
+	"github.com/vultisig/recipes/chain/cosmos"
+	"github.com/vultisig/recipes/engine/compare"
 	"github.com/vultisig/recipes/resolver"
-	vtypes "github.com/vultisig/recipes/types"
+	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
 )
 
-// Maya represents the MAYAChain engine implementation
-type Maya struct {
-	chain *chainmaya.Chain
-	cdc   codec.Codec
+// Config holds chain-specific configuration for the Cosmos engine.
+type Config struct {
+	// ChainID is the identifier used for magic constant resolution (e.g., "cosmos", "mayachain", "thorchain").
+	ChainID string
+
+	// SupportedChains is the list of common.Chain values this engine supports.
+	SupportedChains []common.Chain
+
+	// MessageTypeRegistry maps TypeUrls to MessageTypes for this chain.
+	MessageTypeRegistry *cosmos.MessageTypeRegistry
+
+	// ProtocolMessageTypes maps protocol IDs to allowed message types.
+	// e.g., "atom" -> MessageTypeSend, "thorchain_swap" -> MessageTypeDeposit
+	ProtocolMessageTypes map[string]cosmos.MessageType
+
+	// SupportsMsgDeposit indicates if this chain supports MsgDeposit (e.g., for swaps)
+	SupportsMsgDeposit bool
+
+	// RegisterExtraTypes is an optional function to register additional protobuf types
+	RegisterExtraTypes func(ir codectypes.InterfaceRegistry)
 }
 
-// NewMaya creates a new Maya engine instance
-func NewMaya() *Maya {
+// Engine is a generic Cosmos engine that can be configured for different chains.
+type Engine struct {
+	config Config
+	cdc    codec.Codec
+}
+
+// NewEngine creates a new Cosmos engine with the given configuration.
+func NewEngine(config Config) *Engine {
 	ir := codectypes.NewInterfaceRegistry()
 
 	// Register crypto types (required for PubKey interfaces)
@@ -35,23 +58,30 @@ func NewMaya() *Maya {
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
 
-	// Register the generated protobuf MsgDeposit for MAYAChain swaps
-	ir.RegisterImplementations((*sdk.Msg)(nil), &vtypes.MsgDeposit{})
+	// Register any extra types specific to this chain
+	if config.RegisterExtraTypes != nil {
+		config.RegisterExtraTypes(ir)
+	}
 
-	return &Maya{
-		chain: chainmaya.NewChain(),
-		cdc:   codec.NewProtoCodec(ir),
+	return &Engine{
+		config: config,
+		cdc:    codec.NewProtoCodec(ir),
 	}
 }
 
-// Supports returns true if this engine supports the given chain
-func (m *Maya) Supports(chain common.Chain) bool {
-	return chain == common.MayaChain
+// Supports returns true if this engine supports the given chain.
+func (e *Engine) Supports(chain common.Chain) bool {
+	for _, c := range e.config.SupportedChains {
+		if c == chain {
+			return true
+		}
+	}
+	return false
 }
 
-// Evaluate validates a MAYAChain transaction against policy rules
-func (m *Maya) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
-	if rule.GetEffect().String() != vtypes.Effect_EFFECT_ALLOW.String() {
+// Evaluate validates a Cosmos transaction against policy rules.
+func (e *Engine) Evaluate(rule *types.Rule, txBytes []byte) error {
+	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
 
@@ -60,9 +90,9 @@ func (m *Maya) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	txData, err := m.parseTransaction(txBytes)
+	txData, err := e.parseTransaction(txBytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse MAYAChain transaction: %w", err)
+		return fmt.Errorf("failed to parse %s transaction: %w", e.config.ChainID, err)
 	}
 
 	if txData.Body == nil || len(txData.Body.Messages) == 0 {
@@ -74,29 +104,29 @@ func (m *Maya) Evaluate(rule *vtypes.Rule, txBytes []byte) error {
 	}
 
 	msg := txData.Body.Messages[0]
-	mt, err := m.detectMessageType(msg)
+	mt, err := e.detectMessageType(msg)
 	if err != nil {
 		return fmt.Errorf("unsupported message type: %w", err)
 	}
 
-	if err := m.ensureResourceMessageCompatibility(r, mt); err != nil {
+	if err := e.ensureResourceMessageCompatibility(r, mt); err != nil {
 		return err
 	}
 
-	if err := m.validateTarget(r, rule.GetTarget(), txData); err != nil {
+	if err := e.validateTarget(r, rule.GetTarget(), txData, mt); err != nil {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
 
-	if err := m.validateParameterConstraints(r, rule.GetParameterConstraints(), txData); err != nil {
+	if err := e.validateParameterConstraints(r, rule.GetParameterConstraints(), txData, mt); err != nil {
 		return fmt.Errorf("failed to validate parameter constraints: %w", err)
 	}
 
 	return nil
 }
 
-// parseTransaction parses MAYAChain transaction bytes into a Cosmos SDK transaction
-func (m *Maya) parseTransaction(txBytes []byte) (*tx.Tx, error) {
-	const maxTxBytes = 32 * 1024
+// parseTransaction parses Cosmos transaction bytes into a Cosmos SDK transaction.
+func (e *Engine) parseTransaction(txBytes []byte) (*tx.Tx, error) {
+	const maxTxBytes = 32 * 1024 // 32 KB
 	if len(txBytes) > maxTxBytes {
 		return nil, fmt.Errorf("transaction too large: %d bytes (max %d)", len(txBytes), maxTxBytes)
 	}
@@ -106,38 +136,49 @@ func (m *Maya) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 	}
 
 	var txData tx.Tx
-	if err := m.cdc.Unmarshal(txBytes, &txData); err != nil {
+	if err := e.cdc.Unmarshal(txBytes, &txData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal protobuf transaction: %w", err)
 	}
 
 	return &txData, nil
 }
 
+// detectMessageType determines the message type based on TypeUrl.
+func (e *Engine) detectMessageType(msg *codectypes.Any) (cosmos.MessageType, error) {
+	if msg == nil {
+		return cosmos.MessageType(0), fmt.Errorf("nil message")
+	}
+
+	messageType, err := e.config.MessageTypeRegistry.GetMessageType(msg.TypeUrl)
+	if err != nil {
+		return cosmos.MessageType(0), fmt.Errorf("failed to detect message type: %w", err)
+	}
+
+	return messageType, nil
+}
+
 // ensureResourceMessageCompatibility rejects mismatched resource/message combinations.
-func (m *Maya) ensureResourceMessageCompatibility(resource *vtypes.ResourcePath, mt chainmaya.MessageType) error {
-	switch resource.GetProtocolId() {
-	case "send", "cacao":
-		if mt != chainmaya.MessageTypeSend {
-			return fmt.Errorf("resource %s.%s only allows MsgSend, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
-		}
-	case "mayachain_swap":
-		if mt != chainmaya.MessageTypeDeposit {
-			return fmt.Errorf("resource %s.%s only allows MsgDeposit, got %s", resource.GetProtocolId(), resource.GetFunctionId(), mt)
-		}
-	default:
+func (e *Engine) ensureResourceMessageCompatibility(resource *types.ResourcePath, mt cosmos.MessageType) error {
+	expectedMT, exists := e.config.ProtocolMessageTypes[resource.GetProtocolId()]
+	if !exists {
 		return fmt.Errorf("unsupported protocol: %s", resource.GetProtocolId())
+	}
+
+	if mt != expectedMT {
+		return fmt.Errorf("resource %s.%s only allows %s, got %s",
+			resource.GetProtocolId(), resource.GetFunctionId(), expectedMT, mt)
 	}
 	return nil
 }
 
-// unpackMsgSend unpacks a message to bank MsgSend type
-func (m *Maya) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, error) {
+// unpackMsgSend unpacks a message to bank MsgSend type.
+func (e *Engine) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, error) {
 	if msg == nil {
 		return nil, fmt.Errorf("nil message")
 	}
 
 	var sdkMsg sdk.Msg
-	if err := m.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
 		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
 	}
 
@@ -149,69 +190,29 @@ func (m *Maya) unpackMsgSend(msg *codectypes.Any) (*banktypes.MsgSend, error) {
 	return msgSend, nil
 }
 
-// unpackMsgDeposit unpacks a message to MAYAChain MsgDeposit type
-func (m *Maya) unpackMsgDeposit(msg *codectypes.Any) (*vtypes.MsgDeposit, error) {
+// unpackMsgDeposit unpacks a message to MsgDeposit type.
+func (e *Engine) unpackMsgDeposit(msg *codectypes.Any) (*types.MsgDeposit, error) {
 	if msg == nil {
 		return nil, fmt.Errorf("nil message")
 	}
 
 	var sdkMsg sdk.Msg
-	if err := m.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
 		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
 	}
 
-	msgDeposit, ok := sdkMsg.(*vtypes.MsgDeposit)
+	msgDeposit, ok := sdkMsg.(*types.MsgDeposit)
 	if !ok {
-		return nil, fmt.Errorf("expected MAYAChain MsgDeposit, got: %T", sdkMsg)
+		return nil, fmt.Errorf("expected MsgDeposit, got: %T", sdkMsg)
 	}
 
 	return msgDeposit, nil
 }
 
-// detectMessageType determines the message type based on TypeUrl
-func (m *Maya) detectMessageType(msg *codectypes.Any) (chainmaya.MessageType, error) {
-	if msg == nil {
-		return chainmaya.MessageType(0), fmt.Errorf("nil message")
-	}
 
-	messageType, err := chainmaya.GetMessageTypeFromTypeUrl(msg.TypeUrl)
-	if err != nil {
-		return chainmaya.MessageType(0), fmt.Errorf("failed to detect message type: %w", err)
-	}
-
-	return messageType, nil
-}
-
-// unpackMessage unpacks a message to the appropriate type based on its TypeUrl
-func (m *Maya) unpackMessage(msg *codectypes.Any) (interface{}, chainmaya.MessageType, error) {
-	messageType, err := m.detectMessageType(msg)
-	if err != nil {
-		return nil, chainmaya.MessageType(0), err
-	}
-
-	switch messageType {
-	case chainmaya.MessageTypeSend:
-		msgSend, err := m.unpackMsgSend(msg)
-		if err != nil {
-			return nil, chainmaya.MessageTypeSend, fmt.Errorf("failed to unpack MsgSend: %w", err)
-		}
-		return msgSend, chainmaya.MessageTypeSend, nil
-
-	case chainmaya.MessageTypeDeposit:
-		msgDeposit, err := m.unpackMsgDeposit(msg)
-		if err != nil {
-			return nil, chainmaya.MessageTypeDeposit, fmt.Errorf("failed to unpack MsgDeposit: %w", err)
-		}
-		return msgDeposit, chainmaya.MessageTypeDeposit, nil
-
-	default:
-		return nil, chainmaya.MessageType(0), fmt.Errorf("unsupported message type: %s", messageType)
-	}
-}
-
-// validateTarget validates the transaction target against the rule target
-func (m *Maya) validateTarget(resource *vtypes.ResourcePath, target *vtypes.Target, txData *tx.Tx) error {
-	if target == nil || target.GetTargetType() == vtypes.TargetType_TARGET_TYPE_UNSPECIFIED {
+// validateTarget validates the transaction target against the rule target.
+func (e *Engine) validateTarget(resource *types.ResourcePath, target *types.Target, txData *tx.Tx, mt cosmos.MessageType) error {
+	if target == nil || target.GetTargetType() == types.TargetType_TARGET_TYPE_UNSPECIFIED {
 		return nil
 	}
 
@@ -219,23 +220,19 @@ func (m *Maya) validateTarget(resource *vtypes.ResourcePath, target *vtypes.Targ
 		return fmt.Errorf("no messages in transaction")
 	}
 
+	// Target validation only supported for MsgSend
+	if mt != cosmos.MessageTypeSend {
+		return fmt.Errorf("target validation only supported for MsgSend transactions, use TARGET_TYPE_UNSPECIFIED for %s", mt)
+	}
+
 	msg := txData.Body.Messages[0]
-	unpackedMsg, messageType, err := m.unpackMessage(msg)
+	msgSend, err := e.unpackMsgSend(msg)
 	if err != nil {
 		return fmt.Errorf("failed to unpack message for target validation: %w", err)
 	}
 
-	if messageType != chainmaya.MessageTypeSend {
-		return fmt.Errorf("target validation only supported for MsgSend transactions, use TARGET_TYPE_UNSPECIFIED for %s", messageType)
-	}
-
-	msgSend, ok := unpackedMsg.(*banktypes.MsgSend)
-	if !ok {
-		return fmt.Errorf("expected MsgSend, got: %T", unpackedMsg)
-	}
-
 	switch target.GetTargetType() {
-	case vtypes.TargetType_TARGET_TYPE_ADDRESS:
+	case types.TargetType_TARGET_TYPE_ADDRESS:
 		expectedAddress := target.GetAddress()
 		if expectedAddress == "" {
 			return fmt.Errorf("target address cannot be empty")
@@ -245,7 +242,7 @@ func (m *Maya) validateTarget(resource *vtypes.ResourcePath, target *vtypes.Targ
 				expectedAddress, msgSend.ToAddress)
 		}
 
-	case vtypes.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
+	case types.TargetType_TARGET_TYPE_MAGIC_CONSTANT:
 		resolve, err := resolver.NewMagicConstantRegistry().GetResolver(target.GetMagicConstant())
 		if err != nil {
 			return fmt.Errorf(
@@ -282,47 +279,53 @@ func (m *Maya) validateTarget(resource *vtypes.ResourcePath, target *vtypes.Targ
 	return nil
 }
 
-// validateParameterConstraints validates all parameter constraints
-func (m *Maya) validateParameterConstraints(resource *vtypes.ResourcePath, constraints []*vtypes.ParameterConstraint, txData *tx.Tx) error {
+// validateParameterConstraints validates all parameter constraints.
+func (e *Engine) validateParameterConstraints(resource *types.ResourcePath, constraints []*types.ParameterConstraint, txData *tx.Tx, mt cosmos.MessageType) error {
 	for _, constraint := range constraints {
 		paramName := constraint.GetParameterName()
 
-		value, err := m.extractParameterValue(paramName, txData)
+		value, err := e.extractParameterValue(paramName, txData, mt)
 		if err != nil {
 			return fmt.Errorf("failed to extract parameter %s: %w", paramName, err)
 		}
 
-		if err := m.assertArgsByType(resource.ChainId, paramName, value, constraints); err != nil {
+		if err := e.assertArgsByType(resource.ChainId, paramName, value, constraints); err != nil {
 			return fmt.Errorf("constraint validation failed for parameter %s: %w", paramName, err)
 		}
 	}
 	return nil
 }
 
-// extractParameterValue extracts the actual value from transaction for the given parameter name
-func (m *Maya) extractParameterValue(paramName string, txData *tx.Tx) (any, error) {
+// extractParameterValue extracts the actual value from transaction for the given parameter name.
+func (e *Engine) extractParameterValue(paramName string, txData *tx.Tx, mt cosmos.MessageType) (any, error) {
 	if txData.Body == nil || len(txData.Body.Messages) == 0 {
 		return nil, fmt.Errorf("no messages in transaction")
 	}
 
 	msg := txData.Body.Messages[0]
-	unpackedMsg, messageType, err := m.unpackMessage(msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unpack message: %w", err)
-	}
 
-	switch messageType {
-	case chainmaya.MessageTypeSend:
-		return m.extractParameterFromMsgSend(paramName, unpackedMsg.(*banktypes.MsgSend), txData)
-	case chainmaya.MessageTypeDeposit:
-		return m.extractParameterFromMsgDeposit(paramName, unpackedMsg.(*vtypes.MsgDeposit))
+	switch mt {
+	case cosmos.MessageTypeSend:
+		msgSend, err := e.unpackMsgSend(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgSend(paramName, msgSend, txData)
+
+	case cosmos.MessageTypeDeposit:
+		msgDeposit, err := e.unpackMsgDeposit(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgDeposit(paramName, msgDeposit)
+
 	default:
-		return nil, fmt.Errorf("unsupported message type: %s", messageType)
+		return nil, fmt.Errorf("unsupported message type: %s", mt)
 	}
 }
 
-// extractParameterFromMsgSend extracts parameters from MsgSend
-func (m *Maya) extractParameterFromMsgSend(paramName string, msgSend *banktypes.MsgSend, txData *tx.Tx) (any, error) {
+// extractParameterFromMsgSend extracts parameters from MsgSend.
+func (e *Engine) extractParameterFromMsgSend(paramName string, msgSend *banktypes.MsgSend, txData *tx.Tx) (any, error) {
 	switch paramName {
 	case "recipient":
 		return msgSend.ToAddress, nil
@@ -350,8 +353,8 @@ func (m *Maya) extractParameterFromMsgSend(paramName string, msgSend *banktypes.
 	}
 }
 
-// extractParameterFromMsgDeposit extracts parameters from MsgDeposit (for swaps)
-func (m *Maya) extractParameterFromMsgDeposit(paramName string, msgDeposit *vtypes.MsgDeposit) (any, error) {
+// extractParameterFromMsgDeposit extracts parameters from MsgDeposit (for swaps).
+func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *types.MsgDeposit) (any, error) {
 	switch paramName {
 	case "amount":
 		if len(msgDeposit.Coins) == 0 {
@@ -379,34 +382,34 @@ func (m *Maya) extractParameterFromMsgDeposit(paramName string, msgDeposit *vtyp
 		if coin.Asset == nil {
 			return nil, fmt.Errorf("coin missing asset information")
 		}
-		return strings.ToUpper(coin.Asset.Symbol), nil
+		return coin.Asset.Symbol, nil
 	default:
 		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}
 }
 
-// assertArgsByType validates constraints using the appropriate comparator based on Go type
-func (m *Maya) assertArgsByType(chainId, inputName string, arg any, constraints []*vtypes.ParameterConstraint) error {
+// assertArgsByType validates constraints using the appropriate comparator based on Go type.
+func (e *Engine) assertArgsByType(chainId, inputName string, arg any, constraints []*types.ParameterConstraint) error {
 	switch actual := arg.(type) {
 	case string:
-		err := stdcompare.AssertArg(
+		err := compare.AssertArg(
 			chainId,
 			constraints,
 			inputName,
 			actual,
-			stdcompare.NewString,
+			compare.NewString,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to assert string parameter: %w", err)
 		}
 
 	case *big.Int:
-		err := stdcompare.AssertArg(
+		err := compare.AssertArg(
 			chainId,
 			constraints,
 			inputName,
 			actual,
-			stdcompare.NewBigInt,
+			compare.NewBigInt,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to assert big.Int parameter: %w", err)
