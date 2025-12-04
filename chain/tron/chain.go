@@ -166,8 +166,10 @@ func (p *ParsedTronTransaction) GetAmount() *big.Int {
 	return big.NewInt(p.rawData.Contract[0].Parameter.Value.Amount)
 }
 
-// ParseTransaction decodes a raw TRON transaction from hex string.
-// TRON transactions are typically provided as protobuf-encoded bytes.
+// ParseTransaction decodes a TRON transaction's raw_data from hex string.
+// The input must be the protobuf-encoded raw_data structure (containing ref_block_bytes,
+// ref_block_hash, expiration, contract, etc.), NOT the full Transaction message with signatures.
+// The transaction hash is computed as SHA256 of this raw_data.
 func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
 	txBytes, err := hex.DecodeString(strings.TrimPrefix(txHex, "0x"))
 	if err != nil {
@@ -177,8 +179,11 @@ func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error)
 	return c.ParseTransactionBytes(txBytes)
 }
 
-// ParseTransactionBytes decodes a raw TRON transaction from bytes.
-// This is a simplified implementation that handles the basic TransferContract type.
+// ParseTransactionBytes decodes a TRON transaction's raw_data from bytes.
+// The input must be the protobuf-encoded raw_data structure (containing ref_block_bytes,
+// ref_block_hash, expiration, contract, etc.), NOT the full Transaction message with signatures.
+// This is a simplified implementation that handles basic contract types including TransferContract
+// and TriggerSmartContract.
 func (c *Chain) ParseTransactionBytes(txBytes []byte) (types.DecodedTransaction, error) {
 	const maxTxBytes = 32 * 1024 // 32 KB
 	if len(txBytes) > maxTxBytes {
@@ -593,9 +598,10 @@ func contractTypeToString(t int) string {
 	}
 }
 
-// ComputeTxHash computes the transaction hash from the proposed transaction and signatures.
+// ComputeTxHash computes the transaction hash from the raw_data bytes.
+// The proposedTx must be the protobuf-encoded raw_data structure, NOT the full Transaction message.
+// TRON transaction ID is SHA256 of the raw_data.
 func (c *Chain) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
-	// TRON transaction hash is SHA256 of the raw_data
 	hash := sha256.Sum256(proposedTx)
 	return hex.EncodeToString(hash[:]), nil
 }
