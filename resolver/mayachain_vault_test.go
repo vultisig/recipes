@@ -60,10 +60,11 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 	resolver := NewMayaChainVaultResolver()
 
 	tests := []struct {
-		name    string
-		chainID string
-		assetID string
-		wantErr bool
+		name       string
+		chainID    string
+		assetID    string
+		wantErr    bool
+		canBeHalted bool // chains that may be halted on MayaChain
 	}{
 		{
 			name:    "resolve ZEC vault address",
@@ -78,10 +79,11 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "resolve ETH vault address",
-			chainID: "ethereum",
-			assetID: "eth",
-			wantErr: false,
+			name:        "resolve ETH vault address",
+			chainID:     "ethereum",
+			assetID:     "eth",
+			wantErr:     false,
+			canBeHalted: true, // ETH is often halted on MayaChain
 		},
 		{
 			name:    "resolve DASH vault address",
@@ -119,6 +121,11 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			}
 
 			if err != nil {
+				// If chain can be halted and error indicates halted state, skip instead of fail
+				if tt.canBeHalted && strings.Contains(err.Error(), "halted") {
+					t.Skipf("Chain %s is currently halted on MayaChain (expected for backup chains): %v", tt.chainID, err)
+					return
+				}
 				t.Errorf("Unexpected error for chainID %s: %v", tt.chainID, err)
 				return
 			}
@@ -195,11 +202,12 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 	supportedChains := []struct {
 		chainID       string
 		mayachainName string
+		canBeHalted   bool // chains that may be halted on MayaChain
 	}{
-		{"zcash", "ZEC"},
-		{"bitcoin", "BTC"},
-		{"ethereum", "ETH"},
-		{"dash", "DASH"},
+		{"zcash", "ZEC", false},
+		{"bitcoin", "BTC", false},
+		{"ethereum", "ETH", true}, // ETH is often halted on MayaChain, used as backup only
+		{"dash", "DASH", false},
 	}
 
 	for _, chain := range supportedChains {
@@ -211,6 +219,11 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 				"asset", // assetID doesn't matter for vault resolution
 			)
 			if err != nil {
+				// If chain can be halted and error indicates halted state, skip instead of fail
+				if chain.canBeHalted && strings.Contains(err.Error(), "halted") {
+					t.Skipf("Chain %s is currently halted on MayaChain (expected for backup chains): %v", chain.chainID, err)
+					return
+				}
 				t.Fatalf("Resolver failed for %s: %v", chain.chainID, err)
 			}
 

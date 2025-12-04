@@ -26,6 +26,8 @@ func getThorChainSymbol(chain common.Chain) (string, error) {
 		return "BCH", nil
 	case common.XRP:
 		return "XRP", nil
+	case common.Zcash:
+		return "ZEC", nil
 	default:
 		return "", fmt.Errorf("chain %s not supported by ThorChain", chain.String())
 	}
