@@ -34,10 +34,10 @@ type SDK struct {
 
 // SignedTransaction represents a signed TRON transaction
 type SignedTransaction struct {
-	TxID      string   `json:"txID"`
-	RawData   RawData  `json:"raw_data"`
-	RawDataHex string  `json:"raw_data_hex"`
-	Signature []string `json:"signature"`
+	TxID       string   `json:"txID"`
+	RawData    *RawData `json:"raw_data,omitempty"`
+	RawDataHex string   `json:"raw_data_hex"`
+	Signature  []string `json:"signature"`
 }
 
 // RawData represents the raw data of a TRON transaction
