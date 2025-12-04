@@ -21,6 +21,7 @@ enum MagicConstant {
   THORCHAIN_VAULT = 2;
   THORCHAIN_ROUTER = 3;
   MAYACHAIN_VAULT = 4;
+  MAYACHAIN_ROUTER = 5;
 }
 
 // Constraint defines restrictions on a parameter

@@ -69,7 +69,7 @@ func (r *MayaChainVaultResolver) getInboundAddresses() ([]MayaInboundAddress, er
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
@@ -103,10 +103,6 @@ func (r *MayaChainVaultResolver) findAddressForChain(addresses []MayaInboundAddr
 				return "", fmt.Errorf("inbound address for chain %s is currently halted", chainID)
 			}
 
-			// For chains with router (like EVM), use router address
-			if addr.Router != "" {
-				return addr.Router, nil
-			}
 			return addr.Address, nil
 		}
 	}
@@ -115,6 +111,7 @@ func (r *MayaChainVaultResolver) findAddressForChain(addresses []MayaInboundAddr
 }
 
 // getMayaChainSymbol maps chain IDs to MayaChain's expected symbols
+// For EVM chains, MayaChain only supports Arbitrum (ThorChain handles ETH/BASE/BSC)
 func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, error) {
 	// Normalize chainID to lowercase for comparison
 	switch strings.ToLower(chainID) {
@@ -122,8 +119,6 @@ func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, err
 		return "ZEC", nil
 	case "bitcoin":
 		return "BTC", nil
-	case "ethereum":
-		return "ETH", nil
 	case "dash":
 		return "DASH", nil
 	case "thorchain":
@@ -135,7 +130,7 @@ func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, err
 	case "radix":
 		return "XRD", nil
 	default:
-		return "", fmt.Errorf("chain %s not supported by MayaChain", chainID)
+		return "", fmt.Errorf("chain %s not supported by MayaChain (use ThorChain for ETH/BASE/BSC)", chainID)
 	}
 }
 

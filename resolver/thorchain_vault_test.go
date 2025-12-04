@@ -73,6 +73,12 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve AVAX vault address",
+			chainID: "avalanche",
+			assetID: "avax",
+			wantErr: false,
+		},
+		{
 			name:    "resolve Base vault address",
 			chainID: "base",
 			assetID: "eth",
@@ -109,13 +115,13 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "unsupported chain BSC should error",
-			chainID: "bscchain",
+			name:    "resolve BSC vault address",
+			chainID: "bsc",
 			assetID: "bnb",
-			wantErr: true,
+			wantErr: false,
 		},
 		{
-			name:    "unsupported chain Arbitrum should error",
+			name:    "Arbitrum uses MayaChain not ThorChain",
 			chainID: "arbitrum",
 			assetID: "eth",
 			wantErr: true,
@@ -226,7 +232,9 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 		thorchainName string
 	}{
 		{"ethereum", "ETH"},
+		{"avalanche", "AVAX"},
 		{"bitcoin", "BTC"},
+		{"bsc", "BSC"},
 		{"base", "BASE"},
 		{"ripple", "XRP"},
 		{"bitcoincash", "BCH"},
@@ -282,7 +290,7 @@ func queryTHORChainAPIDirect() ([]InboundAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)

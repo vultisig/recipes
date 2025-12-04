@@ -196,14 +196,6 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	return res, nil
 }
 
-func (m *MetaRule) getConstraint(rule *types.Rule, name string) (*types.Constraint, error) {
-	for _, c := range rule.GetParameterConstraints() {
-		if c.GetParameterName() == name {
-			return c.GetConstraint(), nil
-		}
-	}
-	return nil, fmt.Errorf("failed to find constraint: %s", name)
-}
 
 func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
 	switch metaProtocol(r.GetProtocolId()) {
