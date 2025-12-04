@@ -4,8 +4,11 @@ import (
 	"fmt"
 
 	"github.com/vultisig/recipes/engine/evm"
+	"github.com/vultisig/recipes/engine/gaia"
+	"github.com/vultisig/recipes/engine/maya"
 	"github.com/vultisig/recipes/engine/solana"
 	"github.com/vultisig/recipes/engine/thorchain"
+	"github.com/vultisig/recipes/engine/tron"
 	"github.com/vultisig/recipes/engine/utxo/bitcoin"
 	"github.com/vultisig/recipes/engine/utxo/bitcoincash"
 	"github.com/vultisig/recipes/engine/utxo/dogecoin"
@@ -84,6 +87,15 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 		return nil, fmt.Errorf("failed to create solana engine: %s", err)
 	}
 	registry.Register(solEng)
+
+	// Register Gaia (Cosmos) engine
+	registry.Register(gaia.NewGaia())
+
+	// Register Maya engine
+	registry.Register(maya.NewMaya())
+
+	// Register Tron engine
+	registry.Register(tron.NewTron())
 
 	return registry, nil
 }

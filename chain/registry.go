@@ -5,7 +5,10 @@ import (
 	"sync"
 
 	"github.com/vultisig/recipes/chain/evm/ethereum"
+	"github.com/vultisig/recipes/chain/gaia"
+	"github.com/vultisig/recipes/chain/maya"
 	"github.com/vultisig/recipes/chain/thorchain"
+	"github.com/vultisig/recipes/chain/tron"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
 	"github.com/vultisig/recipes/chain/utxo/dogecoin"
@@ -95,4 +98,7 @@ func init() {
 	// Register other chains
 	RegisterChain(thorchain.NewChain())
 	RegisterChain(xrpl.NewChain())
+	RegisterChain(gaia.NewChain())
+	RegisterChain(maya.NewChain())
+	RegisterChain(tron.NewChain())
 }

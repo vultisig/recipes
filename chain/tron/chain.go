@@ -1,0 +1,551 @@
+package tron
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"math/big"
+	"strings"
+
+	"github.com/vultisig/mobile-tss-lib/tss"
+	"github.com/vultisig/recipes/types"
+)
+
+// Chain implements the types.Chain interface for TRON.
+type Chain struct{}
+
+// NewChain creates a new TRON chain instance.
+func NewChain() *Chain {
+	return &Chain{}
+}
+
+// ID returns the unique identifier for the TRON chain.
+func (c *Chain) ID() string {
+	return "tron"
+}
+
+// Name returns a human-readable name for the TRON chain.
+func (c *Chain) Name() string {
+	return "TRON"
+}
+
+// Description returns a detailed description of the TRON chain.
+func (c *Chain) Description() string {
+	return "TRON is a decentralized blockchain platform for content sharing and dApps."
+}
+
+// SupportedProtocols returns the list of protocol IDs supported by TRON.
+func (c *Chain) SupportedProtocols() []string {
+	return []string{"trx"}
+}
+
+// ParsedTronTransaction implements the types.DecodedTransaction interface for TRON.
+type ParsedTronTransaction struct {
+	rawData     *TronRawData
+	rawDataHex  string
+	txID        string
+}
+
+// TronRawData represents the raw data portion of a TRON transaction
+type TronRawData struct {
+	Contract      []TronContract `json:"contract"`
+	RefBlockBytes string         `json:"ref_block_bytes"`
+	RefBlockHash  string         `json:"ref_block_hash"`
+	Expiration    int64          `json:"expiration"`
+	Timestamp     int64          `json:"timestamp"`
+	FeeLimit      int64          `json:"fee_limit,omitempty"`
+	Data          string         `json:"data,omitempty"` // Memo field
+}
+
+// TronContract represents a contract in a TRON transaction
+type TronContract struct {
+	Parameter TronParameter `json:"parameter"`
+	Type      string        `json:"type"`
+}
+
+// TronParameter represents the parameter of a contract
+type TronParameter struct {
+	Value   TronValue `json:"value"`
+	TypeUrl string    `json:"type_url"`
+}
+
+// TronValue represents the value of a contract parameter
+type TronValue struct {
+	Amount       int64  `json:"amount,omitempty"`
+	OwnerAddress string `json:"owner_address"`
+	ToAddress    string `json:"to_address,omitempty"`
+	Data         string `json:"data,omitempty"` // For smart contract calls
+}
+
+// ChainIdentifier returns "tron".
+func (p *ParsedTronTransaction) ChainIdentifier() string {
+	return "tron"
+}
+
+// Hash returns the transaction hash.
+func (p *ParsedTronTransaction) Hash() string {
+	return p.txID
+}
+
+// From returns the sender address.
+func (p *ParsedTronTransaction) From() string {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return ""
+	}
+	return p.rawData.Contract[0].Parameter.Value.OwnerAddress
+}
+
+// To returns the recipient address.
+func (p *ParsedTronTransaction) To() string {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return ""
+	}
+	return p.rawData.Contract[0].Parameter.Value.ToAddress
+}
+
+// Value returns the amount being transferred.
+func (p *ParsedTronTransaction) Value() *big.Int {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return nil
+	}
+	return big.NewInt(p.rawData.Contract[0].Parameter.Value.Amount)
+}
+
+// Data returns the transaction data/memo.
+func (p *ParsedTronTransaction) Data() []byte {
+	if p.rawData == nil {
+		return nil
+	}
+	if p.rawData.Data != "" {
+		data, _ := hex.DecodeString(p.rawData.Data)
+		return data
+	}
+	return nil
+}
+
+// Nonce returns 0 as TRON doesn't use nonces in the same way.
+func (p *ParsedTronTransaction) Nonce() uint64 {
+	return 0
+}
+
+// GasPrice returns nil as TRON uses a different fee model.
+func (p *ParsedTronTransaction) GasPrice() *big.Int {
+	return nil
+}
+
+// GasLimit returns the fee limit.
+func (p *ParsedTronTransaction) GasLimit() uint64 {
+	if p.rawData == nil {
+		return 0
+	}
+	return uint64(p.rawData.FeeLimit)
+}
+
+// GetRawData returns the underlying TRON raw data.
+func (p *ParsedTronTransaction) GetRawData() *TronRawData {
+	return p.rawData
+}
+
+// GetMemo returns the transaction memo/data as string.
+func (p *ParsedTronTransaction) GetMemo() string {
+	if p.rawData == nil || p.rawData.Data == "" {
+		return ""
+	}
+	data, err := hex.DecodeString(p.rawData.Data)
+	if err != nil {
+		return p.rawData.Data
+	}
+	return string(data)
+}
+
+// GetAmount returns the transaction amount in SUN (1 TRX = 1,000,000 SUN).
+func (p *ParsedTronTransaction) GetAmount() *big.Int {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return big.NewInt(0)
+	}
+	return big.NewInt(p.rawData.Contract[0].Parameter.Value.Amount)
+}
+
+// ParseTransaction decodes a raw TRON transaction from hex string.
+// TRON transactions are typically provided as protobuf-encoded bytes.
+func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
+	txBytes, err := hex.DecodeString(strings.TrimPrefix(txHex, "0x"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hex: %w", err)
+	}
+
+	return c.ParseTransactionBytes(txBytes)
+}
+
+// ParseTransactionBytes decodes a raw TRON transaction from bytes.
+// This is a simplified implementation that handles the basic TransferContract type.
+func (c *Chain) ParseTransactionBytes(txBytes []byte) (types.DecodedTransaction, error) {
+	const maxTxBytes = 32 * 1024 // 32 KB
+	if len(txBytes) > maxTxBytes {
+		return nil, fmt.Errorf("transaction too large: %d bytes (max %d)", len(txBytes), maxTxBytes)
+	}
+
+	if len(txBytes) == 0 {
+		return nil, fmt.Errorf("empty transaction data")
+	}
+
+	// Compute transaction ID (SHA256 of raw_data)
+	txID := sha256.Sum256(txBytes)
+	txIDHex := hex.EncodeToString(txID[:])
+
+	// For now, we'll parse the protobuf manually for basic transfer contracts
+	// A full implementation would use the TRON protobuf definitions
+	rawData, err := parseProtobufRawData(txBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse TRON transaction: %w", err)
+	}
+
+	return &ParsedTronTransaction{
+		rawData:    rawData,
+		rawDataHex: hex.EncodeToString(txBytes),
+		txID:       txIDHex,
+	}, nil
+}
+
+// parseProtobufRawData parses the protobuf-encoded raw_data of a TRON transaction.
+// This is a simplified parser that handles basic TransferContract transactions.
+func parseProtobufRawData(data []byte) (*TronRawData, error) {
+	if len(data) < 10 {
+		return nil, fmt.Errorf("data too short for TRON transaction")
+	}
+
+	rawData := &TronRawData{}
+	
+	// Parse protobuf fields
+	pos := 0
+	for pos < len(data) {
+		if pos >= len(data) {
+			break
+		}
+		
+		// Read field tag
+		tag := data[pos]
+		fieldNum := tag >> 3
+		wireType := tag & 0x7
+		pos++
+		
+		switch fieldNum {
+		case 1: // ref_block_bytes (bytes)
+			if wireType != 2 {
+				return nil, fmt.Errorf("unexpected wire type for ref_block_bytes")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return nil, fmt.Errorf("ref_block_bytes length exceeds data")
+			}
+			rawData.RefBlockBytes = hex.EncodeToString(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 4: // ref_block_hash (bytes)
+			if wireType != 2 {
+				return nil, fmt.Errorf("unexpected wire type for ref_block_hash")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return nil, fmt.Errorf("ref_block_hash length exceeds data")
+			}
+			rawData.RefBlockHash = hex.EncodeToString(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 8: // expiration (int64)
+			if wireType != 0 {
+				return nil, fmt.Errorf("unexpected wire type for expiration")
+			}
+			val, n := readVarint(data[pos:])
+			pos += n
+			rawData.Expiration = int64(val)
+			
+		case 10: // data (bytes) - memo
+			if wireType != 2 {
+				return nil, fmt.Errorf("unexpected wire type for data")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return nil, fmt.Errorf("data length exceeds data")
+			}
+			rawData.Data = hex.EncodeToString(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 11: // contract (repeated message)
+			if wireType != 2 {
+				return nil, fmt.Errorf("unexpected wire type for contract")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return nil, fmt.Errorf("contract length exceeds data")
+			}
+			contract, err := parseContract(data[pos : pos+int(length)])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse contract: %w", err)
+			}
+			rawData.Contract = append(rawData.Contract, contract)
+			pos += int(length)
+			
+		case 14: // timestamp (int64)
+			if wireType != 0 {
+				return nil, fmt.Errorf("unexpected wire type for timestamp")
+			}
+			val, n := readVarint(data[pos:])
+			pos += n
+			rawData.Timestamp = int64(val)
+			
+		case 18: // fee_limit (int64)
+			if wireType != 0 {
+				return nil, fmt.Errorf("unexpected wire type for fee_limit")
+			}
+			val, n := readVarint(data[pos:])
+			pos += n
+			rawData.FeeLimit = int64(val)
+			
+		default:
+			// Skip unknown fields
+			switch wireType {
+			case 0: // Varint
+				_, n := readVarint(data[pos:])
+				pos += n
+			case 2: // Length-delimited
+				length, n := readVarint(data[pos:])
+				pos += n
+				pos += int(length)
+			default:
+				return nil, fmt.Errorf("unknown wire type %d at position %d", wireType, pos)
+			}
+		}
+	}
+
+	return rawData, nil
+}
+
+// parseContract parses a single contract from protobuf
+func parseContract(data []byte) (TronContract, error) {
+	contract := TronContract{}
+	pos := 0
+	
+	for pos < len(data) {
+		tag := data[pos]
+		fieldNum := tag >> 3
+		wireType := tag & 0x7
+		pos++
+		
+		switch fieldNum {
+		case 1: // type (enum)
+			if wireType != 0 {
+				return contract, fmt.Errorf("unexpected wire type for type")
+			}
+			val, n := readVarint(data[pos:])
+			pos += n
+			contract.Type = contractTypeToString(int(val))
+			
+		case 2: // parameter (Any)
+			if wireType != 2 {
+				return contract, fmt.Errorf("unexpected wire type for parameter")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return contract, fmt.Errorf("parameter length exceeds data")
+			}
+			param, err := parseParameter(data[pos : pos+int(length)])
+			if err != nil {
+				return contract, fmt.Errorf("failed to parse parameter: %w", err)
+			}
+			contract.Parameter = param
+			pos += int(length)
+			
+		default:
+			switch wireType {
+			case 0:
+				_, n := readVarint(data[pos:])
+				pos += n
+			case 2:
+				length, n := readVarint(data[pos:])
+				pos += n
+				pos += int(length)
+			}
+		}
+	}
+	
+	return contract, nil
+}
+
+// parseParameter parses the parameter Any type
+func parseParameter(data []byte) (TronParameter, error) {
+	param := TronParameter{}
+	pos := 0
+	
+	for pos < len(data) {
+		tag := data[pos]
+		fieldNum := tag >> 3
+		wireType := tag & 0x7
+		pos++
+		
+		switch fieldNum {
+		case 1: // type_url (string)
+			if wireType != 2 {
+				return param, fmt.Errorf("unexpected wire type for type_url")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return param, fmt.Errorf("type_url length exceeds data")
+			}
+			param.TypeUrl = string(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 2: // value (bytes)
+			if wireType != 2 {
+				return param, fmt.Errorf("unexpected wire type for value")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return param, fmt.Errorf("value length exceeds data")
+			}
+			value, err := parseTransferContractValue(data[pos : pos+int(length)])
+			if err != nil {
+				return param, fmt.Errorf("failed to parse value: %w", err)
+			}
+			param.Value = value
+			pos += int(length)
+			
+		default:
+			switch wireType {
+			case 0:
+				_, n := readVarint(data[pos:])
+				pos += n
+			case 2:
+				length, n := readVarint(data[pos:])
+				pos += n
+				pos += int(length)
+			}
+		}
+	}
+	
+	return param, nil
+}
+
+// parseTransferContractValue parses the value of a TransferContract
+func parseTransferContractValue(data []byte) (TronValue, error) {
+	value := TronValue{}
+	pos := 0
+	
+	for pos < len(data) {
+		if pos >= len(data) {
+			break
+		}
+		tag := data[pos]
+		fieldNum := tag >> 3
+		wireType := tag & 0x7
+		pos++
+		
+		switch fieldNum {
+		case 1: // owner_address (bytes)
+			if wireType != 2 {
+				return value, fmt.Errorf("unexpected wire type for owner_address")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return value, fmt.Errorf("owner_address length exceeds data")
+			}
+			value.OwnerAddress = encodeAddress(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 2: // to_address (bytes)
+			if wireType != 2 {
+				return value, fmt.Errorf("unexpected wire type for to_address")
+			}
+			length, n := readVarint(data[pos:])
+			pos += n
+			if pos+int(length) > len(data) {
+				return value, fmt.Errorf("to_address length exceeds data")
+			}
+			value.ToAddress = encodeAddress(data[pos : pos+int(length)])
+			pos += int(length)
+			
+		case 3: // amount (int64)
+			if wireType != 0 {
+				return value, fmt.Errorf("unexpected wire type for amount")
+			}
+			val, n := readVarint(data[pos:])
+			pos += n
+			value.Amount = int64(val)
+			
+		default:
+			switch wireType {
+			case 0:
+				_, n := readVarint(data[pos:])
+				pos += n
+			case 2:
+				length, n := readVarint(data[pos:])
+				pos += n
+				pos += int(length)
+			}
+		}
+	}
+	
+	return value, nil
+}
+
+// readVarint reads a varint from the byte slice and returns the value and bytes consumed
+func readVarint(data []byte) (uint64, int) {
+	var result uint64
+	var shift uint
+	for i, b := range data {
+		result |= uint64(b&0x7f) << shift
+		if b&0x80 == 0 {
+			return result, i + 1
+		}
+		shift += 7
+		if shift >= 64 {
+			return 0, i + 1
+		}
+	}
+	return result, len(data)
+}
+
+// encodeAddress converts raw address bytes to TRON base58 address
+func encodeAddress(data []byte) string {
+	// For simplicity, return hex-encoded address
+	// A full implementation would use base58check encoding
+	return hex.EncodeToString(data)
+}
+
+// contractTypeToString converts contract type enum to string
+func contractTypeToString(t int) string {
+	switch t {
+	case 1:
+		return "TransferContract"
+	case 2:
+		return "TransferAssetContract"
+	case 31:
+		return "TriggerSmartContract"
+	default:
+		return fmt.Sprintf("Unknown(%d)", t)
+	}
+}
+
+// ComputeTxHash computes the transaction hash from the proposed transaction and signatures.
+func (c *Chain) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error) {
+	// TRON transaction hash is SHA256 of the raw_data
+	hash := sha256.Sum256(proposedTx)
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// GetProtocol returns a protocol handler for the given ID.
+func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
+	if id == "trx" {
+		return NewTRX(), nil
+	}
+	return nil, fmt.Errorf("protocol %q not found on TRON", id)
+}
+
