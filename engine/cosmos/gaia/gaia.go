@@ -25,7 +25,6 @@ func NewGaia() *Gaia {
 				"atom": cosmos.MessageTypeSend,
 				"send": cosmos.MessageTypeSend,
 			},
-			SupportsMsgDeposit: false,
 		}),
 	}
 }

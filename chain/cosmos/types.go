@@ -12,7 +12,8 @@ import (
 type MessageType int
 
 const (
-	MessageTypeSend MessageType = iota
+	MessageTypeUnknown MessageType = iota - 1
+	MessageTypeSend
 	MessageTypeDeposit
 )
 
@@ -53,7 +54,7 @@ func (r *MessageTypeRegistry) GetMessageType(typeUrl string) (MessageType, error
 	if mt, exists := r.typeUrls[typeUrl]; exists {
 		return mt, nil
 	}
-	return MessageType(0), fmt.Errorf("unsupported TypeUrl: %s", typeUrl)
+	return MessageTypeUnknown, fmt.Errorf("unsupported TypeUrl: %s", typeUrl)
 }
 
 // GetSupportedTypeUrls returns all supported TypeUrls
@@ -118,7 +119,7 @@ func (p *ParsedCosmosTransaction) GetTransaction() *tx.Tx {
 
 // GetMemo returns the transaction memo.
 func (p *ParsedCosmosTransaction) GetMemo() string {
-	if p.Tx.Body != nil {
+	if p.Tx != nil && p.Tx.Body != nil {
 		return p.Tx.Body.Memo
 	}
 	return ""

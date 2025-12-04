@@ -31,7 +31,6 @@ func NewThorchain() *Thorchain {
 				"send":           cosmos.MessageTypeSend,
 				"thorchain_swap": cosmos.MessageTypeDeposit,
 			},
-			SupportsMsgDeposit: true,
 			RegisterExtraTypes: func(ir codectypes.InterfaceRegistry) {
 				ir.RegisterImplementations((*sdk.Msg)(nil), &types.MsgDeposit{})
 			},

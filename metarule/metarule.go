@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/vultisig/recipes/metarule/internal/mayachain"
 	"github.com/vultisig/recipes/metarule/internal/thorchain"
 	"github.com/vultisig/recipes/sdk/evm"
 	"github.com/vultisig/recipes/types"
@@ -1903,19 +1904,19 @@ func (m *MetaRule) handleMaya(in *types.Rule, r *types.ResourcePath) ([]*types.R
 
 		// For Maya, we need to handle the asset differently
 		// Maya uses its own asset notation similar to THORChain
-		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		mayaAsset, err := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
 		if err != nil {
 			return nil, fmt.Errorf("failed to make asset: %w", err)
 		}
 
-		shortCode := thorchain.ShortCode(thorAsset)
+		shortCode := mayachain.ShortCode(mayaAsset)
 		var assetPattern string
 		if shortCode != "" {
 			assetPattern = fmt.Sprintf("(%s|%s)",
-				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(mayaAsset),
 				regexp.QuoteMeta(shortCode))
 		} else {
-			assetPattern = regexp.QuoteMeta(thorAsset)
+			assetPattern = regexp.QuoteMeta(mayaAsset)
 		}
 
 		// Extract from_asset value, default to CACAO if empty (native token)

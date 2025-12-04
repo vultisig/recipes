@@ -31,7 +31,6 @@ func NewMaya() *Maya {
 				"send":           cosmos.MessageTypeSend,
 				"mayachain_swap": cosmos.MessageTypeDeposit,
 			},
-			SupportsMsgDeposit: true,
 			RegisterExtraTypes: func(ir codectypes.InterfaceRegistry) {
 				ir.RegisterImplementations((*sdk.Msg)(nil), &types.MsgDeposit{})
 			},

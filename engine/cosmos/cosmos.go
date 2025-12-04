@@ -35,9 +35,6 @@ type Config struct {
 	// e.g., "atom" -> MessageTypeSend, "thorchain_swap" -> MessageTypeDeposit
 	ProtocolMessageTypes map[string]cosmos.MessageType
 
-	// SupportsMsgDeposit indicates if this chain supports MsgDeposit (e.g., for swaps)
-	SupportsMsgDeposit bool
-
 	// RegisterExtraTypes is an optional function to register additional protobuf types
 	RegisterExtraTypes func(ir codectypes.InterfaceRegistry)
 }
@@ -146,12 +143,12 @@ func (e *Engine) parseTransaction(txBytes []byte) (*tx.Tx, error) {
 // detectMessageType determines the message type based on TypeUrl.
 func (e *Engine) detectMessageType(msg *codectypes.Any) (cosmos.MessageType, error) {
 	if msg == nil {
-		return cosmos.MessageType(0), fmt.Errorf("nil message")
+		return cosmos.MessageTypeUnknown, fmt.Errorf("nil message")
 	}
 
 	messageType, err := e.config.MessageTypeRegistry.GetMessageType(msg.TypeUrl)
 	if err != nil {
-		return cosmos.MessageType(0), fmt.Errorf("failed to detect message type: %w", err)
+		return cosmos.MessageTypeUnknown, fmt.Errorf("failed to detect message type: %w", err)
 	}
 
 	return messageType, nil
