@@ -505,3 +505,317 @@ func trim0x(s string) string {
 	return s
 }
 
+// Magic bytes to identify embedded sighashes in raw transaction data
+var sigHashMagic = []byte{0x5A, 0x53, 0x48} // "ZSH"
+
+// SerializeWithSigHashes appends sighashes to raw transaction bytes.
+// Format: [tx bytes][magic 3 bytes][num_sighashes varint][sighash_1 32 bytes][sighash_2]...
+// This allows the verifier to extract sighashes for signature lookup without DB changes.
+func SerializeWithSigHashes(txBytes []byte, sigHashes [][]byte) []byte {
+	if len(sigHashes) == 0 {
+		return txBytes
+	}
+
+	var buf bytes.Buffer
+	buf.Write(txBytes)
+	buf.Write(sigHashMagic)
+	writeCompactSize(&buf, uint64(len(sigHashes)))
+	for _, sh := range sigHashes {
+		buf.Write(sh)
+	}
+	return buf.Bytes()
+}
+
+// ParseWithSigHashes extracts raw transaction bytes and sighashes from serialized data.
+// If no sighashes are embedded, returns the original bytes and nil sighashes.
+func ParseWithSigHashes(data []byte) (txBytes []byte, sigHashes [][]byte, err error) {
+	// Look for magic bytes by scanning backwards
+	// The transaction ends, then we have: [magic 3][varint][sighashes...]
+	for i := len(data) - 3; i >= 0; i-- {
+		if bytes.Equal(data[i:i+3], sigHashMagic) {
+			// Found magic bytes at position i
+			txBytes = data[:i]
+
+			// Parse sighashes from position i+3
+			r := bytes.NewReader(data[i+3:])
+			numSigHashes, err := readCompactSize(r)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to read num sighashes: %w", err)
+			}
+
+			sigHashes = make([][]byte, numSigHashes)
+			for j := uint64(0); j < numSigHashes; j++ {
+				sh := make([]byte, 32)
+				if _, err := r.Read(sh); err != nil {
+					return nil, nil, fmt.Errorf("failed to read sighash %d: %w", j, err)
+				}
+				sigHashes[j] = sh
+			}
+
+			return txBytes, sigHashes, nil
+		}
+	}
+
+	// No magic bytes found, return original data
+	return data, nil, nil
+}
+
+// readCompactSize reads a Bitcoin-style compact size from a reader.
+func readCompactSize(r *bytes.Reader) (uint64, error) {
+	b, err := r.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+
+	switch {
+	case b < 0xFD:
+		return uint64(b), nil
+	case b == 0xFD:
+		var v uint16
+		if err := binary.Read(r, binary.LittleEndian, &v); err != nil {
+			return 0, err
+		}
+		return uint64(v), nil
+	case b == 0xFE:
+		var v uint32
+		if err := binary.Read(r, binary.LittleEndian, &v); err != nil {
+			return 0, err
+		}
+		return uint64(v), nil
+	default:
+		var v uint64
+		if err := binary.Read(r, binary.LittleEndian, &v); err != nil {
+			return 0, err
+		}
+		return v, nil
+	}
+}
+
+// SignAndComputeHashFromRaw signs a transaction from raw bytes (with embedded sighashes) and computes the tx hash.
+// This is the main entry point for the verifier's tx_indexer.
+func SignAndComputeHashFromRaw(data []byte, sigs map[string]tss.KeysignResponse, pubKey []byte) (string, error) {
+	txBytes, sigHashes, err := ParseWithSigHashes(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse data: %w", err)
+	}
+
+	if len(sigHashes) == 0 {
+		return "", fmt.Errorf("no sighashes found in transaction data")
+	}
+
+	// Parse transaction to get structure (for outputs)
+	tx, err := parseZcashTxBasic(txBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse transaction: %w", err)
+	}
+
+	if len(sigHashes) != len(tx.inputs) {
+		return "", fmt.Errorf("sighash count (%d) does not match input count (%d)", len(sigHashes), len(tx.inputs))
+	}
+
+	// Build signed transaction
+	var buf bytes.Buffer
+
+	// Version (4 bytes, little-endian) - version 4 with overwintered flag
+	if err := binary.Write(&buf, binary.LittleEndian, zcashV4Version); err != nil {
+		return "", fmt.Errorf("failed to write version: %w", err)
+	}
+
+	// Version group ID (4 bytes, little-endian) - Sapling
+	if err := binary.Write(&buf, binary.LittleEndian, zcashSaplingVersionID); err != nil {
+		return "", fmt.Errorf("failed to write version group ID: %w", err)
+	}
+
+	// Inputs count
+	writeCompactSize(&buf, uint64(len(tx.inputs)))
+
+	// Inputs with signatures
+	for i, input := range tx.inputs {
+		// Previous output hash (already in correct byte order from parsing)
+		buf.Write(input.prevHash)
+
+		// Previous output index
+		if err := binary.Write(&buf, binary.LittleEndian, input.prevIndex); err != nil {
+			return "", fmt.Errorf("failed to write input index: %w", err)
+		}
+
+		// Get signature for this input
+		derivedKey := DeriveKeyFromMessage(sigHashes[i])
+		sig, exists := sigs[derivedKey]
+		if !exists {
+			return "", fmt.Errorf("missing signature for input %d (key: %s)", i, derivedKey)
+		}
+
+		// Build scriptSig
+		derSig, err := hex.DecodeString(trim0x(sig.DerSignature))
+		if err != nil {
+			return "", fmt.Errorf("failed to decode DER signature for input %d: %w", i, err)
+		}
+
+		// Append SIGHASH_ALL
+		fullSig := append(derSig, byte(txscript.SigHashAll))
+
+		// scriptSig: <sig_length> <sig> <pubkey_length> <pubkey>
+		scriptSig := make([]byte, 0, 2+len(fullSig)+len(pubKey))
+		scriptSig = append(scriptSig, byte(len(fullSig)))
+		scriptSig = append(scriptSig, fullSig...)
+		scriptSig = append(scriptSig, byte(len(pubKey)))
+		scriptSig = append(scriptSig, pubKey...)
+
+		// Script length and script
+		writeCompactSize(&buf, uint64(len(scriptSig)))
+		buf.Write(scriptSig)
+
+		// Sequence
+		if err := binary.Write(&buf, binary.LittleEndian, input.sequence); err != nil {
+			return "", fmt.Errorf("failed to write sequence: %w", err)
+		}
+	}
+
+	// Outputs count
+	writeCompactSize(&buf, uint64(len(tx.outputs)))
+
+	// Outputs
+	for i, output := range tx.outputs {
+		if err := binary.Write(&buf, binary.LittleEndian, uint64(output.value)); err != nil {
+			return "", fmt.Errorf("failed to write output value %d: %w", i, err)
+		}
+		writeCompactSize(&buf, uint64(len(output.script)))
+		buf.Write(output.script)
+	}
+
+	// Lock time
+	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
+		return "", fmt.Errorf("failed to write lock time: %w", err)
+	}
+
+	// Expiry height
+	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
+		return "", fmt.Errorf("failed to write expiry height: %w", err)
+	}
+
+	// Value balance
+	if err := binary.Write(&buf, binary.LittleEndian, int64(0)); err != nil {
+		return "", fmt.Errorf("failed to write value balance: %w", err)
+	}
+
+	// Empty shielded sections
+	buf.WriteByte(0x00) // Shielded spends count
+	buf.WriteByte(0x00) // Shielded outputs count
+	buf.WriteByte(0x00) // JoinSplits count
+
+	// Compute transaction hash (double SHA256)
+	hash := chainhash.DoubleHashH(buf.Bytes())
+	return hash.String(), nil
+}
+
+// parsedTxBasic holds basic parsed transaction data
+type parsedTxBasic struct {
+	inputs  []parsedInput
+	outputs []parsedOutput
+}
+
+type parsedInput struct {
+	prevHash  []byte // 32 bytes, as stored in tx (little-endian)
+	prevIndex uint32
+	sequence  uint32
+}
+
+type parsedOutput struct {
+	value  int64
+	script []byte
+}
+
+// parseZcashTxBasic parses a Zcash transaction to extract inputs and outputs
+func parseZcashTxBasic(data []byte) (*parsedTxBasic, error) {
+	r := bytes.NewReader(data)
+
+	// Skip version (4 bytes)
+	if _, err := r.Seek(4, 0); err != nil {
+		return nil, fmt.Errorf("failed to skip version: %w", err)
+	}
+
+	// Skip version group ID (4 bytes)
+	if _, err := r.Seek(4, 1); err != nil {
+		return nil, fmt.Errorf("failed to skip version group ID: %w", err)
+	}
+
+	// Read inputs count
+	inputCount, err := readCompactSize(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read input count: %w", err)
+	}
+
+	tx := &parsedTxBasic{
+		inputs:  make([]parsedInput, inputCount),
+		outputs: nil,
+	}
+
+	for i := uint64(0); i < inputCount; i++ {
+		// Read prev hash (32 bytes)
+		hash := make([]byte, 32)
+		if _, err := r.Read(hash); err != nil {
+			return nil, fmt.Errorf("failed to read prev hash: %w", err)
+		}
+
+		// Read prev index
+		var index uint32
+		if err := binary.Read(r, binary.LittleEndian, &index); err != nil {
+			return nil, fmt.Errorf("failed to read prev index: %w", err)
+		}
+
+		// Read and skip script
+		scriptLen, err := readCompactSize(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read script length: %w", err)
+		}
+		if _, err := r.Seek(int64(scriptLen), 1); err != nil {
+			return nil, fmt.Errorf("failed to skip script: %w", err)
+		}
+
+		// Read sequence
+		var sequence uint32
+		if err := binary.Read(r, binary.LittleEndian, &sequence); err != nil {
+			return nil, fmt.Errorf("failed to read sequence: %w", err)
+		}
+
+		tx.inputs[i] = parsedInput{
+			prevHash:  hash,
+			prevIndex: index,
+			sequence:  sequence,
+		}
+	}
+
+	// Read outputs count
+	outputCount, err := readCompactSize(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read output count: %w", err)
+	}
+
+	tx.outputs = make([]parsedOutput, outputCount)
+	for i := uint64(0); i < outputCount; i++ {
+		// Read value
+		var value int64
+		if err := binary.Read(r, binary.LittleEndian, &value); err != nil {
+			return nil, fmt.Errorf("failed to read output value: %w", err)
+		}
+
+		// Read script
+		scriptLen, err := readCompactSize(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read output script length: %w", err)
+		}
+		script := make([]byte, scriptLen)
+		if _, err := r.Read(script); err != nil {
+			return nil, fmt.Errorf("failed to read output script: %w", err)
+		}
+
+		tx.outputs[i] = parsedOutput{
+			value:  value,
+			script: script,
+		}
+	}
+
+	return tx, nil
+}
+
