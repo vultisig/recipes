@@ -579,3 +579,368 @@ func TestTrim0x(t *testing.T) {
 	}
 }
 
+func TestSerializeWithMetadata(t *testing.T) {
+	txBytes := []byte{0x04, 0x00, 0x00, 0x80, 0x85, 0x20, 0x2f, 0x89} // sample tx header
+	sigHashes := [][]byte{
+		make([]byte, 32), // sighash 1
+		make([]byte, 32), // sighash 2
+	}
+	// Fill with test values
+	for i := range sigHashes[0] {
+		sigHashes[0][i] = byte(i)
+	}
+	for i := range sigHashes[1] {
+		sigHashes[1][i] = byte(i + 32)
+	}
+
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Test serialization
+	data := SerializeWithMetadata(txBytes, sigHashes, pubKey)
+
+	// Should be larger than original
+	if len(data) <= len(txBytes) {
+		t.Errorf("Serialized data should be larger than original tx bytes")
+	}
+
+	// Expected size: txBytes + magic(3) + pubkey(33) + varint(1) + sighashes(64)
+	expectedMinSize := len(txBytes) + 3 + 33 + 1 + 64
+	if len(data) < expectedMinSize {
+		t.Errorf("Serialized data too small: got %d, expected at least %d", len(data), expectedMinSize)
+	}
+
+	t.Logf("✓ SerializeWithMetadata: %d bytes -> %d bytes", len(txBytes), len(data))
+}
+
+func TestSerializeWithMetadata_Empty(t *testing.T) {
+	txBytes := []byte{0x04, 0x00, 0x00, 0x80}
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Test with empty sigHashes - should return original
+	data := SerializeWithMetadata(txBytes, nil, pubKey)
+	if !bytes.Equal(data, txBytes) {
+		t.Error("Empty sigHashes should return original tx bytes")
+	}
+
+	data = SerializeWithMetadata(txBytes, [][]byte{}, pubKey)
+	if !bytes.Equal(data, txBytes) {
+		t.Error("Empty sigHashes slice should return original tx bytes")
+	}
+
+	// Test with invalid pubkey length - should return original
+	data = SerializeWithMetadata(txBytes, [][]byte{make([]byte, 32)}, []byte{0x01, 0x02})
+	if !bytes.Equal(data, txBytes) {
+		t.Error("Invalid pubkey length should return original tx bytes")
+	}
+}
+
+func TestParseWithMetadata(t *testing.T) {
+	originalTxBytes := []byte{0x04, 0x00, 0x00, 0x80, 0x85, 0x20, 0x2f, 0x89}
+	sigHashes := [][]byte{
+		make([]byte, 32),
+		make([]byte, 32),
+	}
+	for i := range sigHashes[0] {
+		sigHashes[0][i] = byte(i)
+	}
+	for i := range sigHashes[1] {
+		sigHashes[1][i] = byte(i + 32)
+	}
+
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Serialize and then parse
+	data := SerializeWithMetadata(originalTxBytes, sigHashes, pubKey)
+
+	parsedTxBytes, parsedPubKey, parsedSigHashes, err := ParseWithMetadata(data)
+	if err != nil {
+		t.Fatalf("ParseWithMetadata failed: %v", err)
+	}
+
+	// Verify tx bytes match
+	if !bytes.Equal(parsedTxBytes, originalTxBytes) {
+		t.Errorf("Parsed tx bytes don't match: got %x, want %x", parsedTxBytes, originalTxBytes)
+	}
+
+	// Verify pubkey matches
+	if !bytes.Equal(parsedPubKey, pubKey) {
+		t.Errorf("Parsed pubkey doesn't match: got %x, want %x", parsedPubKey, pubKey)
+	}
+
+	// Verify sighashes match
+	if len(parsedSigHashes) != len(sigHashes) {
+		t.Errorf("Parsed sighash count mismatch: got %d, want %d", len(parsedSigHashes), len(sigHashes))
+	}
+	for i := range sigHashes {
+		if !bytes.Equal(parsedSigHashes[i], sigHashes[i]) {
+			t.Errorf("Parsed sighash %d doesn't match", i)
+		}
+	}
+
+	t.Logf("✓ ParseWithMetadata: round-trip successful")
+}
+
+func TestParseWithMetadata_NoMetadata(t *testing.T) {
+	// Plain tx bytes without metadata
+	plainTxBytes := []byte{0x04, 0x00, 0x00, 0x80, 0x85, 0x20, 0x2f, 0x89}
+
+	txBytes, pubKey, sigHashes, err := ParseWithMetadata(plainTxBytes)
+	if err != nil {
+		t.Fatalf("ParseWithMetadata failed for plain tx: %v", err)
+	}
+
+	// Should return original bytes unchanged
+	if !bytes.Equal(txBytes, plainTxBytes) {
+		t.Error("Plain tx bytes should be returned unchanged")
+	}
+
+	// Pubkey and sighashes should be nil
+	if pubKey != nil {
+		t.Error("Pubkey should be nil for plain tx")
+	}
+	if sigHashes != nil {
+		t.Error("SigHashes should be nil for plain tx")
+	}
+}
+
+func TestSignAndComputeHashFromRaw(t *testing.T) {
+	sdk := &SDK{}
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Create test inputs and outputs
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    testInputValue,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  testOutputValue,
+			Script: testP2PKHScript,
+		},
+	}
+
+	// Serialize unsigned tx
+	rawBytes, err := sdk.SerializeUnsignedTx(inputs, outputs)
+	if err != nil {
+		t.Fatalf("SerializeUnsignedTx failed: %v", err)
+	}
+
+	// Calculate sig hash
+	sigHash, err := sdk.CalculateSigHash(inputs, outputs, 0)
+	if err != nil {
+		t.Fatalf("CalculateSigHash failed: %v", err)
+	}
+
+	// Serialize with metadata
+	dataWithMetadata := SerializeWithMetadata(rawBytes, [][]byte{sigHash}, pubKey)
+
+	// Create signatures map
+	derivedKey := DeriveKeyFromMessage(sigHash)
+	sigs := map[string]tss.KeysignResponse{
+		derivedKey: {
+			DerSignature: mockDerSignature,
+		},
+	}
+
+	// Sign and compute hash
+	txHash, err := SignAndComputeHashFromRaw(dataWithMetadata, sigs)
+	if err != nil {
+		t.Fatalf("SignAndComputeHashFromRaw failed: %v", err)
+	}
+
+	// Verify tx hash format (64 hex chars)
+	if len(txHash) != 64 {
+		t.Errorf("Expected tx hash length 64, got %d", len(txHash))
+	}
+
+	t.Logf("✓ SignAndComputeHashFromRaw: tx hash = %s", txHash)
+}
+
+func TestSignAndComputeHashFromRaw_NoMetadata(t *testing.T) {
+	// Test with plain tx bytes (no metadata)
+	plainTxBytes := []byte{0x04, 0x00, 0x00, 0x80}
+	sigs := map[string]tss.KeysignResponse{}
+
+	_, err := SignAndComputeHashFromRaw(plainTxBytes, sigs)
+	if err == nil {
+		t.Error("Expected error for tx without metadata")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("no sighashes found")) {
+		t.Errorf("Expected 'no sighashes found' error, got: %v", err)
+	}
+}
+
+func TestSignAndComputeHashFromRaw_MissingSignature(t *testing.T) {
+	sdk := &SDK{}
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    testInputValue,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  testOutputValue,
+			Script: testP2PKHScript,
+		},
+	}
+
+	rawBytes, _ := sdk.SerializeUnsignedTx(inputs, outputs)
+	sigHash, _ := sdk.CalculateSigHash(inputs, outputs, 0)
+	dataWithMetadata := SerializeWithMetadata(rawBytes, [][]byte{sigHash}, pubKey)
+
+	// Empty signatures map
+	sigs := map[string]tss.KeysignResponse{}
+
+	_, err := SignAndComputeHashFromRaw(dataWithMetadata, sigs)
+	if err == nil {
+		t.Error("Expected error for missing signature")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("missing signature")) {
+		t.Errorf("Expected 'missing signature' error, got: %v", err)
+	}
+}
+
+func TestSignAndComputeHashFromRaw_MultipleInputs(t *testing.T) {
+	sdk := &SDK{}
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    50000000,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+		{
+			TxHash:   testPrevTxHash,
+			Index:    1,
+			Value:    50000000,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  99990000,
+			Script: testP2PKHScript,
+		},
+	}
+
+	rawBytes, err := sdk.SerializeUnsignedTx(inputs, outputs)
+	if err != nil {
+		t.Fatalf("SerializeUnsignedTx failed: %v", err)
+	}
+
+	// Calculate sig hashes for both inputs
+	sigHashes := make([][]byte, len(inputs))
+	for i := range inputs {
+		sigHash, err := sdk.CalculateSigHash(inputs, outputs, i)
+		if err != nil {
+			t.Fatalf("CalculateSigHash failed for input %d: %v", i, err)
+		}
+		sigHashes[i] = sigHash
+	}
+
+	dataWithMetadata := SerializeWithMetadata(rawBytes, sigHashes, pubKey)
+
+	// Create signatures for both inputs
+	sigs := map[string]tss.KeysignResponse{}
+	for _, sigHash := range sigHashes {
+		derivedKey := DeriveKeyFromMessage(sigHash)
+		sigs[derivedKey] = tss.KeysignResponse{
+			DerSignature: mockDerSignature,
+		}
+	}
+
+	txHash, err := SignAndComputeHashFromRaw(dataWithMetadata, sigs)
+	if err != nil {
+		t.Fatalf("SignAndComputeHashFromRaw failed: %v", err)
+	}
+
+	if len(txHash) != 64 {
+		t.Errorf("Expected tx hash length 64, got %d", len(txHash))
+	}
+
+	t.Logf("✓ SignAndComputeHashFromRaw with multiple inputs: tx hash = %s", txHash)
+}
+
+func TestDeriveKeyFromMessage_Standalone(t *testing.T) {
+	testMessage := []byte("test message hash")
+
+	// Test standalone function
+	key1 := DeriveKeyFromMessage(testMessage)
+
+	// Test SDK method
+	sdk := &SDK{}
+	key2 := sdk.DeriveKeyFromMessage(testMessage)
+
+	// Both should produce same result
+	if key1 != key2 {
+		t.Errorf("Standalone and SDK DeriveKeyFromMessage should produce same result")
+	}
+
+	// Verify format (base64 encoded SHA256)
+	decoded, err := base64.StdEncoding.DecodeString(key1)
+	if err != nil {
+		t.Errorf("Key should be valid base64: %v", err)
+	}
+	if len(decoded) != 32 {
+		t.Errorf("Decoded key should be 32 bytes (SHA256), got %d", len(decoded))
+	}
+}
+
+func TestConsensusBranchID(t *testing.T) {
+	// Verify NU6 branch ID is exported and correct
+	expectedNU6BranchID := uint32(0xC8E71055)
+	if ConsensusBranchID != expectedNU6BranchID {
+		t.Errorf("ConsensusBranchID should be NU6 (0x%X), got 0x%X", expectedNU6BranchID, ConsensusBranchID)
+	}
+}
+
+func TestReadCompactSize(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected uint64
+		wantErr  bool
+	}{
+		{"zero", []byte{0x00}, 0, false},
+		{"small", []byte{0x64}, 100, false},
+		{"max_one_byte", []byte{0xfc}, 252, false},
+		{"two_byte", []byte{0xfd, 0xe8, 0x03}, 1000, false},
+		{"four_byte", []byte{0xfe, 0x00, 0x00, 0x01, 0x00}, 0x10000, false},
+		{"empty", []byte{}, 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bytes.NewReader(tt.data)
+			result, err := readCompactSize(r)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error, got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("readCompactSize() = %d, want %d", result, tt.expected)
+			}
+		})
+	}
+}
+
