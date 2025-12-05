@@ -505,20 +505,21 @@ func trim0x(s string) string {
 	return s
 }
 
-// Magic bytes to identify embedded sighashes in raw transaction data
+// Magic bytes to identify embedded metadata in raw transaction data
 var sigHashMagic = []byte{0x5A, 0x53, 0x48} // "ZSH"
 
-// SerializeWithSigHashes appends sighashes to raw transaction bytes.
-// Format: [tx bytes][magic 3 bytes][num_sighashes varint][sighash_1 32 bytes][sighash_2]...
-// This allows the verifier to extract sighashes for signature lookup without DB changes.
-func SerializeWithSigHashes(txBytes []byte, sigHashes [][]byte) []byte {
-	if len(sigHashes) == 0 {
+// SerializeWithMetadata appends sighashes and pubkey to raw transaction bytes.
+// Format: [tx bytes][magic 3 bytes][pubkey 33 bytes][num_sighashes varint][sighash_1 32 bytes][sighash_2]...
+// This allows the verifier to extract sighashes and pubkey for signature lookup without DB changes.
+func SerializeWithMetadata(txBytes []byte, sigHashes [][]byte, pubKey []byte) []byte {
+	if len(sigHashes) == 0 || len(pubKey) != 33 {
 		return txBytes
 	}
 
 	var buf bytes.Buffer
 	buf.Write(txBytes)
 	buf.Write(sigHashMagic)
+	buf.Write(pubKey) // 33 bytes
 	writeCompactSize(&buf, uint64(len(sigHashes)))
 	for _, sh := range sigHashes {
 		buf.Write(sh)
@@ -526,38 +527,45 @@ func SerializeWithSigHashes(txBytes []byte, sigHashes [][]byte) []byte {
 	return buf.Bytes()
 }
 
-// ParseWithSigHashes extracts raw transaction bytes and sighashes from serialized data.
-// If no sighashes are embedded, returns the original bytes and nil sighashes.
-func ParseWithSigHashes(data []byte) (txBytes []byte, sigHashes [][]byte, err error) {
+// ParseWithMetadata extracts raw transaction bytes, pubkey, and sighashes from serialized data.
+// If no metadata is embedded, returns the original bytes and nil values.
+func ParseWithMetadata(data []byte) (txBytes []byte, pubKey []byte, sigHashes [][]byte, err error) {
 	// Look for magic bytes by scanning backwards
-	// The transaction ends, then we have: [magic 3][varint][sighashes...]
+	// The transaction ends, then we have: [magic 3][pubkey 33][varint][sighashes...]
 	for i := len(data) - 3; i >= 0; i-- {
 		if bytes.Equal(data[i:i+3], sigHashMagic) {
 			// Found magic bytes at position i
 			txBytes = data[:i]
 
-			// Parse sighashes from position i+3
+			// Parse pubkey and sighashes from position i+3
 			r := bytes.NewReader(data[i+3:])
+
+			// Read pubkey (33 bytes)
+			pubKey = make([]byte, 33)
+			if _, err := r.Read(pubKey); err != nil {
+				return nil, nil, nil, fmt.Errorf("failed to read pubkey: %w", err)
+			}
+
 			numSigHashes, err := readCompactSize(r)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to read num sighashes: %w", err)
+				return nil, nil, nil, fmt.Errorf("failed to read num sighashes: %w", err)
 			}
 
 			sigHashes = make([][]byte, numSigHashes)
 			for j := uint64(0); j < numSigHashes; j++ {
 				sh := make([]byte, 32)
 				if _, err := r.Read(sh); err != nil {
-					return nil, nil, fmt.Errorf("failed to read sighash %d: %w", j, err)
+					return nil, nil, nil, fmt.Errorf("failed to read sighash %d: %w", j, err)
 				}
 				sigHashes[j] = sh
 			}
 
-			return txBytes, sigHashes, nil
+			return txBytes, pubKey, sigHashes, nil
 		}
 	}
 
 	// No magic bytes found, return original data
-	return data, nil, nil
+	return data, nil, nil, nil
 }
 
 // readCompactSize reads a Bitcoin-style compact size from a reader.
@@ -591,16 +599,21 @@ func readCompactSize(r *bytes.Reader) (uint64, error) {
 	}
 }
 
-// SignAndComputeHashFromRaw signs a transaction from raw bytes (with embedded sighashes) and computes the tx hash.
+// SignAndComputeHashFromRaw signs a transaction from raw bytes (with embedded metadata) and computes the tx hash.
 // This is the main entry point for the verifier's tx_indexer.
-func SignAndComputeHashFromRaw(data []byte, sigs map[string]tss.KeysignResponse, pubKey []byte) (string, error) {
-	txBytes, sigHashes, err := ParseWithSigHashes(data)
+// The data should be created using SerializeWithMetadata which embeds pubkey and sighashes.
+func SignAndComputeHashFromRaw(data []byte, sigs map[string]tss.KeysignResponse) (string, error) {
+	txBytes, pubKey, sigHashes, err := ParseWithMetadata(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse data: %w", err)
 	}
 
 	if len(sigHashes) == 0 {
-		return "", fmt.Errorf("no sighashes found in transaction data")
+		return "", fmt.Errorf("no sighashes found in transaction data - use SerializeWithMetadata")
+	}
+
+	if len(pubKey) != 33 {
+		return "", fmt.Errorf("invalid pubkey in transaction data")
 	}
 
 	// Parse transaction to get structure (for outputs)
