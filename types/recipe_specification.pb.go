@@ -39,7 +39,7 @@ type RecipeSchema struct {
 	// Plugin configuration
 	Configuration *structpb.Struct `protobuf:"bytes,9,opt,name=configuration,proto3" json:"configuration,omitempty"`
 	// Plugin configuration_example
-	ConfigurationExample *structpb.Struct `protobuf:"bytes,10,opt,name=configuration_example,json=configurationExample,proto3" json:"configuration_example,omitempty"`
+	ConfigurationExample []*structpb.Struct `protobuf:"bytes,10,rep,name=configuration_example,json=configurationExample,proto3" json:"configuration_example,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -123,7 +123,7 @@ func (x *RecipeSchema) GetConfiguration() *structpb.Struct {
 	return nil
 }
 
-func (x *RecipeSchema) GetConfigurationExample() *structpb.Struct {
+func (x *RecipeSchema) GetConfigurationExample() []*structpb.Struct {
 	if x != nil {
 		return x.ConfigurationExample
 	}
@@ -338,7 +338,7 @@ const file_recipe_specification_proto_rawDesc = "" +
 	"\frequirements\x18\b \x01(\v2\x19.types.PluginRequirementsR\frequirements\x12=\n" +
 	"\rconfiguration\x18\t \x01(\v2\x17.google.protobuf.StructR\rconfiguration\x12L\n" +
 	"\x15configuration_example\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructR\x14configurationExample\"\xef\x01\n" +
+	" \x03(\v2\x17.google.protobuf.StructR\x14configurationExample\"\xef\x01\n" +
 	"\x0fResourcePattern\x128\n" +
 	"\rresource_path\x18\x01 \x01(\v2\x13.types.ResourcePathR\fresourcePath\x12[\n" +
 	"\x16parameter_capabilities\x18\x02 \x03(\v2$.types.ParameterConstraintCapabilityR\x15parameterCapabilities\x12\x1a\n" +
