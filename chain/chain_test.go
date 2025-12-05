@@ -3,7 +3,7 @@ package chain
 import (
 	"testing"
 
-	"github.com/vultisig/recipes/bitcoin"
+	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 )
 
 // TestBitcoinChain tests the Bitcoin chain implementation

@@ -1,4 +1,4 @@
-package zcash
+package litecoin
 
 import (
 	"fmt"
@@ -8,46 +8,46 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// ZEC implements the Protocol interface for the Zcash protocol
-type ZEC struct{}
+// LTC implements the Protocol interface for the Litecoin protocol
+type LTC struct{}
 
-// ID returns the unique identifier for the ZEC protocol
-func (z *ZEC) ID() string {
-	return "zec"
+// ID returns the unique identifier for the LTC protocol
+func (l *LTC) ID() string {
+	return "ltc"
 }
 
-// Name returns a human-readable name for the ZEC protocol
-func (z *ZEC) Name() string {
-	return "Zcash"
+// Name returns a human-readable name for the LTC protocol
+func (l *LTC) Name() string {
+	return "Litecoin"
 }
 
 // ChainID returns the ID of the chain this protocol belongs to
-func (z *ZEC) ChainID() string {
-	return "zcash"
+func (l *LTC) ChainID() string {
+	return "litecoin"
 }
 
-// Description returns a detailed description of the ZEC protocol
-func (z *ZEC) Description() string {
-	return "The native cryptocurrency of the Zcash blockchain, used for transparent and shielded transactions."
+// Description returns a detailed description of the LTC protocol
+func (l *LTC) Description() string {
+	return "The native cryptocurrency of the Litecoin blockchain, used for transactions and value transfer."
 }
 
 // Functions returns a list of available functions for this protocol
-func (z *ZEC) Functions() []*types.Function {
+func (l *LTC) Functions() []*types.Function {
 	return []*types.Function{
 		{
 			ID:          "transfer",
-			Name:        "Transfer ZEC",
-			Description: "Transfer Zcash to another address (transparent transaction)",
+			Name:        "Transfer LTC",
+			Description: "Transfer Litecoin to another address",
 			Parameters: []*types.FunctionParam{
 				{
 					Name:        "recipient",
 					Type:        "address",
-					Description: "The Zcash transparent address of the recipient",
+					Description: "The Litecoin address of the recipient",
 				},
 				{
 					Name:        "amount",
 					Type:        "decimal",
-					Description: "The amount of Zcash to transfer (in zatoshis)",
+					Description: "The amount of Litecoin to transfer",
 				},
 			},
 		},
@@ -55,19 +55,19 @@ func (z *ZEC) Functions() []*types.Function {
 }
 
 // GetFunction retrieves a specific function by ID
-func (z *ZEC) GetFunction(id string) (*types.Function, error) {
-	for _, fn := range z.Functions() {
+func (l *LTC) GetFunction(id string) (*types.Function, error) {
+	for _, fn := range l.Functions() {
 		if fn.ID == id {
 			return fn, nil
 		}
 	}
-	return nil, fmt.Errorf("function %q not found for protocol ZEC", id)
+	return nil, fmt.Errorf("function %q not found for protocol LTC", id)
 }
 
-func (z *ZEC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
-	// Check if this is a Zcash transaction
-	if decodedTx.ChainIdentifier() != "zcash" {
-		return false, nil, fmt.Errorf("expected Zcash transaction, got %s", decodedTx.ChainIdentifier())
+func (l *LTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
+	// Check if this is a Litecoin transaction
+	if decodedTx.ChainIdentifier() != "litecoin" {
+		return false, nil, fmt.Errorf("expected Litecoin transaction, got %s", decodedTx.ChainIdentifier())
 	}
 
 	// Only support transfer function
@@ -78,12 +78,12 @@ func (z *ZEC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 	// Extract parameters from the transaction
 	params := make(map[string]interface{})
 	params["recipient"] = decodedTx.To()
-	params["amount"] = decodedTx.Value() // Amount as *big.Int in zatoshis
+	params["amount"] = decodedTx.Value() // Amount as *big.Int in litoshi
 
 	// Also store a string representation for display
 	displayParams := make(map[string]interface{})
 	displayParams["recipient"] = decodedTx.To()
-	displayParams["amount"] = decodedTx.Value().String() // Amount in zatoshis as string
+	displayParams["amount"] = decodedTx.Value().String() // Amount in litoshi as string
 
 	// Check constraints
 	for _, pc := range policyMatcher.Constraints {
@@ -148,16 +148,15 @@ func (z *ZEC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 			}
 
 		default:
-			// Skip unsupported constraint types for now
-			continue
+			return false, nil, fmt.Errorf("unsupported constraint type %v for parameter %q", constraint.GetType(), paramName)
 		}
 	}
 
 	return true, displayParams, nil
 }
 
-// NewZEC creates a new ZEC protocol instance
-func NewZEC() types.Protocol {
-	return &ZEC{}
+// NewLTC creates a new LTC protocol instance
+func NewLTC() types.Protocol {
+	return &LTC{}
 }
 

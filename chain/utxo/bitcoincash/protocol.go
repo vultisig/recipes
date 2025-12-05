@@ -1,4 +1,4 @@
-package bitcoin
+package bitcoincash
 
 import (
 	"fmt"
@@ -8,46 +8,46 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
-// BTC implements the Protocol interface for the Bitcoin protocol
-type BTC struct{}
+// BCH implements the Protocol interface for the Bitcoin Cash protocol
+type BCH struct{}
 
-// ID returns the unique identifier for the BTC protocol
-func (b *BTC) ID() string {
-	return "btc"
+// ID returns the unique identifier for the BCH protocol
+func (b *BCH) ID() string {
+	return "bch"
 }
 
-// Name returns a human-readable name for the BTC protocol
-func (b *BTC) Name() string {
-	return "Bitcoin"
+// Name returns a human-readable name for the BCH protocol
+func (b *BCH) Name() string {
+	return "Bitcoin Cash"
 }
 
 // ChainID returns the ID of the chain this protocol belongs to
-func (b *BTC) ChainID() string {
-	return "bitcoin"
+func (b *BCH) ChainID() string {
+	return "bitcoincash"
 }
 
-// Description returns a detailed description of the BTC protocol
-func (b *BTC) Description() string {
-	return "The native cryptocurrency of the Bitcoin blockchain, used for transactions and value transfer."
+// Description returns a detailed description of the BCH protocol
+func (b *BCH) Description() string {
+	return "The native cryptocurrency of the Bitcoin Cash blockchain, used for transactions and value transfer."
 }
 
 // Functions returns a list of available functions for this protocol
-func (b *BTC) Functions() []*types.Function {
+func (b *BCH) Functions() []*types.Function {
 	return []*types.Function{
 		{
 			ID:          "transfer",
-			Name:        "Transfer BTC",
-			Description: "Transfer Bitcoin to another address",
+			Name:        "Transfer BCH",
+			Description: "Transfer Bitcoin Cash to another address",
 			Parameters: []*types.FunctionParam{
 				{
 					Name:        "recipient",
 					Type:        "address",
-					Description: "The Bitcoin address of the recipient",
+					Description: "The Bitcoin Cash address of the recipient",
 				},
 				{
 					Name:        "amount",
 					Type:        "decimal",
-					Description: "The amount of Bitcoin to transfer",
+					Description: "The amount of Bitcoin Cash to transfer",
 				},
 			},
 		},
@@ -55,19 +55,19 @@ func (b *BTC) Functions() []*types.Function {
 }
 
 // GetFunction retrieves a specific function by ID
-func (b *BTC) GetFunction(id string) (*types.Function, error) {
+func (b *BCH) GetFunction(id string) (*types.Function, error) {
 	for _, fn := range b.Functions() {
 		if fn.ID == id {
 			return fn, nil
 		}
 	}
-	return nil, fmt.Errorf("function %q not found for protocol BTC", id)
+	return nil, fmt.Errorf("function %q not found for protocol BCH", id)
 }
 
-func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
-	// Check if this is a Bitcoin transaction
-	if decodedTx.ChainIdentifier() != "bitcoin" {
-		return false, nil, fmt.Errorf("expected Bitcoin transaction, got %s", decodedTx.ChainIdentifier())
+func (b *BCH) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
+	// Check if this is a Bitcoin Cash transaction
+	if decodedTx.ChainIdentifier() != "bitcoincash" {
+		return false, nil, fmt.Errorf("expected Bitcoin Cash transaction, got %s", decodedTx.ChainIdentifier())
 	}
 
 	// Only support transfer function
@@ -148,15 +148,15 @@ func (b *BTC) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatche
 			}
 
 		default:
-			// Skip unsupported constraint types for now
-			continue
+			return false, nil, fmt.Errorf("unsupported constraint type %v for parameter %q", constraint.GetType(), paramName)
 		}
 	}
 
 	return true, displayParams, nil
 }
 
-// NewBTC creates a new BTC protocol instance
-func NewBTC() types.Protocol {
-	return &BTC{}
+// NewBCH creates a new BCH protocol instance
+func NewBCH() types.Protocol {
+	return &BCH{}
 }
+

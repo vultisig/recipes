@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	reth "github.com/vultisig/recipes/ethereum"
+	reth "github.com/vultisig/recipes/chain/evm/ethereum"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"golang.org/x/sync/errgroup"
 )

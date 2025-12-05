@@ -3,15 +3,15 @@ package solana
 import (
 	"fmt"
 
-	bin "github.com/gagliardetto/binary"
-	"github.com/gagliardetto/solana-go"
+	chainsolana "github.com/vultisig/recipes/chain/solana"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
 )
 
 type Solana struct {
-	idl map[protocolID]idl
+	chain *chainsolana.Chain
+	idl   map[protocolID]idl
 }
 
 func NewSolana() (*Solana, error) {
@@ -21,7 +21,8 @@ func NewSolana() (*Solana, error) {
 	}
 
 	return &Solana{
-		idl: idls,
+		chain: chainsolana.NewChain(),
+		idl:   idls,
 	}, nil
 }
 
@@ -39,11 +40,13 @@ func (s *Solana) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return fmt.Errorf("failed to parse rule resource: %w", err)
 	}
 
-	tx, err := solana.TransactionFromDecoder(bin.NewBorshDecoder(txBytes))
+	// Use chain package to parse transaction (using bytes directly)
+	parsedTx, err := s.chain.ParseTransactionBytes(txBytes)
 	if err != nil {
 		return fmt.Errorf("failed to decode tx payload: %w", err)
 	}
 
+	tx := parsedTx.GetTransaction()
 	if len(tx.Message.Instructions) != 1 {
 		return fmt.Errorf(
 			"only single instruction transactions are allowed, got %d instructions",
