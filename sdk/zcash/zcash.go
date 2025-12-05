@@ -56,10 +56,11 @@ type UnsignedTx struct {
 	SigHashes [][]byte // Pre-computed signature hashes for each input
 }
 
-// NU5 consensus branch ID for signature hash personalization.
+// ConsensusBranchID is the NU6 consensus branch ID for signature hash personalization.
 // Although we use v4 transactions (Sapling format), we must use the
-// consensus branch ID of the current epoch (NU5/NU6) for signature hashing.
-const nu5BranchID = 0xc2d6d0b4
+// consensus branch ID of the current epoch for signature hashing.
+// NU6 activated on November 23, 2024.
+const ConsensusBranchID = 0xC8E71055
 
 // Zcash v4 transaction constants
 const (
@@ -400,6 +401,12 @@ func (sdk *SDK) ComputeTxHash(signedTx []byte) string {
 // DeriveKeyFromMessage derives a map key from a message hash using SHA256 + Base64.
 // This is used to look up signatures in the TSS response map.
 func (sdk *SDK) DeriveKeyFromMessage(messageHash []byte) string {
+	return DeriveKeyFromMessage(messageHash)
+}
+
+// DeriveKeyFromMessage derives a map key from a message hash using SHA256 + Base64.
+// This standalone function can be used without an SDK instance.
+func DeriveKeyFromMessage(messageHash []byte) string {
 	hash := sha256.Sum256(messageHash)
 	return base64.StdEncoding.EncodeToString(hash[:])
 }
@@ -409,7 +416,7 @@ func (sdk *SDK) blake2bSigHash(data []byte) ([]byte, error) {
 	// Personalization: "ZcashSigHash" (12 bytes) + branch ID (4 bytes, little-endian)
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashSigHash")
-	binary.LittleEndian.PutUint32(personalization[12:], nu5BranchID)
+	binary.LittleEndian.PutUint32(personalization[12:], ConsensusBranchID)
 
 	h, err := blake2b.New256(personalization)
 	if err != nil {
