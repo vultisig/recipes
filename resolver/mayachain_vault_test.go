@@ -272,4 +272,3 @@ func queryMayaChainAPIDirect() ([]MayaInboundAddress, error) {
 
 	return addresses, nil
 }
-

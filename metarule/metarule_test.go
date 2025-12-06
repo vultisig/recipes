@@ -2219,3 +2219,449 @@ func TestTryFormat_THORChain_UnsupportedProtocol(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported protocol id for THORChain: stake")
 }
+
+// Zcash MetaRule Tests
+const testZcashAddress = "t1KVoNNPwDQ8QwcfqEqU6k5ZKSW6q4wMJLS"
+const testZcashChangeAddress = "t1VYTNgTqmvRYZ3H8hTxRKehXnH5dswLWrE"
+
+func TestTryFormat_ZcashSend(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testZcashChangeAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testZcashAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000", // 0.01 ZEC in zatoshis
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, "zcash.zec.transfer", result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 4)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Output 0: recipient address and amount
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, testZcashAddress, paramByName["output_address_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
+	assert.Equal(t, "1000000", paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	// Output 1: change address (any value)
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
+	assert.Equal(t, testZcashChangeAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
+}
+
+func TestTryFormat_ZcashSwap(t *testing.T) {
+	const (
+		fromAddress      = testZcashChangeAddress
+		fromAmount       = "10000000" // 0.1 ZEC in zatoshis
+		toChain          = "ethereum"
+		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+		toAddress        = "0x742d35Cc6634C0532925a3b8D5c9E0B0Cf8a6b"
+		expectedResource = "zcash.zec.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "", // Empty for native ZEC
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 5)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Output 0: vault address (magic constant)
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
+
+	// Output 0: swap amount
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
+	assert.Equal(t, fromAmount, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	// Output 1: change address
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
+	assert.Equal(t, fromAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	// Output 1: change value (any)
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
+
+	// Output 2: OP_RETURN memo
+	assert.Contains(t, paramByName, "output_data_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["output_data_2"].Constraint.Type)
+	regexpValue := paramByName["output_data_2"].Constraint.GetRegexpValue()
+	assert.Equal(t, fmt.Sprintf(`^=:ETH\.USDC:%s:.*`, toAddress), regexpValue)
+}
+
+func TestTryFormat_ZcashSwap_ToNativeAsset(t *testing.T) {
+	const (
+		fromAddress      = testZcashChangeAddress
+		fromAmount       = "10000000" // 0.1 ZEC in zatoshis
+		toChain          = "bitcoin"
+		toAsset          = ""                                             // Native BTC
+		toAddress        = "bc1qw589q7vva3wxju9zxz8gt59pfz2frwsazglsj8"
+		expectedResource = "zcash.zec.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "",
+					},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: fromAmount,
+					},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toChain,
+					},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAsset,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: toAddress,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Verify memo pattern includes short code for BTC
+	assert.Contains(t, paramByName, "output_data_2")
+	regexpValue := paramByName["output_data_2"].Constraint.GetRegexpValue()
+	// Should match both BTC.BTC and b (shortcode)
+	assert.Equal(t, fmt.Sprintf(`^=:(BTC\.BTC|b):%s:.*`, regexp.QuoteMeta(toAddress)), regexpValue)
+}
+
+func TestTryFormat_ZcashSend_MissingRecipient(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: to_address")
+}
+
+func TestTryFormat_ZcashSend_MissingAmount(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testZcashAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: amount")
+}
+
+func TestTryFormat_ZcashSwap_MissingFromAsset(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testZcashChangeAddress,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to find constraint: from_asset")
+}
+
+func TestTryFormat_Zcash_UnsupportedProtocol(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "zcash.stake", // Unsupported protocol
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported protocol id for Zcash: stake")
+}
+
+func TestTryFormat_Zcash_NonMetaRule(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	// Test with a complete Zcash rule that has function ID (not a meta-rule)
+	rule := &types.Rule{
+		Resource: "zcash.zec.transfer", // Already has function ID
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "output_address_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: testZcashAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "output_value_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "1000000",
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, rule, result[0]) // Should return unchanged
+}
