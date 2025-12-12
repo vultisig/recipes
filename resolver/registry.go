@@ -20,6 +20,7 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 	registry.Register(NewTHORChainVaultResolver())
 	registry.Register(NewTHORChainRouterResolver())
 	registry.Register(NewMayaChainVaultResolver())
+	registry.Register(NewMayaChainRouterResolver())
 
 	return registry
 }

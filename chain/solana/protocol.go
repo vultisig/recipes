@@ -72,6 +72,6 @@ func (p *SOL) GetFunction(id string) (*types.Function, error) {
 // MatchFunctionCall matches a transaction against a policy function matcher.
 func (p *SOL) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
 	// Solana function matching is handled by the engine via IDL
-	return false, nil, fmt.Errorf("Solana function matching is handled by the engine")
+	return false, nil, fmt.Errorf("solana function matching is handled by the engine")
 }
 

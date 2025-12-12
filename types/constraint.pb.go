@@ -91,6 +91,7 @@ const (
 	MagicConstant_THORCHAIN_VAULT   MagicConstant = 2
 	MagicConstant_THORCHAIN_ROUTER  MagicConstant = 3
 	MagicConstant_MAYACHAIN_VAULT   MagicConstant = 4
+	MagicConstant_MAYACHAIN_ROUTER  MagicConstant = 5
 )
 
 // Enum value maps for MagicConstant.
@@ -101,6 +102,7 @@ var (
 		2: "THORCHAIN_VAULT",
 		3: "THORCHAIN_ROUTER",
 		4: "MAYACHAIN_VAULT",
+		5: "MAYACHAIN_ROUTER",
 	}
 	MagicConstant_value = map[string]int32{
 		"UNSPECIFIED":       0,
@@ -108,6 +110,7 @@ var (
 		"THORCHAIN_VAULT":   2,
 		"THORCHAIN_ROUTER":  3,
 		"MAYACHAIN_VAULT":   4,
+		"MAYACHAIN_ROUTER":  5,
 	}
 )
 
@@ -330,13 +333,14 @@ const file_constraint_proto_rawDesc = "" +
 	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\"\n" +
 	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\x04\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_ANY\x10\x05\x12\x1a\n" +
-	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*w\n" +
+	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*\x8d\x01\n" +
 	"\rMagicConstant\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11VULTISIG_TREASURY\x10\x01\x12\x13\n" +
 	"\x0fTHORCHAIN_VAULT\x10\x02\x12\x14\n" +
 	"\x10THORCHAIN_ROUTER\x10\x03\x12\x13\n" +
-	"\x0fMAYACHAIN_VAULT\x10\x04B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x0fMAYACHAIN_VAULT\x10\x04\x12\x14\n" +
+	"\x10MAYACHAIN_ROUTER\x10\x05B#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once

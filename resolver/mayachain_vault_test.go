@@ -60,11 +60,10 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 	resolver := NewMayaChainVaultResolver()
 
 	tests := []struct {
-		name       string
-		chainID    string
-		assetID    string
-		wantErr    bool
-		canBeHalted bool // chains that may be halted on MayaChain
+		name    string
+		chainID string
+		assetID string
+		wantErr bool
 	}{
 		{
 			name:    "resolve ZEC vault address",
@@ -79,11 +78,10 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "resolve ETH vault address",
-			chainID:     "ethereum",
-			assetID:     "eth",
-			wantErr:     false,
-			canBeHalted: true, // ETH is often halted on MayaChain
+			name:    "resolve ARB vault address",
+			chainID: "arbitrum",
+			assetID: "eth",
+			wantErr: false,
 		},
 		{
 			name:    "resolve DASH vault address",
@@ -96,6 +94,12 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			chainID: "radix",
 			assetID: "xrd",
 			wantErr: false,
+		},
+		{
+			name:    "ETH should use ThorChain not MayaChain",
+			chainID: "ethereum",
+			assetID: "eth",
+			wantErr: true,
 		},
 		{
 			name:    "unsupported chain should error",
@@ -121,11 +125,6 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			}
 
 			if err != nil {
-				// If chain can be halted and error indicates halted state, skip instead of fail
-				if tt.canBeHalted && strings.Contains(err.Error(), "halted") {
-					t.Skipf("Chain %s is currently halted on MayaChain (expected for backup chains): %v", tt.chainID, err)
-					return
-				}
 				t.Errorf("Unexpected error for chainID %s: %v", tt.chainID, err)
 				return
 			}
@@ -198,16 +197,15 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 	// Create our resolver
 	resolver := NewMayaChainVaultResolver()
 
-	// Test each supported chain
+	// Test each supported chain (MayaChain only supports ARB for EVM, ThorChain handles ETH/BASE/BSC)
 	supportedChains := []struct {
 		chainID       string
 		mayachainName string
-		canBeHalted   bool // chains that may be halted on MayaChain
 	}{
-		{"zcash", "ZEC", false},
-		{"bitcoin", "BTC", false},
-		{"ethereum", "ETH", true}, // ETH is often halted on MayaChain, used as backup only
-		{"dash", "DASH", false},
+		{"zcash", "ZEC"},
+		{"bitcoin", "BTC"},
+		{"arbitrum", "ARB"},
+		{"dash", "DASH"},
 	}
 
 	for _, chain := range supportedChains {
@@ -219,11 +217,6 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 				"asset", // assetID doesn't matter for vault resolution
 			)
 			if err != nil {
-				// If chain can be halted and error indicates halted state, skip instead of fail
-				if chain.canBeHalted && strings.Contains(err.Error(), "halted") {
-					t.Skipf("Chain %s is currently halted on MayaChain (expected for backup chains): %v", chain.chainID, err)
-					return
-				}
 				t.Fatalf("Resolver failed for %s: %v", chain.chainID, err)
 			}
 
@@ -231,12 +224,8 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 			var apiAddress string
 			for _, addr := range apiAddresses {
 				if strings.ToUpper(addr.Chain) == chain.mayachainName {
-					// For chains with router, expect router address, otherwise vault address
-					if addr.Router != "" {
-						apiAddress = addr.Router
-					} else {
-						apiAddress = addr.Address
-					}
+					// VAULT resolver should always return the vault address, not router
+					apiAddress = addr.Address
 					break
 				}
 			}
@@ -264,7 +253,7 @@ func queryMayaChainAPIDirect() ([]MayaInboundAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
@@ -283,4 +272,3 @@ func queryMayaChainAPIDirect() ([]MayaInboundAddress, error) {
 
 	return addresses, nil
 }
-

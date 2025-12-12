@@ -137,7 +137,7 @@ func (c *HTTPRPCClient) SubmitTransaction(ctx context.Context, txBlob string) er
 		}
 
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if readErr != nil {
 			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, readErr)

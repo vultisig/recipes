@@ -1455,7 +1455,7 @@ func TestEvaluate_1inchSwap(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%s", tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			data := routerv6_1inch.NewRouterv61inch().PackSwap(
 				tc.executor,
 				tc.desc,
