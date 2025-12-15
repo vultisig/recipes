@@ -13,13 +13,6 @@ type UTXO struct {
 	PkScript []byte // Optional: locking script (for witness detection)
 }
 
-// Output represents a transaction output to create.
-type Output struct {
-	Address string // Destination address (empty if OP_RETURN)
-	Amount  int64  // Amount in satoshis
-	Data    []byte // OP_RETURN data (if Address is empty)
-}
-
 // BuildResult contains the built transaction and metadata.
 type BuildResult struct {
 	Packet        *psbt.Packet // PSBT packet ready for signing

@@ -7,6 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // Test public key (compressed, 33 bytes)
@@ -35,11 +36,16 @@ func TestBuild_Send(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000002", Index: 1, Value: 50000, PkScript: p2wpkhScript},
 	}
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	// Create outputs: recipient + change (change with Value=0)
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6") // tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript}, // change output
 	}
 
-	result, err := builder.Build(utxos, outputs, 10, testPubKey, "")
+	result, err := builder.Build(utxos, outputs, 1, 10, testPubKey)
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -58,9 +64,9 @@ func TestBuild_Send(t *testing.T) {
 		t.Errorf("fee seems unreasonable: %d sats", result.Fee)
 	}
 
-	// Verify change exists
-	if result.ChangeIndex == -1 {
-		t.Error("expected change output")
+	// Verify change was set
+	if result.ChangeIndex != 1 {
+		t.Errorf("expected change index 1, got %d", result.ChangeIndex)
 	}
 
 	if result.ChangeAmount <= 0 {
@@ -82,11 +88,15 @@ func TestBuild_InsufficientFunds(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 1000, PkScript: p2wpkhScript},
 	}
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript},
 	}
 
-	_, err := builder.Build(utxos, outputs, 10, testPubKey, "")
+	_, err := builder.Build(utxos, outputs, 1, 10, testPubKey)
 	if err == nil {
 		t.Fatal("expected error for insufficient funds")
 	}
@@ -95,11 +105,15 @@ func TestBuild_InsufficientFunds(t *testing.T) {
 func TestBuild_NoUTXOs(t *testing.T) {
 	builder := Testnet()
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript},
 	}
 
-	_, err := builder.Build([]UTXO{}, outputs, 10, testPubKey, "")
+	_, err := builder.Build([]UTXO{}, outputs, 1, 10, testPubKey)
 	if err == nil {
 		t.Fatal("expected error for no UTXOs")
 	}
@@ -114,11 +128,15 @@ func TestBuild_InvalidPubKey(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 100000, PkScript: p2wpkhScript},
 	}
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript},
 	}
 
-	_, err := builder.Build(utxos, outputs, 10, []byte{0x01, 0x02}, "")
+	_, err := builder.Build(utxos, outputs, 1, 10, []byte{0x01, 0x02})
 	if err == nil {
 		t.Fatal("expected error for invalid pubkey")
 	}
@@ -133,13 +151,19 @@ func TestBuild_Swap(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 200000, PkScript: p2wpkhScript},
 	}
 
-	// Swap outputs: vault address + OP_RETURN memo
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 100000},
-		{Data: []byte("=:ETH.ETH:0x1234567890abcdef:0/1/0")},
+	// Swap outputs: vault address + OP_RETURN memo + change
+	vaultScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	memoData := []byte("=:ETH.ETH:0x1234567890abcdef:0/1/0")
+	opReturnOut, _ := CreateOPReturnOutput(memoData)
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 100000, PkScript: vaultScript},
+		opReturnOut,
+		{Value: 0, PkScript: changeScript}, // change output
 	}
 
-	result, err := builder.Build(utxos, outputs, 15, testPubKey, "")
+	result, err := builder.Build(utxos, outputs, 2, 15, testPubKey)
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -301,11 +325,15 @@ func TestPopulatePSBTMetadata(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 100000, PkScript: p2wpkhScript},
 	}
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript},
 	}
 
-	result, err := builder.Build(utxos, outputs, 10, testPubKey, "")
+	result, err := builder.Build(utxos, outputs, 1, 10, testPubKey)
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -339,11 +367,15 @@ func TestCreatePSBT(t *testing.T) {
 		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 100000, PkScript: p2wpkhScript},
 	}
 
-	outputs := []Output{
-		{Address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", Amount: 50000},
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+		{Value: 0, PkScript: changeScript},
 	}
 
-	result, err := builder.Build(utxos, outputs, 10, testPubKey, "")
+	result, err := builder.Build(utxos, outputs, 1, 10, testPubKey)
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -357,5 +389,27 @@ func TestCreatePSBT(t *testing.T) {
 	_, err = psbt.NewFromRawBytes(&buf, false)
 	if err != nil {
 		t.Fatalf("failed to parse serialized PSBT: %v", err)
+	}
+}
+
+func TestBuild_InvalidChangeIndex(t *testing.T) {
+	builder := Testnet()
+
+	p2wpkhScript, _ := hex.DecodeString("0014" + "89abcdefabbaabbaabbaabbaabbaabbaabbaabba")
+
+	utxos := []UTXO{
+		{TxHash: "0000000000000000000000000000000000000000000000000000000000000001", Index: 0, Value: 100000, PkScript: p2wpkhScript},
+	}
+
+	recipientScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
+
+	outputs := []*wire.TxOut{
+		{Value: 50000, PkScript: recipientScript},
+	}
+
+	// Invalid change index (out of bounds)
+	_, err := builder.Build(utxos, outputs, 5, 10, testPubKey)
+	if err == nil {
+		t.Fatal("expected error for invalid change index")
 	}
 }
