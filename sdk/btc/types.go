@@ -17,8 +17,8 @@ type BuildResult struct {
 	Packet        *psbt.Packet // PSBT packet ready for signing
 	SelectedUTXOs []UTXO       // Which UTXOs were selected
 	Fee           uint64       // Calculated fee in satoshis
-	ChangeAmount  int64        // Change output amount (0 if no change)
-	ChangeIndex   int          // Index of change output (-1 if no change)
+	ChangeAmount  int64        // Change output amount (0 if dust or no change)
+	ChangeIndex   int          // Index of designated change output; check ChangeAmount > 0 to determine if change was applied
 }
 
 // PrevTxFetcher fetches previous transactions for PSBT metadata population.
