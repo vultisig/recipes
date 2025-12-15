@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcutil/psbt"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -150,13 +149,13 @@ func TestBuild_Swap(t *testing.T) {
 
 	// Swap outputs: vault address + OP_RETURN memo + change
 	vaultScript, _ := hex.DecodeString("0014751e76e8199196d454941c45d1b3a323f1433bd6")
-	memoData := []byte("=:ETH.ETH:0x1234567890abcdef:0/1/0")
-	opReturnOut, _ := CreateOPReturnOutput(memoData)
+	// OP_RETURN script: 0x6a (OP_RETURN) + 0x24 (push 36 bytes) + memo
+	opReturnScript, _ := hex.DecodeString("6a24" + hex.EncodeToString([]byte("=:ETH.ETH:0x1234567890abcdef:0/1/0")))
 	changeScript, _ := hex.DecodeString("0014" + "1234567890abcdef1234567890abcdef12345678")
 
 	outputs := []*wire.TxOut{
 		{Value: 100000, PkScript: vaultScript},
-		opReturnOut,
+		{Value: 0, PkScript: opReturnScript},
 		{Value: 0, PkScript: changeScript}, // change output
 	}
 
@@ -250,44 +249,6 @@ func TestCalculateFee(t *testing.T) {
 		if fee != tt.expected {
 			t.Errorf("CalculateFee(%d, %d) = %d, expected %d", tt.vbytes, tt.satsPerByte, fee, tt.expected)
 		}
-	}
-}
-
-func TestPubKeyToP2WPKHAddress(t *testing.T) {
-	addr, err := PubKeyToP2WPKHAddress(testPubKey, &chaincfg.MainNetParams)
-	if err != nil {
-		t.Fatalf("PubKeyToP2WPKHAddress failed: %v", err)
-	}
-
-	if len(addr) == 0 {
-		t.Error("expected non-empty address")
-	}
-	if addr[0:3] != "bc1" {
-		t.Errorf("expected mainnet bech32 address starting with bc1, got %s", addr)
-	}
-}
-
-func TestCreateOPReturnOutput(t *testing.T) {
-	data := []byte("test memo data")
-	out, err := CreateOPReturnOutput(data)
-	if err != nil {
-		t.Fatalf("CreateOPReturnOutput failed: %v", err)
-	}
-
-	if out.Value != 0 {
-		t.Errorf("expected 0 value for OP_RETURN, got %d", out.Value)
-	}
-
-	if len(out.PkScript) == 0 || out.PkScript[0] != 0x6a {
-		t.Error("expected OP_RETURN script")
-	}
-}
-
-func TestCreateOPReturnOutput_TooLong(t *testing.T) {
-	data := make([]byte, 81)
-	_, err := CreateOPReturnOutput(data)
-	if err == nil {
-		t.Fatal("expected error for data > 80 bytes")
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -203,4 +204,11 @@ func (b *Builder) validate(utxos []UTXO, outputs []*wire.TxOut, changeOutputInde
 		return fmt.Errorf("invalid change output index: %d", changeOutputIndex)
 	}
 	return nil
+}
+
+// IsWitnessOutput returns true if the pkScript is a witness program.
+func IsWitnessOutput(pkScript []byte) bool {
+	return txscript.IsPayToWitnessPubKeyHash(pkScript) ||
+		txscript.IsPayToWitnessScriptHash(pkScript) ||
+		txscript.IsPayToTaproot(pkScript)
 }
