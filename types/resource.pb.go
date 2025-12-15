@@ -94,6 +94,70 @@ func (x *ResourcePath) GetFull() string {
 	return ""
 }
 
+// Permission represents a user-facing permission for UI display
+type Permission struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier (e.g., "transaction_signing", "fee_deduction", "balance_visibility")
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Display label (e.g., "Access to transaction signing")
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// Tooltip text (e.g., "The app can initiate transactions to swap assets in your Vault")
+	Description   string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Permission) Reset() {
+	*x = Permission{}
+	mi := &file_resource_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Permission) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Permission) ProtoMessage() {}
+
+func (x *Permission) ProtoReflect() protoreflect.Message {
+	mi := &file_resource_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Permission.ProtoReflect.Descriptor instead.
+func (*Permission) Descriptor() ([]byte, []int) {
+	return file_resource_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Permission) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Permission) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Permission) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 var File_resource_proto protoreflect.FileDescriptor
 
 const file_resource_proto_rawDesc = "" +
@@ -105,7 +169,12 @@ const file_resource_proto_rawDesc = "" +
 	"protocolId\x12\x1f\n" +
 	"\vfunction_id\x18\x03 \x01(\tR\n" +
 	"functionId\x12\x12\n" +
-	"\x04full\x18\x04 \x01(\tR\x04fullB#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x04full\x18\x04 \x01(\tR\x04full\"T\n" +
+	"\n" +
+	"Permission\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescriptionB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_resource_proto_rawDescOnce sync.Once
@@ -119,9 +188,10 @@ func file_resource_proto_rawDescGZIP() []byte {
 	return file_resource_proto_rawDescData
 }
 
-var file_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_resource_proto_goTypes = []any{
 	(*ResourcePath)(nil), // 0: types.ResourcePath
+	(*Permission)(nil),   // 1: types.Permission
 }
 var file_resource_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -142,7 +212,7 @@ func file_resource_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_resource_proto_rawDesc), len(file_resource_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
