@@ -18,9 +18,6 @@ func TestNewBuilder(t *testing.T) {
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
 	}
-	if builder.Network != &chaincfg.MainNetParams {
-		t.Error("expected mainnet params")
-	}
 	if builder.DustLimit != 546 {
 		t.Errorf("expected dust limit 546, got %d", builder.DustLimit)
 	}

@@ -2,7 +2,6 @@ package btc
 
 import (
 	"github.com/btcsuite/btcd/btcutil/psbt"
-	"github.com/btcsuite/btcd/chaincfg"
 )
 
 // UTXO represents an unspent transaction output.
@@ -30,24 +29,22 @@ type PrevTxFetcher interface {
 
 // Builder creates unsigned Bitcoin transactions.
 type Builder struct {
-	Network   *chaincfg.Params
 	DustLimit int64
 }
 
-// NewBuilder creates a new Builder with the given network and dust limit.
-func NewBuilder(network *chaincfg.Params, dustLimit int64) *Builder {
+// NewBuilder creates a new Builder with the given dust limit.
+func NewBuilder(dustLimit int64) *Builder {
 	return &Builder{
-		Network:   network,
 		DustLimit: dustLimit,
 	}
 }
 
 // Mainnet returns a Builder configured for Bitcoin mainnet.
 func Mainnet() *Builder {
-	return NewBuilder(&chaincfg.MainNetParams, 546)
+	return NewBuilder(546)
 }
 
 // Testnet returns a Builder configured for Bitcoin testnet.
 func Testnet() *Builder {
-	return NewBuilder(&chaincfg.TestNet3Params, 546)
+	return NewBuilder(546)
 }

@@ -116,24 +116,19 @@ func PopulatePSBTMetadata(result *BuildResult, fetcher PrevTxFetcher) error {
 		txHash := prevOutPoint.Hash.String()
 
 		// Check if we have PkScript from UTXO
-		var pkScript []byte
-		for _, utxo := range result.SelectedUTXOs {
-			if utxo.TxHash == txHash && utxo.Index == prevOutPoint.Index {
-				pkScript = utxo.PkScript
+		var matchedUTXO *UTXO
+		for j := range result.SelectedUTXOs {
+			if result.SelectedUTXOs[j].TxHash == txHash && result.SelectedUTXOs[j].Index == prevOutPoint.Index {
+				matchedUTXO = &result.SelectedUTXOs[j]
 				break
 			}
 		}
 
 		// If we have PkScript and it's witness, we can populate directly
-		if len(pkScript) > 0 && IsWitnessOutput(pkScript) {
-			for _, utxo := range result.SelectedUTXOs {
-				if utxo.TxHash == txHash && utxo.Index == prevOutPoint.Index {
-					pkt.Inputs[i].WitnessUtxo = &wire.TxOut{
-						Value:    int64(utxo.Value),
-						PkScript: pkScript,
-					}
-					break
-				}
+		if matchedUTXO != nil && len(matchedUTXO.PkScript) > 0 && IsWitnessOutput(matchedUTXO.PkScript) {
+			pkt.Inputs[i].WitnessUtxo = &wire.TxOut{
+				Value:    int64(matchedUTXO.Value),
+				PkScript: matchedUTXO.PkScript,
 			}
 			continue
 		}
@@ -166,10 +161,6 @@ func PopulatePSBTMetadata(result *BuildResult, fetcher PrevTxFetcher) error {
 
 // selectUTXOs selects UTXOs using largest-first strategy.
 func (b *Builder) selectUTXOs(utxos []UTXO, targetAmount uint64, feeRate uint64, numOutputs int, opReturnDataLen int) ([]UTXO, uint64, error) {
-	if len(utxos) == 0 {
-		return nil, 0, errors.New("no UTXOs provided")
-	}
-
 	// Sort by value descending
 	sorted := make([]UTXO, len(utxos))
 	copy(sorted, utxos)
