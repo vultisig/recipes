@@ -1068,6 +1068,271 @@ func TestTryFormat_BitcoinSend(t *testing.T) {
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
 }
 
+func TestTryFormat_BitcoinBatchSend(t *testing.T) {
+	const (
+		changeAddress     = "bc1qchange123456789abcdef1234567890abcdef12"
+		recipient1Address = "bc1qrecipient1_123456789abcdef1234567890ab"
+		recipient2Address = "bc1qrecipient2_123456789abcdef1234567890ab"
+		amount1           = "100000"
+		amount2           = "200000"
+		expectedResource  = "bitcoin.btc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.batch_send",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipient1Address,
+					},
+				},
+			},
+			{
+				ParameterName: "amount_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount1,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address_1",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipient2Address,
+					},
+				},
+			},
+			{
+				ParameterName: "amount_1",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount2,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
+	require.Len(t, result[0].ParameterConstraints, 6) // 2 recipients * 2 + change address + change value
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range result[0].ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// Recipient 1
+	assert.Contains(t, paramByName, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_0"].Constraint.Type)
+	assert.Equal(t, recipient1Address, paramByName["output_address_0"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
+	assert.Equal(t, amount1, paramByName["output_value_0"].Constraint.GetFixedValue())
+
+	// Recipient 2
+	assert.Contains(t, paramByName, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
+	assert.Equal(t, recipient2Address, paramByName["output_address_1"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_1"].Constraint.Type)
+	assert.Equal(t, amount2, paramByName["output_value_1"].Constraint.GetFixedValue())
+
+	// Change output (last)
+	assert.Contains(t, paramByName, "output_address_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_2"].Constraint.Type)
+	assert.Equal(t, changeAddress, paramByName["output_address_2"].Constraint.GetFixedValue())
+
+	assert.Contains(t, paramByName, "output_value_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_2"].Constraint.Type)
+}
+
+func TestTryFormat_BitcoinBatchSend_SingleRecipient(t *testing.T) {
+	const (
+		changeAddress    = "bc1qchange123456789abcdef1234567890abcdef12"
+		recipientAddress = "bc1qrecipient123456789abcdef1234567890abcd"
+		amount           = "500000"
+		expectedResource = "bitcoin.btc.transfer"
+	)
+
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.batch_send",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: changeAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "to_address_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: recipientAddress,
+					},
+				},
+			},
+			{
+				ParameterName: "amount_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: amount,
+					},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+
+	assert.Equal(t, expectedResource, result[0].Resource)
+	require.Len(t, result[0].ParameterConstraints, 4) // 1 recipient * 2 + change address + change value
+}
+
+func TestTryFormat_BitcoinBatchSend_MissingFromAddress(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.batch_send",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "to_address_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "bc1qrecipient",
+					},
+				},
+			},
+			{
+				ParameterName: "amount_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "100000",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "from_address")
+}
+
+func TestTryFormat_BitcoinBatchSend_NoRecipients(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.batch_send",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "bc1qchange",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one recipient")
+}
+
+func TestTryFormat_BitcoinBatchSend_MismatchedAmounts(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "bitcoin.batch_send",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "bc1qchange",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "bc1qrecipient1",
+					},
+				},
+			},
+			{
+				ParameterName: "to_address_1",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "bc1qrecipient2",
+					},
+				},
+			},
+			{
+				ParameterName: "amount_0",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "100000",
+					},
+				},
+			},
+			// Missing amount_1
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mismatched recipient count")
+}
+
 func TestTryFormat_SolanaSwap(t *testing.T) {
 	const (
 		fromAsset           = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC mint

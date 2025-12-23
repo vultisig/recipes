@@ -3,6 +3,7 @@ package metarule
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gagliardetto/solana-go"
@@ -23,8 +24,9 @@ func NewMetaRule() *MetaRule {
 type metaProtocol string
 
 const (
-	send metaProtocol = "send"
-	swap metaProtocol = "swap"
+	send      metaProtocol = "send"
+	swap      metaProtocol = "swap"
+	batchSend metaProtocol = "batch_send"
 )
 
 func getOneInchSpender(chain common.Chain) (string, error) {
@@ -197,6 +199,81 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	}
 	if res.toAddress == nil {
 		return res, fmt.Errorf("failed to find constraint: to_address")
+	}
+
+	return res, nil
+}
+
+// countIndexedParams counts the number of indexed parameters with a given prefix.
+// For example, countIndexedParams(constraints, "to_address_") returns the count of
+// to_address_0, to_address_1, etc. Parameters must be sequential starting from 0.
+func countIndexedParams(constraints []*types.ParameterConstraint, prefix string) int {
+	maxIdx := -1
+	for _, c := range constraints {
+		if strings.HasPrefix(c.GetParameterName(), prefix) {
+			idxStr := strings.TrimPrefix(c.GetParameterName(), prefix)
+			if idx, err := strconv.Atoi(idxStr); err == nil && idx > maxIdx {
+				maxIdx = idx
+			}
+		}
+	}
+	return maxIdx + 1
+}
+
+// getConstraintByName returns the constraint with the given parameter name, or nil if not found.
+func getConstraintByName(constraints []*types.ParameterConstraint, name string) *types.Constraint {
+	for _, c := range constraints {
+		if c.GetParameterName() == name {
+			return c.GetConstraint()
+		}
+	}
+	return nil
+}
+
+type batchSendConstraints struct {
+	fromAddress *types.Constraint
+	recipients  []recipientConstraint
+}
+
+type recipientConstraint struct {
+	toAddress *types.Constraint
+	amount    *types.Constraint
+}
+
+func getBatchSendConstraints(rule *types.Rule) (batchSendConstraints, error) {
+	res := batchSendConstraints{}
+
+	res.fromAddress = getConstraintByName(rule.GetParameterConstraints(), "from_address")
+	if res.fromAddress == nil {
+		return res, fmt.Errorf("missing required constraint: from_address")
+	}
+
+	recipientCount := countIndexedParams(rule.GetParameterConstraints(), "to_address_")
+	amountCount := countIndexedParams(rule.GetParameterConstraints(), "amount_")
+
+	if recipientCount != amountCount {
+		return res, fmt.Errorf("mismatched recipient count: %d addresses, %d amounts", recipientCount, amountCount)
+	}
+	if recipientCount == 0 {
+		return res, fmt.Errorf("batch_send requires at least one recipient")
+	}
+
+	// Build recipients list (must be sequential 0, 1, 2, ...)
+	for i := 0; i < recipientCount; i++ {
+		toAddr := getConstraintByName(rule.GetParameterConstraints(), fmt.Sprintf("to_address_%d", i))
+		amount := getConstraintByName(rule.GetParameterConstraints(), fmt.Sprintf("amount_%d", i))
+
+		if toAddr == nil {
+			return res, fmt.Errorf("missing to_address_%d", i)
+		}
+		if amount == nil {
+			return res, fmt.Errorf("missing amount_%d", i)
+		}
+
+		res.recipients = append(res.recipients, recipientConstraint{
+			toAddress: toAddr,
+			amount:    amount,
+		})
 	}
 
 	return res, nil
@@ -720,6 +797,49 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 				},
 			},
 		}}
+		return []*types.Rule{out}, nil
+	case batchSend:
+		c, err := getBatchSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse batch_send constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "bitcoin.btc.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		constraints := make([]*types.ParameterConstraint, 0, len(c.recipients)*2+2)
+
+		// Add recipient outputs
+		for i, r := range c.recipients {
+			constraints = append(constraints,
+				&types.ParameterConstraint{
+					ParameterName: fmt.Sprintf("output_address_%d", i),
+					Constraint:    r.toAddress,
+				},
+				&types.ParameterConstraint{
+					ParameterName: fmt.Sprintf("output_value_%d", i),
+					Constraint:    r.amount,
+				},
+			)
+		}
+
+		// Add change output (last)
+		changeIdx := len(c.recipients)
+		constraints = append(constraints,
+			&types.ParameterConstraint{
+				ParameterName: fmt.Sprintf("output_address_%d", changeIdx),
+				Constraint:    c.fromAddress,
+			},
+			&types.ParameterConstraint{
+				ParameterName: fmt.Sprintf("output_value_%d", changeIdx),
+				Constraint:    anyConstraint(),
+			},
+		)
+
+		out.ParameterConstraints = constraints
 		return []*types.Rule{out}, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
