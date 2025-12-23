@@ -57,16 +57,17 @@ func (sdk *SDK) MakeAnyTransfer(
 	ctx context.Context,
 	from, to, asset common.Address,
 	amount *big.Int,
+	nonceOffset uint64,
 ) (UnsignedTx, error) {
 	if asset == ZeroAddress {
-		tx, err := sdk.MakeTxTransferNative(ctx, from, to, amount)
+		tx, err := sdk.MakeTxTransferNative(ctx, from, to, amount, nonceOffset)
 		if err != nil {
 			return nil, fmt.Errorf("sdk.MakeTxTransferNative: %w", err)
 		}
 		return tx, nil
 	}
 
-	tx, err := sdk.MakeTxTransferERC20(ctx, from, to, asset, amount)
+	tx, err := sdk.MakeTxTransferERC20(ctx, from, to, asset, amount, nonceOffset)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.MakeTxTransferERC20: %w", err)
 	}
@@ -77,6 +78,7 @@ func (sdk *SDK) MakeTxTransferNative(
 	ctx context.Context,
 	from, to common.Address,
 	value *big.Int,
+	nonceOffset uint64,
 ) (UnsignedTx, error) {
 	tx, err := sdk.MakeTx(
 		ctx,
@@ -84,6 +86,7 @@ func (sdk *SDK) MakeTxTransferNative(
 		to,
 		value,
 		nil,
+		nonceOffset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.MakeTx: %w", err)
@@ -95,6 +98,7 @@ func (sdk *SDK) MakeTxTransferERC20(
 	ctx context.Context,
 	from, to, contractAddress common.Address,
 	amount *big.Int,
+	nonceOffset uint64,
 ) (UnsignedTx, error) {
 	tx, err := sdk.MakeTx(
 		ctx,
@@ -102,6 +106,7 @@ func (sdk *SDK) MakeTxTransferERC20(
 		contractAddress,
 		big.NewInt(0),
 		erc20.NewErc20().PackTransfer(to, amount),
+		nonceOffset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.MakeTx: %w", err)
@@ -114,8 +119,9 @@ func (sdk *SDK) MakeTx(
 	from, to common.Address,
 	value *big.Int,
 	data []byte,
+	nonceOffset uint64,
 ) (UnsignedTx, error) {
-	nonce, gasLimit, gasTipCap, maxFeePerGas, accessList, err := sdk.estimateTx(ctx, from, to, value, data)
+	nonce, gasLimit, gasTipCap, maxFeePerGas, accessList, err := sdk.estimateTx(ctx, from, to, value, data, nonceOffset)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.estimateTx: %w", err)
 	}
@@ -199,6 +205,7 @@ func (sdk *SDK) estimateTx(
 	from, to common.Address,
 	value *big.Int,
 	data []byte,
+	nonceOffset uint64,
 ) (uint64, uint64, *big.Int, *big.Int, types.AccessList, error) {
 	var eg errgroup.Group
 	var gasLimit uint64
@@ -293,7 +300,7 @@ func (sdk *SDK) estimateTx(
 		},
 		"latest",
 	)
-	return nonce, gasLimit, gasTipCap, maxFeePerGas, callRes.AccessList, nil
+	return nonce + nonceOffset, gasLimit, gasTipCap, maxFeePerGas, callRes.AccessList, nil
 }
 
 func (sdk *SDK) encodeDynamicFeeTx(
