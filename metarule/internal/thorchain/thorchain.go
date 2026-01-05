@@ -59,6 +59,7 @@ var pools = []metadata{
 	{asset: "THOR.RUJI"},
 	{asset: "THOR.TCY"},
 	{asset: "XRP.XRP"},
+	{asset: "TRON.TRX"},
 	{asset: "ZEC.ZEC"},
 }
 
@@ -72,6 +73,8 @@ const (
 	avax      network = "AVAX"
 	xrp       network = "XRP"
 	thorchain network = "THOR"
+	gaia      network = "GAIA"
+	tron      network = "TRON"
 	zec       network = "ZEC"
 )
 
@@ -91,6 +94,10 @@ func parseNetwork(c common.Chain) (network, error) {
 		return xrp, nil
 	case common.THORChain:
 		return thorchain, nil
+	case common.GaiaChain:
+		return gaia, nil
+	case common.Tron:
+		return tron, nil
 	case common.Zcash:
 		return zec, nil
 	default:

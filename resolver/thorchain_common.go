@@ -26,6 +26,10 @@ func getThorChainSymbol(chain common.Chain) (string, error) {
 		return "BCH", nil
 	case common.XRP:
 		return "XRP", nil
+	case common.GaiaChain:
+		return "GAIA", nil
+	case common.Tron:
+		return "TRON", nil
 	case common.Zcash:
 		return "ZEC", nil
 	default:
