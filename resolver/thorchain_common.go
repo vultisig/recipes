@@ -30,6 +30,8 @@ func getThorChainSymbol(chain common.Chain) (string, error) {
 		return "GAIA", nil
 	case common.Tron:
 		return "TRON", nil
+	case common.Zcash:
+		return "ZEC", nil
 	default:
 		return "", fmt.Errorf("chain %s not supported by ThorChain", chain.String())
 	}

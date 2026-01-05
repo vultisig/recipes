@@ -67,6 +67,18 @@ func TestTHORChainRouterResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "resolve AVAX router address",
+			chainID: "avalanche",
+			assetID: "avax",
+			wantErr: false,
+		},
+		{
+			name:    "resolve BSC router address",
+			chainID: "bsc",
+			assetID: "bnb",
+			wantErr: false,
+		},
+		{
 			name:    "resolve Base router address",
 			chainID: "base",
 			assetID: "eth",
@@ -191,6 +203,8 @@ func TestTHORChainRouterResolver_APIConsistency(t *testing.T) {
 		thorchainName string
 	}{
 		{"ethereum", "ETH"},
+		{"avalanche", "AVAX"},
+		{"bsc", "BSC"},
 		{"base", "BASE"},
 	}
 

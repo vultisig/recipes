@@ -7,7 +7,8 @@ import (
 	"github.com/vultisig/recipes/chain/cosmos/gaia"
 	"github.com/vultisig/recipes/chain/cosmos/maya"
 	"github.com/vultisig/recipes/chain/cosmos/thorchain"
-	"github.com/vultisig/recipes/chain/evm/ethereum"
+	"github.com/vultisig/recipes/chain/evm"
+	"github.com/vultisig/recipes/chain/solana"
 	"github.com/vultisig/recipes/chain/tron"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
@@ -92,8 +93,10 @@ func init() {
 	RegisterChain(litecoin.NewChain())
 	RegisterChain(zcash.NewChain())
 
-	// Register EVM chains
-	RegisterChain(ethereum.NewEthereum())
+	// Register all EVM chains using the generic implementation
+	for _, config := range evm.AllEVMChainConfigs() {
+		RegisterChain(evm.NewChainFromConfig(config))
+	}
 
 	// Register other chains
 	RegisterChain(thorchain.NewChain())
@@ -101,4 +104,5 @@ func init() {
 	RegisterChain(gaia.NewChain())
 	RegisterChain(maya.NewChain())
 	RegisterChain(tron.NewChain())
+	RegisterChain(solana.NewChain())
 }

@@ -64,7 +64,6 @@ type Ethereum struct {
 	abiRegistry     map[string]*ABI // Changed from *ABI to *types.ABI
 	tokenList       *TokenList
 	genericERC20ABI *ABI // Changed from *ABI to *types.ABI
-	chainID         *big.Int
 }
 
 // ID returns the unique identifier for the Ethereum chain

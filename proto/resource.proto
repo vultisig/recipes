@@ -18,3 +18,15 @@ message ResourcePath {
   // Full is the complete resource path
   string full = 4;
 }
+
+// Permission represents a user-facing permission for UI display
+message Permission {
+  // Unique identifier (e.g., "transaction_signing", "fee_deduction", "balance_visibility")
+  string id = 1;
+
+  // Display label (e.g., "Access to transaction signing")
+  string label = 2;
+
+  // Tooltip text (e.g., "The app can initiate transactions to swap assets in your Vault")
+  string description = 3;
+}

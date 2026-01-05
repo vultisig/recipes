@@ -24,3 +24,4 @@ type DecodedTransaction interface {
 	// GasLimit returns the maximum amount of gas the transaction is allowed to consume.
 	GasLimit() uint64
 }
+

@@ -78,8 +78,8 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "resolve ETH vault address",
-			chainID: "ethereum",
+			name:    "resolve ARB vault address",
+			chainID: "arbitrum",
 			assetID: "eth",
 			wantErr: false,
 		},
@@ -94,6 +94,12 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			chainID: "radix",
 			assetID: "xrd",
 			wantErr: false,
+		},
+		{
+			name:    "ETH should use ThorChain not MayaChain",
+			chainID: "ethereum",
+			assetID: "eth",
+			wantErr: true,
 		},
 		{
 			name:    "unsupported chain should error",
@@ -196,14 +202,14 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 	// Create our resolver
 	resolver := NewMayaChainVaultResolver()
 
-	// Test each supported chain
+	// Test each supported chain (MayaChain only supports ARB for EVM, ThorChain handles ETH/BASE/BSC)
 	supportedChains := []struct {
 		chainID       string
 		mayachainName string
 	}{
 		{"zcash", "ZEC"},
 		{"bitcoin", "BTC"},
-		{"ethereum", "ETH"},
+		{"arbitrum", "ARB"},
 		{"dash", "DASH"},
 	}
 
@@ -228,12 +234,8 @@ func TestMayaChainVaultResolver_APIConsistency(t *testing.T) {
 			var apiAddress string
 			for _, addr := range apiAddresses {
 				if strings.ToUpper(addr.Chain) == chain.mayachainName {
-					// For chains with router, expect router address, otherwise vault address
-					if addr.Router != "" {
-						apiAddress = addr.Router
-					} else {
-						apiAddress = addr.Address
-					}
+					// VAULT resolver should always return the vault address, not router
+					apiAddress = addr.Address
 					break
 				}
 			}
@@ -280,4 +282,3 @@ func queryMayaChainAPIDirect() ([]MayaInboundAddress, error) {
 
 	return addresses, nil
 }
-

@@ -46,45 +46,104 @@ go mod download
 
 ### Usage
 
-#### Adding a New Chain
+## Adding a New Chain
 
-1. Implement the `Chain` interface:
-```go
-type MyChain struct{}
+Adding a new blockchain requires implementing several layers. Each layer has a specific responsibility.
 
-func (c *MyChain) ID() string {
-    return "my-chain"
-}
+### Layer Overview
 
-func (c *MyChain) Name() string {
-    return "My Chain"
-}
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| **Chain** | `chain/` | Parse transactions, define protocols |
+| **Engine** | `engine/` | Validate transactions against policy rules |
+| **SDK** | `sdk/` | Sign and broadcast transactions (optional) |
+| **MetaRule** | `metarule/` | Transform `send`/`swap` intents into chain-specific rules |
+| **Resolver** | `resolver/` | Resolve magic constants (vault addresses, etc.) |
 
-func (c *MyChain) SupportedProtocols() []string {
-    return []string{"my-protocol"}
-}
-```
+---
 
-2. Register your chain:
-```go
-chain.RegisterChain(&MyChain{})
-```
+### 1. Chain Layer (`chain/`)
 
-#### Adding a New Protocol
+Defines how to parse and identify transactions.
 
-1. Create a protocol validator:
-```go
-type MyValidator struct{}
+- **Location**: Nest under chain family if applicable
+  - UTXO: `chain/utxo/<name>/`
+  - EVM: `chain/evm/<name>/`
+  - Standalone: `chain/<name>/`
 
-func (v *MyValidator) ValidateTransaction(tx *Transaction) error {
-    return nil
-}
-```
+- **Files needed**:
+  - `chain.go` — Implements `types.Chain` interface (ID, Name, ParseTransaction)
+  - `protocol.go` — Defines native token and supported functions
+  - `decode.go` — Transaction deserialization logic (if complex)
 
-2. Register the validator:
-```go
-validator.RegisterValidator("my-protocol", &MyValidator{})
-```
+- **Register** in `chain/registry.go`
+
+---
+
+### 2. Engine Layer (`engine/`)
+
+Validates transactions against policy rules.
+
+- **Location**: Mirror the chain layer structure (`engine/utxo/<name>/`)
+
+- **Implements**: `Supports(chain)` and `Evaluate(rule, txBytes)`
+  - UTXO chains can wrap the generic `engine/utxo.Engine`
+  - EVM chains can use the shared EVM engine
+
+- **Register** in `engine/registry.go`
+
+---
+
+### 3. SDK Layer (`sdk/`) — Optional
+
+Handles transaction signing and broadcasting. Only needed if your chain has unique signing requirements not covered by existing implementations.
+
+- **Location**: `sdk/<name>/`
+- **Provides**: `Sign()`, `Broadcast()`, `Send()` methods
+
+---
+
+### 4. MetaRule Layer (`metarule/`)
+
+Enables **Recurring Send** and **Recurring Swap** by transforming high-level intents into chain-specific rules.
+
+- **`metarule/metarule.go`** — Add a `handle<Chain>()` function for `send` and `swap` protocols
+- **`metarule/internal/thorchain/thorchain.go`** — Add ThorChain asset mapping:
+  - Network constant (e.g., `zec network = "ZEC"`)
+  - Add to `parseNetwork()` switch
+  - Add asset to pools list (e.g., `{asset: "ZEC.ZEC"}`)
+  - Add shortcode to `ShortCode()` if applicable
+
+---
+
+### 5. Resolver Layer (`resolver/`)
+
+Resolves magic constants like `THORCHAIN_VAULT` to actual addresses.
+
+- **`resolver/thorchain_common.go`** — Add chain to `getThorChainSymbol()` switch
+
+---
+
+### 6. vultisig-go Integration
+
+Ensure the chain is defined in `vultisig-go/common/chain.go`:
+- Add chain constant
+- Add to `chainToString` map
+- Implement `NativeSymbol()` for the chain
+
+---
+
+### Checklist
+
+- [ ] `chain/` — Chain implementation + register
+- [ ] `engine/` — Engine implementation + register  
+- [ ] `sdk/` — SDK if needed
+- [ ] `metarule/metarule.go` — Handler for send/swap
+- [ ] `metarule/internal/thorchain/` — ThorChain asset mapping
+- [ ] `resolver/thorchain_common.go` — Vault resolution
+- [ ] `vultisig-go/common/chain.go` — Chain definition
+- [ ] Tests for each layer
+- [ ] Run `go run cmd/generator/main.go --output RESOURCES.md`
 
 ## Development
 
