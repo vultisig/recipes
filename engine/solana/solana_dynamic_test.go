@@ -78,22 +78,23 @@ func runTestSuite(t *testing.T, engine *Solana, protocolName string, instruction
 			if arg.Type == argU64 || arg.Type == argU16 || arg.Type == argU8 {
 				var minValuePass, maxValuePass, minValueFail, maxValueFail string
 
-				if arg.Type == argU8 {
-					minValuePass = "3"  // testValue=6, so min=3 should pass
-					maxValuePass = "10" // testValue=6, so max=10 should pass
-					minValueFail = "10" // testValue=6, so min=10 should fail
-					maxValueFail = "3"  // testValue=6, so max=3 should fail
-				} else if arg.Type == argU16 {
-					minValuePass = "500"  // testValue=1000, so min=500 should pass
-					maxValuePass = "2000" // testValue=1000, so max=2000 should pass
-					minValueFail = "2000" // testValue=1000, so min=2000 should fail
-					maxValueFail = "500"  // testValue=1000, so max=500 should fail
-				} else {
-					minValuePass = "500000"  // testValue=1000000, so min=500000 should pass
-					maxValuePass = "2000000" // testValue=1000000, so max=2000000 should pass
-					minValueFail = "2000000" // testValue=1000000, so min=2000000 should fail
-					maxValueFail = "500000"  // testValue=1000000, so max=500000 should fail
-				}
+			switch arg.Type {
+			case argU8:
+				minValuePass = "3"  // testValue=6, so min=3 should pass
+				maxValuePass = "10" // testValue=6, so max=10 should pass
+				minValueFail = "10" // testValue=6, so min=10 should fail
+				maxValueFail = "3"  // testValue=6, so max=3 should fail
+			case argU16:
+				minValuePass = "500"  // testValue=1000, so min=500 should pass
+				maxValuePass = "2000" // testValue=1000, so max=2000 should pass
+				minValueFail = "2000" // testValue=1000, so min=2000 should fail
+				maxValueFail = "500"  // testValue=1000, so max=500 should fail
+			default:
+				minValuePass = "500000"  // testValue=1000000, so min=500000 should pass
+				maxValuePass = "2000000" // testValue=1000000, so max=2000000 should pass
+				minValueFail = "2000000" // testValue=1000000, so min=2000000 should fail
+				maxValueFail = "500000"  // testValue=1000000, so max=500000 should fail
+			}
 
 				t.Run(fmt.Sprintf("Min_%s", arg.Name), func(t *testing.T) {
 					rule := buildMinRule(protocolName, instruction, accs, args, programID, arg.Name, minValuePass)
@@ -418,14 +419,6 @@ func genTx(
 	return data, nil
 }
 
-func getArgType(args []idlArgument, argName string) argType {
-	for _, arg := range args {
-		if arg.Name == argName {
-			return arg.Type
-		}
-	}
-	return ""
-}
 
 func buildInstructionData(
 	instruction idlInstruction,

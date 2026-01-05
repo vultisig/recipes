@@ -3,6 +3,7 @@ package solana
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	bin "github.com/gagliardetto/binary"
@@ -39,7 +40,7 @@ func (c *Chain) SupportedProtocols() []string {
 	return []string{"sol"}
 }
 
-// ParsedSolanaTransaction wraps a decoded Solana transaction.
+// ParsedSolanaTransaction wraps a decoded Solana transaction and implements types.DecodedTransaction.
 type ParsedSolanaTransaction struct {
 	tx *solana.Transaction
 }
@@ -59,8 +60,45 @@ func (p *ParsedSolanaTransaction) GetAccountKeys() []solana.PublicKey {
 	return p.tx.Message.AccountKeys
 }
 
+// ChainIdentifier returns "solana".
+func (p *ParsedSolanaTransaction) ChainIdentifier() string { return "solana" }
+
+// Hash returns the transaction hash (first signature if present).
+func (p *ParsedSolanaTransaction) Hash() string {
+	if len(p.tx.Signatures) > 0 {
+		return p.tx.Signatures[0].String()
+	}
+	return ""
+}
+
+// From returns the fee payer address.
+func (p *ParsedSolanaTransaction) From() string {
+	if len(p.tx.Message.AccountKeys) > 0 {
+		return p.tx.Message.AccountKeys[0].String()
+	}
+	return ""
+}
+
+// To returns the recipient address (empty for Solana as transactions can have multiple recipients).
+func (p *ParsedSolanaTransaction) To() string { return "" }
+
+// Value returns zero (Solana uses lamports in instructions, not a single value field).
+func (p *ParsedSolanaTransaction) Value() *big.Int { return big.NewInt(0) }
+
+// Data returns empty bytes (Solana data is in instructions, not a single data field).
+func (p *ParsedSolanaTransaction) Data() []byte { return nil }
+
+// Nonce returns zero (Solana uses recent blockhash instead of nonces).
+func (p *ParsedSolanaTransaction) Nonce() uint64 { return 0 }
+
+// GasPrice returns zero (Solana uses compute units, not gas price).
+func (p *ParsedSolanaTransaction) GasPrice() *big.Int { return big.NewInt(0) }
+
+// GasLimit returns zero (Solana uses compute unit limits, not gas limit).
+func (p *ParsedSolanaTransaction) GasLimit() uint64 { return 0 }
+
 // ParseTransaction decodes a raw Solana transaction from hex string.
-func (c *Chain) ParseTransaction(txHex string) (*ParsedSolanaTransaction, error) {
+func (c *Chain) ParseTransaction(txHex string) (types.DecodedTransaction, error) {
 	txBytes, err := hex.DecodeString(strings.TrimPrefix(txHex, "0x"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex: %w", err)
