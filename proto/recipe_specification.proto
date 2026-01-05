@@ -31,6 +31,9 @@ message RecipeSchema {
 
   // Plugin configuration_example
   repeated google.protobuf.Struct configuration_example = 10;
+
+  // App-level permissions for UI display (labels and tooltips)
+  repeated Permission permissions = 11;
 }
 
 // ResourcePattern defines a specific resource and what constraints its parameters support
