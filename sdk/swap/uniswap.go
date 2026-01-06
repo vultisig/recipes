@@ -2,32 +2,59 @@ package swap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
-// Uniswap supported chains
+const (
+	uniswapDefaultBaseURL = "https://api.uniswap.org/v2"
+	uniswapNativeAddress  = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+)
+
+// Uniswap chain IDs
+var uniswapChainIDs = map[string]int{
+	"Ethereum": 1,
+	"Polygon":  137,
+	"Arbitrum": 42161,
+	"Optimism": 10,
+	"Base":     8453,
+}
+
+// Uniswap supported EVM chains
 var uniswapSupportedChains = []string{
 	"Ethereum",
+	"Polygon",
 	"Arbitrum",
 	"Optimism",
-	"Polygon",
 	"Base",
 }
 
 // UniswapProvider implements SwapProvider for Uniswap
 type UniswapProvider struct {
 	BaseProvider
+	client  *http.Client
+	baseURL string
 }
 
 // NewUniswapProvider creates a new Uniswap provider
 func NewUniswapProvider() *UniswapProvider {
 	return &UniswapProvider{
 		BaseProvider: NewBaseProvider("Uniswap", PriorityUniswap, uniswapSupportedChains),
+		client: &http.Client{
+			Timeout: 15 * time.Second,
+		},
+		baseURL: uniswapDefaultBaseURL,
 	}
 }
 
 // SupportsRoute checks if Uniswap can handle a swap between two assets
-// Uniswap only supports same-chain swaps on supported chains
+// Uniswap only supports same-chain swaps
 func (p *UniswapProvider) SupportsRoute(from, to Asset) bool {
 	return from.Chain == to.Chain && p.SupportsChain(from.Chain)
 }
@@ -47,13 +74,160 @@ func (p *UniswapProvider) GetStatus(ctx context.Context, chain string) (*Provide
 
 // GetQuote gets a swap quote from Uniswap
 func (p *UniswapProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
-	// TODO: Implement Uniswap quote API
-	return nil, fmt.Errorf("Uniswap provider not yet implemented")
+	chainID, ok := uniswapChainIDs[req.From.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported chain: %s", req.From.Chain)
+	}
+
+	// Format token addresses
+	tokenIn := req.From.Address
+	if tokenIn == "" {
+		tokenIn = uniswapNativeAddress
+	}
+	tokenOut := req.To.Address
+	if tokenOut == "" {
+		tokenOut = uniswapNativeAddress
+	}
+
+	// Build quote URL
+	params := url.Values{}
+	params.Set("tokenIn", strings.ToLower(tokenIn))
+	params.Set("tokenOut", strings.ToLower(tokenOut))
+	params.Set("amount", req.Amount.String())
+	params.Set("type", "EXACT_INPUT")
+	params.Set("chainId", fmt.Sprintf("%d", chainID))
+	params.Set("recipient", req.Destination)
+	params.Set("enableUniversalRouter", "true")
+
+	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call Uniswap API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Uniswap API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var quoteResp uniswapQuoteResponse
+	if err := json.Unmarshal(body, &quoteResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	quoteAmount, ok := new(big.Int).SetString(quoteResp.Quote, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid quote amount: %s", quoteResp.Quote)
+	}
+
+	return &Quote{
+		Provider:       p.Name(),
+		FromAsset:      req.From,
+		ToAsset:        req.To,
+		FromAmount:     req.Amount,
+		ExpectedOutput: quoteAmount,
+	}, nil
 }
 
 // BuildTx builds an unsigned transaction for the swap
 func (p *UniswapProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResult, error) {
-	// TODO: Implement Uniswap transaction building
-	return nil, fmt.Errorf("Uniswap provider not yet implemented")
+	if req.Quote == nil {
+		return nil, fmt.Errorf("quote is required")
+	}
+
+	chainID, ok := uniswapChainIDs[req.Quote.FromAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported chain: %s", req.Quote.FromAsset.Chain)
+	}
+
+	tokenIn := req.Quote.FromAsset.Address
+	if tokenIn == "" {
+		tokenIn = uniswapNativeAddress
+	}
+	tokenOut := req.Quote.ToAsset.Address
+	if tokenOut == "" {
+		tokenOut = uniswapNativeAddress
+	}
+
+	// Build quote URL with swap request
+	params := url.Values{}
+	params.Set("tokenIn", strings.ToLower(tokenIn))
+	params.Set("tokenOut", strings.ToLower(tokenOut))
+	params.Set("amount", req.Quote.FromAmount.String())
+	params.Set("type", "EXACT_INPUT")
+	params.Set("chainId", fmt.Sprintf("%d", chainID))
+	params.Set("recipient", req.Destination)
+	params.Set("enableUniversalRouter", "true")
+
+	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call Uniswap API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Uniswap API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var quoteResp uniswapQuoteResponse
+	if err := json.Unmarshal(body, &quoteResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	value := big.NewInt(0)
+	if strings.EqualFold(tokenIn, uniswapNativeAddress) {
+		value = req.Quote.FromAmount
+	}
+
+	toAddress := quoteResp.MethodParameters.To
+	if toAddress == "" {
+		toAddress = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" // Universal Router
+	}
+
+	return &SwapResult{
+		Provider:    p.Name(),
+		TxData:      []byte(quoteResp.MethodParameters.Calldata),
+		Value:       value,
+		ToAddress:   toAddress,
+		ExpectedOut: req.Quote.ExpectedOutput,
+	}, nil
 }
 
+// Uniswap API types
+type uniswapQuoteResponse struct {
+	Quote            string                  `json:"quote"`
+	QuoteGasAdjusted string                  `json:"quoteGasAdjusted"`
+	GasUseEstimate   string                  `json:"gasUseEstimate"`
+	MethodParameters uniswapMethodParameters `json:"methodParameters"`
+}
+
+type uniswapMethodParameters struct {
+	Calldata string `json:"calldata"`
+	Value    string `json:"value"`
+	To       string `json:"to"`
+}

@@ -2,8 +2,33 @@ package swap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"time"
 )
+
+const (
+	oneInchAPIVersion      = "v6.0"
+	oneInchDefaultSlippage = 1
+	oneInchNativeToken     = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+	oneInchDefaultBaseURL  = "https://api.1inch.dev"
+)
+
+// 1inch chain IDs
+var oneInchChainIDs = map[string]int{
+	"Ethereum":  1,
+	"BSC":       56,
+	"Polygon":   137,
+	"Avalanche": 43114,
+	"Arbitrum":  42161,
+	"Optimism":  10,
+	"Base":      8453,
+	"Fantom":    250,
+	"Gnosis":    100,
+}
 
 // 1inch supported EVM chains (same-chain swaps only)
 var oneInchSupportedChains = []string{
@@ -21,14 +46,20 @@ var oneInchSupportedChains = []string{
 // OneInchProvider implements SwapProvider for 1inch aggregator
 type OneInchProvider struct {
 	BaseProvider
-	apiKey string
+	client  *http.Client
+	baseURL string
+	apiKey  string
 }
 
 // NewOneInchProvider creates a new 1inch provider
 func NewOneInchProvider(apiKey string) *OneInchProvider {
 	return &OneInchProvider{
 		BaseProvider: NewBaseProvider("1inch", PriorityOneInch, oneInchSupportedChains),
-		apiKey:       apiKey,
+		client: &http.Client{
+			Timeout: 15 * time.Second,
+		},
+		baseURL: oneInchDefaultBaseURL,
+		apiKey:  apiKey,
 	}
 }
 
@@ -53,13 +84,171 @@ func (p *OneInchProvider) GetStatus(ctx context.Context, chain string) (*Provide
 
 // GetQuote gets a swap quote from 1inch
 func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
-	// TODO: Implement 1inch quote API
-	return nil, fmt.Errorf("1inch provider not yet implemented")
+	chainID, ok := oneInchChainIDs[req.From.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported chain: %s", req.From.Chain)
+	}
+
+	// Format token addresses
+	srcToken := req.From.Address
+	if srcToken == "" {
+		srcToken = oneInchNativeToken
+	}
+	dstToken := req.To.Address
+	if dstToken == "" {
+		dstToken = oneInchNativeToken
+	}
+
+	// Build request URL
+	endpoint := fmt.Sprintf("%s/swap/%s/%d/swap", p.baseURL, oneInchAPIVersion, chainID)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add query parameters
+	q := httpReq.URL.Query()
+	q.Set("src", srcToken)
+	q.Set("dst", dstToken)
+	q.Set("amount", req.Amount.String())
+	q.Set("from", req.Sender)
+	q.Set("slippage", fmt.Sprintf("%d", oneInchDefaultSlippage))
+	q.Set("disableEstimate", "true")
+	q.Set("allowPartialFill", "false")
+	q.Set("compatibility", "true")
+	httpReq.URL.RawQuery = q.Encode()
+
+	// Add API key header if provided
+	if p.apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	}
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call 1inch API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("1inch API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var swapResp oneInchSwapResponse
+	if err := json.Unmarshal(body, &swapResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	dstAmount, ok := new(big.Int).SetString(swapResp.DstAmount, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid dstAmount: %s", swapResp.DstAmount)
+	}
+
+	return &Quote{
+		Provider:       p.Name(),
+		FromAsset:      req.From,
+		ToAsset:        req.To,
+		FromAmount:     req.Amount,
+		ExpectedOutput: dstAmount,
+		Router:         swapResp.Tx.To,
+	}, nil
 }
 
 // BuildTx builds an unsigned transaction for the swap
 func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResult, error) {
-	// TODO: Implement 1inch transaction building
-	return nil, fmt.Errorf("1inch provider not yet implemented")
+	if req.Quote == nil {
+		return nil, fmt.Errorf("quote is required")
+	}
+
+	// For 1inch, we need to re-fetch with full tx data
+	chainID, ok := oneInchChainIDs[req.Quote.FromAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported chain: %s", req.Quote.FromAsset.Chain)
+	}
+
+	srcToken := req.Quote.FromAsset.Address
+	if srcToken == "" {
+		srcToken = oneInchNativeToken
+	}
+	dstToken := req.Quote.ToAsset.Address
+	if dstToken == "" {
+		dstToken = oneInchNativeToken
+	}
+
+	endpoint := fmt.Sprintf("%s/swap/%s/%d/swap", p.baseURL, oneInchAPIVersion, chainID)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	q := httpReq.URL.Query()
+	q.Set("src", srcToken)
+	q.Set("dst", dstToken)
+	q.Set("amount", req.Quote.FromAmount.String())
+	q.Set("from", req.Sender)
+	q.Set("receiver", req.Destination)
+	q.Set("slippage", fmt.Sprintf("%d", oneInchDefaultSlippage))
+	q.Set("disableEstimate", "true")
+	q.Set("allowPartialFill", "false")
+	q.Set("compatibility", "true")
+	httpReq.URL.RawQuery = q.Encode()
+
+	if p.apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	}
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call 1inch API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("1inch API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var swapResp oneInchSwapResponse
+	if err := json.Unmarshal(body, &swapResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	value, ok := new(big.Int).SetString(swapResp.Tx.Value, 10)
+	if !ok {
+		value = big.NewInt(0)
+	}
+
+	return &SwapResult{
+		Provider:    p.Name(),
+		TxData:      []byte(swapResp.Tx.Data),
+		Value:       value,
+		ToAddress:   swapResp.Tx.To,
+		ExpectedOut: req.Quote.ExpectedOutput,
+	}, nil
+}
+
+// 1inch API response types
+type oneInchSwapResponse struct {
+	DstAmount string         `json:"dstAmount"`
+	Tx        oneInchTxData  `json:"tx"`
+}
+
+type oneInchTxData struct {
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Data     string `json:"data"`
+	Value    string `json:"value"`
+	Gas      int64  `json:"gas"`
+	GasPrice string `json:"gasPrice"`
 }
 

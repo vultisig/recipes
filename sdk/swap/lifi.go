@@ -2,10 +2,35 @@ package swap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"net/url"
+	"time"
 )
 
-// LiFi supported EVM chains
+const (
+	lifiDefaultBaseURL   = "https://li.quest/v1"
+	lifiIntegratorName   = "vultisig"
+)
+
+// LiFi chain IDs
+var lifiChainIDs = map[string]int{
+	"Ethereum":  1,
+	"BSC":       56,
+	"Polygon":   137,
+	"Avalanche": 43114,
+	"Arbitrum":  42161,
+	"Optimism":  10,
+	"Base":      8453,
+	"Fantom":    250,
+	"Gnosis":    100,
+	"Solana":    1151111081099710, // LiFi Solana chain ID
+}
+
+// LiFi supported chains (EVM + Solana for cross-chain)
 var lifiSupportedChains = []string{
 	"Ethereum",
 	"BSC",
@@ -16,19 +41,26 @@ var lifiSupportedChains = []string{
 	"Base",
 	"Fantom",
 	"Gnosis",
+	"Solana",
 }
 
 // LiFiProvider implements SwapProvider for LiFi aggregator
 type LiFiProvider struct {
 	BaseProvider
-	apiKey string
+	client  *http.Client
+	baseURL string
+	apiKey  string
 }
 
 // NewLiFiProvider creates a new LiFi provider
 func NewLiFiProvider(apiKey string) *LiFiProvider {
 	return &LiFiProvider{
 		BaseProvider: NewBaseProvider("LiFi", PriorityLiFi, lifiSupportedChains),
-		apiKey:       apiKey,
+		client: &http.Client{
+			Timeout: 30 * time.Second, // LiFi can be slow for complex routes
+		},
+		baseURL: lifiDefaultBaseURL,
+		apiKey:  apiKey,
 	}
 }
 
@@ -53,13 +85,200 @@ func (p *LiFiProvider) GetStatus(ctx context.Context, chain string) (*ProviderSt
 
 // GetQuote gets a swap quote from LiFi
 func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
-	// TODO: Implement LiFi quote API
-	return nil, fmt.Errorf("LiFi provider not yet implemented")
+	fromChainID, ok := lifiChainIDs[req.From.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported from chain: %s", req.From.Chain)
+	}
+	toChainID, ok := lifiChainIDs[req.To.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported to chain: %s", req.To.Chain)
+	}
+
+	// Format token addresses (use ticker for native tokens)
+	fromToken := req.From.Address
+	if fromToken == "" {
+		fromToken = req.From.Symbol
+	}
+	toToken := req.To.Address
+	if toToken == "" {
+		toToken = req.To.Symbol
+	}
+
+	// Build quote URL
+	params := url.Values{}
+	params.Set("fromChain", fmt.Sprintf("%d", fromChainID))
+	params.Set("toChain", fmt.Sprintf("%d", toChainID))
+	params.Set("fromToken", fromToken)
+	params.Set("toToken", toToken)
+	params.Set("fromAmount", req.Amount.String())
+	params.Set("fromAddress", req.Sender)
+	params.Set("toAddress", req.Destination)
+	params.Set("integrator", lifiIntegratorName)
+
+	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	if p.apiKey != "" {
+		httpReq.Header.Set("x-lifi-api-key", p.apiKey)
+	}
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call LiFi API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp lifiErrorResponse
+		if json.Unmarshal(body, &errResp) == nil && errResp.Message != "" {
+			return nil, fmt.Errorf("LiFi error: %s", errResp.Message)
+		}
+		return nil, fmt.Errorf("LiFi API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var quoteResp lifiQuoteResponse
+	if err := json.Unmarshal(body, &quoteResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	toAmount, ok := new(big.Int).SetString(quoteResp.Estimate.ToAmount, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid toAmount: %s", quoteResp.Estimate.ToAmount)
+	}
+
+	quote := &Quote{
+		Provider:       p.Name(),
+		FromAsset:      req.From,
+		ToAsset:        req.To,
+		FromAmount:     req.Amount,
+		ExpectedOutput: toAmount,
+	}
+
+	// Store transaction request if available
+	if quoteResp.TransactionRequest != nil {
+		quote.Router = quoteResp.TransactionRequest.To
+	}
+
+	return quote, nil
 }
 
 // BuildTx builds an unsigned transaction for the swap
 func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResult, error) {
-	// TODO: Implement LiFi transaction building
-	return nil, fmt.Errorf("LiFi provider not yet implemented")
+	if req.Quote == nil {
+		return nil, fmt.Errorf("quote is required")
+	}
+
+	fromChainID, ok := lifiChainIDs[req.Quote.FromAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported from chain: %s", req.Quote.FromAsset.Chain)
+	}
+	toChainID, ok := lifiChainIDs[req.Quote.ToAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported to chain: %s", req.Quote.ToAsset.Chain)
+	}
+
+	fromToken := req.Quote.FromAsset.Address
+	if fromToken == "" {
+		fromToken = req.Quote.FromAsset.Symbol
+	}
+	toToken := req.Quote.ToAsset.Address
+	if toToken == "" {
+		toToken = req.Quote.ToAsset.Symbol
+	}
+
+	// Re-fetch quote with transaction data
+	params := url.Values{}
+	params.Set("fromChain", fmt.Sprintf("%d", fromChainID))
+	params.Set("toChain", fmt.Sprintf("%d", toChainID))
+	params.Set("fromToken", fromToken)
+	params.Set("toToken", toToken)
+	params.Set("fromAmount", req.Quote.FromAmount.String())
+	params.Set("fromAddress", req.Sender)
+	params.Set("toAddress", req.Destination)
+	params.Set("integrator", lifiIntegratorName)
+
+	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	if p.apiKey != "" {
+		httpReq.Header.Set("x-lifi-api-key", p.apiKey)
+	}
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call LiFi API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("LiFi API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var quoteResp lifiQuoteResponse
+	if err := json.Unmarshal(body, &quoteResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if quoteResp.TransactionRequest == nil {
+		return nil, fmt.Errorf("no transaction request in LiFi response")
+	}
+
+	value := big.NewInt(0)
+	if quoteResp.TransactionRequest.Value != "" {
+		value, _ = new(big.Int).SetString(quoteResp.TransactionRequest.Value, 0)
+	}
+
+	toAmount, _ := new(big.Int).SetString(quoteResp.Estimate.ToAmount, 10)
+
+	return &SwapResult{
+		Provider:    p.Name(),
+		TxData:      []byte(quoteResp.TransactionRequest.Data),
+		Value:       value,
+		ToAddress:   quoteResp.TransactionRequest.To,
+		ExpectedOut: toAmount,
+	}, nil
+}
+
+// LiFi API types
+type lifiQuoteResponse struct {
+	Estimate           lifiEstimate           `json:"estimate"`
+	TransactionRequest *lifiTransactionRequest `json:"transactionRequest,omitempty"`
+}
+
+type lifiEstimate struct {
+	FromAmount string `json:"fromAmount"`
+	ToAmount   string `json:"toAmount"`
+}
+
+type lifiTransactionRequest struct {
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Data     string `json:"data"`
+	Value    string `json:"value"`
+	GasLimit string `json:"gasLimit,omitempty"`
+	GasPrice string `json:"gasPrice,omitempty"`
+}
+
+type lifiErrorResponse struct {
+	Message string `json:"message"`
+	Code    string `json:"code"`
 }
 

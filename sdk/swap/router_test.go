@@ -41,12 +41,12 @@ func TestRouterFindRoute(t *testing.T) {
 			wantErr: false, // May succeed or fail depending on THORChain status
 		},
 		{
-			name: "Solana to Solana via Jupiter",
+			name: "Solana to Solana via LiFi",
 			from: Asset{Chain: "Solana", Symbol: "SOL"},
 			to:   Asset{Chain: "Solana", Symbol: "USDC", Address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"},
-			// Jupiter is last priority for Solana-only routes
-			wantProvider: "Jupiter",
-			wantErr: false,
+			// LiFi has higher priority (3) than Jupiter (5) and supports Solana
+			wantProvider: "LiFi",
+			wantErr:      false,
 		},
 		{
 			name:    "Unsupported chain",
@@ -237,6 +237,156 @@ func TestJupiterProviderSolanaOnly(t *testing.T) {
 				t.Errorf("SupportsRoute() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLiFiProviderCrossChain(t *testing.T) {
+	provider := NewLiFiProvider("")
+
+	tests := []struct {
+		name string
+		from Asset
+		to   Asset
+		want bool
+	}{
+		{
+			name: "Same chain EVM swap",
+			from: Asset{Chain: "Ethereum", Symbol: "ETH"},
+			to:   Asset{Chain: "Ethereum", Symbol: "USDC"},
+			want: true,
+		},
+		{
+			name: "Cross-chain EVM swap",
+			from: Asset{Chain: "Ethereum", Symbol: "ETH"},
+			to:   Asset{Chain: "BSC", Symbol: "BNB"},
+			want: true,
+		},
+		{
+			name: "Solana supported",
+			from: Asset{Chain: "Solana", Symbol: "SOL"},
+			to:   Asset{Chain: "Ethereum", Symbol: "ETH"},
+			want: true,
+		},
+		{
+			name: "Unsupported chain",
+			from: Asset{Chain: "UnsupportedChain", Symbol: "XXX"},
+			to:   Asset{Chain: "Ethereum", Symbol: "ETH"},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := provider.SupportsRoute(tt.from, tt.to)
+			if got != tt.want {
+				t.Errorf("SupportsRoute() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUniswapProviderSameChainOnly(t *testing.T) {
+	provider := NewUniswapProvider()
+
+	tests := []struct {
+		name string
+		from Asset
+		to   Asset
+		want bool
+	}{
+		{
+			name: "Same chain ETH swap",
+			from: Asset{Chain: "Ethereum", Symbol: "ETH"},
+			to:   Asset{Chain: "Ethereum", Symbol: "USDC"},
+			want: true,
+		},
+		{
+			name: "Cross-chain not supported",
+			from: Asset{Chain: "Ethereum", Symbol: "ETH"},
+			to:   Asset{Chain: "Polygon", Symbol: "MATIC"},
+			want: false,
+		},
+		{
+			name: "Same chain Arbitrum",
+			from: Asset{Chain: "Arbitrum", Symbol: "ETH"},
+			to:   Asset{Chain: "Arbitrum", Symbol: "USDC"},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := provider.SupportsRoute(tt.from, tt.to)
+			if got != tt.want {
+				t.Errorf("SupportsRoute() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test package-level API
+func TestPackageLevelFunctions(t *testing.T) {
+	providers := ListProviders()
+	if len(providers) == 0 {
+		t.Error("ListProviders() returned empty list")
+	}
+
+	chains := GetSupportedChains()
+	if len(chains) == 0 {
+		t.Error("GetSupportedChains() returned empty list")
+	}
+}
+
+func TestCanSwap(t *testing.T) {
+	ctx := context.Background()
+
+	// Solana-to-Solana should always be possible via Jupiter
+	from := Asset{Chain: "Solana", Symbol: "SOL"}
+	to := Asset{Chain: "Solana", Symbol: "USDC"}
+
+	if !CanSwap(ctx, from, to) {
+		t.Error("expected Solana-to-Solana swap to be possible")
+	}
+
+	// Unsupported chain should not be possible
+	unsupportedFrom := Asset{Chain: "UnsupportedChain", Symbol: "XXX"}
+	if CanSwap(ctx, unsupportedFrom, to) {
+		t.Error("expected unsupported chain to return false")
+	}
+}
+
+func TestAssetConstructors(t *testing.T) {
+	// Test NewAsset
+	usdc := NewAsset("Ethereum", "USDC", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", 6)
+	if usdc.Chain != "Ethereum" || usdc.Symbol != "USDC" || usdc.Decimals != 6 {
+		t.Errorf("NewAsset() = %+v, expected Ethereum USDC with 6 decimals", usdc)
+	}
+
+	// Test NativeAsset
+	eth := NativeAsset("Ethereum", "ETH", 18)
+	if eth.Chain != "Ethereum" || eth.Symbol != "ETH" || eth.Address != "" || eth.Decimals != 18 {
+		t.Errorf("NativeAsset() = %+v, expected native Ethereum ETH", eth)
+	}
+}
+
+func TestUnitConversions(t *testing.T) {
+	// Test ToBaseUnits
+	weiAmount := ToBaseUnits(1.5, 18)
+	expected := "1500000000000000000"
+	if weiAmount.String() != expected {
+		t.Errorf("ToBaseUnits(1.5, 18) = %s, want %s", weiAmount.String(), expected)
+	}
+
+	// Test FromBaseUnits
+	ethAmount := FromBaseUnits(weiAmount, 18)
+	if ethAmount != 1.5 {
+		t.Errorf("FromBaseUnits() = %f, want 1.5", ethAmount)
+	}
+
+	// Test with different decimals (USDC has 6)
+	usdcAmount := ToBaseUnits(100.0, 6)
+	if usdcAmount.String() != "100000000" {
+		t.Errorf("ToBaseUnits(100.0, 6) = %s, want 100000000", usdcAmount.String())
 	}
 }
 
