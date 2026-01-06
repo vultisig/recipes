@@ -2,12 +2,14 @@ package swap
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -17,6 +19,7 @@ const (
 )
 
 // LiFi chain IDs
+// Note: LiFi supports Fantom but we exclude it for consistency with 1inch removal
 var lifiChainIDs = map[string]int{
 	"Ethereum":  1,
 	"BSC":       56,
@@ -25,7 +28,6 @@ var lifiChainIDs = map[string]int{
 	"Arbitrum":  42161,
 	"Optimism":  10,
 	"Base":      8453,
-	"Fantom":    250,
 	"Gnosis":    100,
 	"Solana":    1151111081099710, // LiFi Solana chain ID
 }
@@ -39,7 +41,6 @@ var lifiSupportedChains = []string{
 	"Arbitrum",
 	"Optimism",
 	"Base",
-	"Fantom",
 	"Gnosis",
 	"Solana",
 }
@@ -256,10 +257,17 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 
 	value := big.NewInt(0)
 	if quoteResp.TransactionRequest.Value != "" {
-		value, _ = new(big.Int).SetString(quoteResp.TransactionRequest.Value, 0)
+		var ok bool
+		value, ok = new(big.Int).SetString(quoteResp.TransactionRequest.Value, 0)
+		if !ok {
+			return nil, fmt.Errorf("invalid transaction value: %s", quoteResp.TransactionRequest.Value)
+		}
 	}
 
-	toAmount, _ := new(big.Int).SetString(quoteResp.Estimate.ToAmount, 10)
+	toAmount, ok := new(big.Int).SetString(quoteResp.Estimate.ToAmount, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid toAmount: %s", quoteResp.Estimate.ToAmount)
+	}
 
 	// Get the approval spender address from resolver
 	approvalSpender := quoteResp.TransactionRequest.To
@@ -267,12 +275,18 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 		approvalSpender = routerInfo.Address
 	}
 
-	// Token swaps need approval (not native token)
-	needsApproval := req.Quote.FromAsset.Address != ""
+	// Check if approval is needed using consistent logic
+	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
+
+	// Decode hex-encoded transaction data
+	txData, err := decodeLiFiHexData(quoteResp.TransactionRequest.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode tx data: %w", err)
+	}
 
 	return &SwapResult{
 		Provider:        p.Name(),
-		TxData:          []byte(quoteResp.TransactionRequest.Data),
+		TxData:          txData,
 		Value:           value,
 		ToAddress:       quoteResp.TransactionRequest.To,
 		ExpectedOut:     toAmount,
@@ -280,6 +294,15 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 		ApprovalAddress: approvalSpender,
 		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
+}
+
+// decodeLiFiHexData decodes a hex-encoded string (with optional 0x prefix) to bytes
+func decodeLiFiHexData(hexStr string) ([]byte, error) {
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+	if hexStr == "" {
+		return nil, nil
+	}
+	return hex.DecodeString(hexStr)
 }
 
 // LiFi API types

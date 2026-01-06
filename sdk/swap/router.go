@@ -261,13 +261,14 @@ func (r *Router) BuildSwapBundle(ctx context.Context, req SwapBundleRequest) (*S
 	// Get chain ID for EVM chains
 	chainID, err := GetEVMChainID(req.Quote.FromAsset.Chain)
 	if err != nil {
-		// Non-EVM chain - return just the swap tx without approval
+		// Non-EVM chain - return just the swap tx without approval, include memo
 		return &SwapBundle{
 			ApprovalTx: nil,
 			SwapTx: &TxData{
 				To:    swapResult.ToAddress,
 				Value: swapResult.Value,
 				Data:  swapResult.TxData,
+				Memo:  swapResult.Memo,
 			},
 			Provider:       req.Quote.Provider,
 			ExpectedOutput: req.Quote.ExpectedOutput,

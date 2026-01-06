@@ -120,12 +120,19 @@ func (p *JupiterProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		return nil, fmt.Errorf("invalid outAmount: %s", quoteResp.OutAmount)
 	}
 
+	// Parse minimum output (otherAmountThreshold) for slippage protection
+	var minOutput *big.Int
+	if quoteResp.OtherAmountThreshold != "" {
+		minOutput, _ = new(big.Int).SetString(quoteResp.OtherAmountThreshold, 10)
+	}
+
 	return &Quote{
 		Provider:       p.Name(),
 		FromAsset:      req.From,
 		ToAsset:        req.To,
 		FromAmount:     req.Amount,
 		ExpectedOutput: outAmount,
+		MinimumOutput:  minOutput,
 	}, nil
 }
 

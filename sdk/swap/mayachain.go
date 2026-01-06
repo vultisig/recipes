@@ -141,7 +141,22 @@ func (p *MayachainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
 
-	quoteURL := fmt.Sprintf("%s/mayachain/quote/swap?%s", p.endpoints[0], params.Encode())
+	// Try all endpoints with fallback
+	var lastErr error
+	for _, endpoint := range p.endpoints {
+		quote, err := p.fetchQuote(ctx, endpoint, params, req)
+		if err == nil {
+			return quote, nil
+		}
+		lastErr = err
+	}
+
+	return nil, fmt.Errorf("all Mayachain endpoints failed: %w", lastErr)
+}
+
+// fetchQuote fetches a quote from a specific Mayachain endpoint
+func (p *MayachainProvider) fetchQuote(ctx context.Context, endpoint string, params url.Values, req QuoteRequest) (*Quote, error) {
+	quoteURL := fmt.Sprintf("%s/mayachain/quote/swap?%s", endpoint, params.Encode())
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
 	if err != nil {
@@ -217,14 +232,63 @@ func (p *MayachainProvider) BuildTx(ctx context.Context, req SwapRequest) (*Swap
 		ExpectedOut: req.Quote.ExpectedOutput,
 	}
 
-	// For EVM token swaps, set approval info using the router
-	if req.Quote.FromAsset.Address != "" && req.Quote.Router != "" {
-		result.NeedsApproval = true
-		result.ApprovalAddress = req.Quote.Router
-		result.ApprovalAmount = req.Quote.FromAmount
+	// Check if this is an EVM chain that requires router calldata
+	if IsEVMChain(req.Quote.FromAsset.Chain) && req.Quote.Router != "" {
+		// Build router calldata for EVM chains (uses same encoding as THORChain)
+		txData, value, err := p.encodeRouterDeposit(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode router deposit: %w", err)
+		}
+		result.TxData = txData
+		result.Value = value
+		result.ToAddress = req.Quote.Router
+
+		// For EVM token swaps, set approval info
+		if req.Quote.FromAsset.Address != "" {
+			result.NeedsApproval = true
+			result.ApprovalAddress = req.Quote.Router
+			result.ApprovalAmount = req.Quote.FromAmount
+		}
+	} else {
+		// For UTXO/Cosmos chains, just set the value to send
+		result.Value = req.Quote.FromAmount
 	}
 
 	return result, nil
+}
+
+// encodeRouterDeposit encodes a Mayachain router depositWithExpiry call
+// Mayachain uses the same router interface as THORChain
+func (p *MayachainProvider) encodeRouterDeposit(req SwapRequest) ([]byte, *big.Int, error) {
+	vault := req.Quote.InboundAddress
+	asset := req.Quote.FromAsset.Address
+	amount := req.Quote.FromAmount
+	memo := req.Quote.Memo
+	expiry := req.Quote.Expiry
+
+	// For native ETH, asset is the zero address
+	if asset == "" {
+		asset = "0x0000000000000000000000000000000000000000"
+	}
+
+	// Default expiry to 15 minutes from now if not set
+	if expiry == 0 {
+		expiry = time.Now().Unix() + 900
+	}
+
+	// Use shared encoding function (Mayachain uses same router interface as THORChain)
+	calldata, err := encodeDepositWithExpiry(vault, asset, amount, memo, big.NewInt(expiry))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Value is the amount for native token, 0 for ERC20
+	value := big.NewInt(0)
+	if req.Quote.FromAsset.Address == "" {
+		value = amount
+	}
+
+	return calldata, value, nil
 }
 
 // formatAsset formats an asset for Mayachain API
@@ -240,7 +304,8 @@ func (p *MayachainProvider) formatAsset(asset Asset) (string, error) {
 	}
 
 	// Token format: CHAIN.SYMBOL-ADDRESS (e.g., ETH.USDC-0x...)
-	return fmt.Sprintf("%s.%s-%s", network, asset.Symbol, strings.ToUpper(asset.Address)), nil
+	// Use address as-is to preserve EIP-55 checksums for EVM chains
+	return fmt.Sprintf("%s.%s-%s", network, asset.Symbol, asset.Address), nil
 }
 
 // getInboundAddresses fetches inbound addresses from Mayachain

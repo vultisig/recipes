@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 )
 
 // ChainAdapter provides a chain-specific interface to the canonical swap router.
@@ -169,7 +170,8 @@ func (a *ChainAdapter) GetSwap(ctx context.Context, input SwapInput) (*SwapOutpu
 func (a *ChainAdapter) IsAvailable(ctx context.Context) (bool, error) {
 	route, err := a.router.FindRoute(ctx, Asset{Chain: a.chain}, Asset{Chain: a.chain})
 	if err != nil {
-		return false, nil
+		// Propagate errors so callers can distinguish failures from unavailability
+		return false, err
 	}
 	return route.IsSupported, nil
 }
@@ -195,6 +197,7 @@ func (a *ChainAdapter) GetStatus(ctx context.Context) (*ProviderStatus, error) {
 // MultiChainAdapter provides swap functionality across multiple chains.
 type MultiChainAdapter struct {
 	router   *Router
+	mu       sync.RWMutex
 	adapters map[string]*ChainAdapter
 }
 
@@ -208,7 +211,21 @@ func NewMultiChainAdapter() *MultiChainAdapter {
 }
 
 // GetChainAdapter returns the adapter for a specific chain.
+// This method is thread-safe.
 func (m *MultiChainAdapter) GetChainAdapter(chain string) *ChainAdapter {
+	// Try read lock first
+	m.mu.RLock()
+	if adapter, ok := m.adapters[chain]; ok {
+		m.mu.RUnlock()
+		return adapter
+	}
+	m.mu.RUnlock()
+
+	// Acquire write lock and double-check
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock
 	if adapter, ok := m.adapters[chain]; ok {
 		return adapter
 	}

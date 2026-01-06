@@ -2,6 +2,7 @@ package swap
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -231,13 +232,19 @@ func (p *UniswapProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		}
 	}
 
-	// Token swaps need approval (not native token)
-	needsApproval := req.Quote.FromAsset.Address != ""
+	// Check if approval is needed using consistent logic
+	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
 	approvalSpender := toAddress
+
+	// Decode hex-encoded calldata
+	txData, err := decodeUniswapHexData(quoteResp.MethodParameters.Calldata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode calldata: %w", err)
+	}
 
 	return &SwapResult{
 		Provider:        p.Name(),
-		TxData:          []byte(quoteResp.MethodParameters.Calldata),
+		TxData:          txData,
 		Value:           value,
 		ToAddress:       toAddress,
 		ExpectedOut:     req.Quote.ExpectedOutput,
@@ -245,6 +252,15 @@ func (p *UniswapProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		ApprovalAddress: approvalSpender,
 		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
+}
+
+// decodeUniswapHexData decodes a hex-encoded string (with optional 0x prefix) to bytes
+func decodeUniswapHexData(hexStr string) ([]byte, error) {
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+	if hexStr == "" {
+		return nil, nil
+	}
+	return hex.DecodeString(hexStr)
 }
 
 // Uniswap API types

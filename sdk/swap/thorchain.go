@@ -2,6 +2,7 @@ package swap
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -150,7 +151,22 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("streaming_quantity", "0")
 	params.Set("tolerance_bps", "2500")
 
-	quoteURL := fmt.Sprintf("%s/thorchain/quote/swap?%s", p.endpoints[0], params.Encode())
+	// Try all endpoints with fallback
+	var lastErr error
+	for _, endpoint := range p.endpoints {
+		quote, err := p.fetchQuote(ctx, endpoint, params, req)
+		if err == nil {
+			return quote, nil
+		}
+		lastErr = err
+	}
+
+	return nil, fmt.Errorf("all THORChain endpoints failed: %w", lastErr)
+}
+
+// fetchQuote fetches a quote from a specific THORChain endpoint
+func (p *THORChainProvider) fetchQuote(ctx context.Context, endpoint string, params url.Values, req QuoteRequest) (*Quote, error) {
+	quoteURL := fmt.Sprintf("%s/thorchain/quote/swap?%s", endpoint, params.Encode())
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
 	if err != nil {
@@ -226,14 +242,140 @@ func (p *THORChainProvider) BuildTx(ctx context.Context, req SwapRequest) (*Swap
 		ExpectedOut: req.Quote.ExpectedOutput,
 	}
 
-	// For EVM token swaps, set approval info using the router
-	if req.Quote.FromAsset.Address != "" && req.Quote.Router != "" {
-		result.NeedsApproval = true
-		result.ApprovalAddress = req.Quote.Router
-		result.ApprovalAmount = req.Quote.FromAmount
+	// Check if this is an EVM chain that requires router calldata
+	if IsEVMChain(req.Quote.FromAsset.Chain) && req.Quote.Router != "" {
+		// Build router calldata for EVM chains
+		txData, value, err := p.encodeRouterDeposit(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode router deposit: %w", err)
+		}
+		result.TxData = txData
+		result.Value = value
+		result.ToAddress = req.Quote.Router
+
+		// For EVM token swaps, set approval info
+		if req.Quote.FromAsset.Address != "" {
+			result.NeedsApproval = true
+			result.ApprovalAddress = req.Quote.Router
+			result.ApprovalAmount = req.Quote.FromAmount
+		}
+	} else {
+		// For UTXO/Cosmos chains, just set the value to send
+		result.Value = req.Quote.FromAmount
 	}
 
 	return result, nil
+}
+
+// THORChain router function selectors
+// depositWithExpiry(address,address,uint256,string,uint256): 0x44bc937b
+var thorChainDepositWithExpirySig = []byte{0x44, 0xbc, 0x93, 0x7b}
+
+// encodeRouterDeposit encodes a THORChain router depositWithExpiry call
+// depositWithExpiry(address vault, address asset, uint256 amount, string memo, uint256 expiration)
+func (p *THORChainProvider) encodeRouterDeposit(req SwapRequest) ([]byte, *big.Int, error) {
+	vault := req.Quote.InboundAddress
+	asset := req.Quote.FromAsset.Address
+	amount := req.Quote.FromAmount
+	memo := req.Quote.Memo
+	expiry := req.Quote.Expiry
+
+	// For native ETH, asset is the zero address
+	if asset == "" {
+		asset = "0x0000000000000000000000000000000000000000"
+	}
+
+	// Default expiry to 15 minutes from now if not set
+	if expiry == 0 {
+		expiry = time.Now().Unix() + 900
+	}
+
+	// Encode calldata
+	calldata, err := encodeDepositWithExpiry(vault, asset, amount, memo, big.NewInt(expiry))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Value is the amount for native token, 0 for ERC20
+	value := big.NewInt(0)
+	if req.Quote.FromAsset.Address == "" {
+		value = amount
+	}
+
+	return calldata, value, nil
+}
+
+// encodeDepositWithExpiry encodes the THORChain router depositWithExpiry function call
+// Function signature: depositWithExpiry(address,address,uint256,string,uint256)
+func encodeDepositWithExpiry(vault, asset string, amount *big.Int, memo string, expiry *big.Int) ([]byte, error) {
+	// Validate addresses
+	vaultBytes, err := addressToBytes(vault)
+	if err != nil {
+		return nil, fmt.Errorf("invalid vault address: %w", err)
+	}
+	assetBytes, err := addressToBytes(asset)
+	if err != nil {
+		return nil, fmt.Errorf("invalid asset address: %w", err)
+	}
+
+	// Calculate memo byte length (padded to 32 bytes)
+	memoBytes := []byte(memo)
+	memoPaddedLen := ((len(memoBytes) + 31) / 32) * 32
+
+	// Calculate total calldata size:
+	// 4 (selector) + 32*5 (5 params) + 32 (memo offset points to) + memoPaddedLen
+	// Parameters: vault(32) + asset(32) + amount(32) + memo_offset(32) + expiry(32)
+	// Dynamic data: memo_length(32) + memo_data(memoPaddedLen)
+	totalLen := 4 + 32*5 + 32 + memoPaddedLen
+
+	calldata := make([]byte, totalLen)
+
+	// Function selector
+	copy(calldata[0:4], thorChainDepositWithExpirySig)
+	offset := 4
+
+	// Vault address (32 bytes, left-padded)
+	copy(calldata[offset+12:offset+32], vaultBytes)
+	offset += 32
+
+	// Asset address (32 bytes, left-padded)
+	copy(calldata[offset+12:offset+32], assetBytes)
+	offset += 32
+
+	// Amount (32 bytes, left-padded)
+	amountBytes := amount.Bytes()
+	copy(calldata[offset+32-len(amountBytes):offset+32], amountBytes)
+	offset += 32
+
+	// Memo offset (points to dynamic data section: 5*32 = 160)
+	memoOffset := big.NewInt(160)
+	memoOffsetBytes := memoOffset.Bytes()
+	copy(calldata[offset+32-len(memoOffsetBytes):offset+32], memoOffsetBytes)
+	offset += 32
+
+	// Expiry (32 bytes, left-padded)
+	expiryBytes := expiry.Bytes()
+	copy(calldata[offset+32-len(expiryBytes):offset+32], expiryBytes)
+	offset += 32
+
+	// Dynamic data: memo length
+	memoLenBytes := big.NewInt(int64(len(memoBytes))).Bytes()
+	copy(calldata[offset+32-len(memoLenBytes):offset+32], memoLenBytes)
+	offset += 32
+
+	// Dynamic data: memo content (right-padded)
+	copy(calldata[offset:offset+len(memoBytes)], memoBytes)
+
+	return calldata, nil
+}
+
+// addressToBytes converts a hex address string to 20 bytes
+func addressToBytes(addr string) ([]byte, error) {
+	addr = strings.TrimPrefix(strings.ToLower(addr), "0x")
+	if len(addr) != 40 {
+		return nil, fmt.Errorf("invalid address length: %d", len(addr))
+	}
+	return hex.DecodeString(addr)
 }
 
 // formatAsset formats an asset for THORChain API
@@ -249,7 +391,8 @@ func (p *THORChainProvider) formatAsset(asset Asset) (string, error) {
 	}
 
 	// Token format: CHAIN.SYMBOL-ADDRESS (e.g., ETH.USDC-0x...)
-	return fmt.Sprintf("%s.%s-%s", network, asset.Symbol, strings.ToUpper(asset.Address)), nil
+	// Use address as-is to preserve EIP-55 checksums for EVM chains
+	return fmt.Sprintf("%s.%s-%s", network, asset.Symbol, asset.Address), nil
 }
 
 // getInboundAddresses fetches inbound addresses from THORChain

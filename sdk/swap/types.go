@@ -197,11 +197,12 @@ func IsApprovalRequired(asset Asset) bool {
 // TxData represents transaction data ready for signing
 type TxData struct {
 	To       string   // Destination address
-	Value    *big.Int // Native token value (wei)
-	Data     []byte   // Transaction calldata
-	Nonce    uint64   // Transaction nonce
-	GasLimit uint64   // Gas limit
-	ChainID  *big.Int // EVM chain ID
+	Value    *big.Int // Native token value (wei for EVM, satoshis for UTXO, etc.)
+	Data     []byte   // Transaction calldata (for EVM)
+	Memo     string   // Transaction memo (for UTXO/Cosmos chains)
+	Nonce    uint64   // Transaction nonce (for EVM)
+	GasLimit uint64   // Gas limit (for EVM)
+	ChainID  *big.Int // EVM chain ID (nil for non-EVM)
 }
 
 // SwapBundle contains the approval tx (if needed) and swap tx bundled together.

@@ -2,11 +2,13 @@ package swap
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -18,6 +20,7 @@ const (
 )
 
 // 1inch chain IDs
+// Note: Fantom removed - 1inch uses Router V4 on Fantom, not V6, and is being deprecated
 var oneInchChainIDs = map[string]int{
 	"Ethereum":  1,
 	"BSC":       56,
@@ -26,7 +29,6 @@ var oneInchChainIDs = map[string]int{
 	"Arbitrum":  42161,
 	"Optimism":  10,
 	"Base":      8453,
-	"Fantom":    250,
 	"Gnosis":    100,
 }
 
@@ -39,7 +41,6 @@ var oneInchSupportedChains = []string{
 	"Arbitrum",
 	"Optimism",
 	"Base",
-	"Fantom",
 	"Gnosis",
 }
 
@@ -246,12 +247,18 @@ func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		approvalSpender = routerInfo.Address
 	}
 
-	// Token swaps need approval (not native token)
-	needsApproval := req.Quote.FromAsset.Address != ""
+	// Check if approval is needed using consistent logic
+	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
+
+	// Decode hex-encoded transaction data
+	txData, err := decodeHexData(swapResp.Tx.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode tx data: %w", err)
+	}
 
 	return &SwapResult{
 		Provider:        p.Name(),
-		TxData:          []byte(swapResp.Tx.Data),
+		TxData:          txData,
 		Value:           value,
 		ToAddress:       swapResp.Tx.To,
 		ExpectedOut:     req.Quote.ExpectedOutput,
@@ -259,6 +266,15 @@ func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		ApprovalAddress: approvalSpender,
 		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
+}
+
+// decodeHexData decodes a hex-encoded string (with optional 0x prefix) to bytes
+func decodeHexData(hexStr string) ([]byte, error) {
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+	if hexStr == "" {
+		return nil, nil
+	}
+	return hex.DecodeString(hexStr)
 }
 
 // 1inch API response types

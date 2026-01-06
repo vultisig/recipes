@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -132,6 +133,7 @@ func GetEVMChainID(chain string) (*big.Int, error) {
 // NonceClient handles EVM nonce fetching via JSON-RPC
 type NonceClient struct {
 	httpClient *http.Client
+	mu         sync.RWMutex
 	rpcURLs    map[string][]string // chain name -> RPC URLs
 }
 
@@ -150,8 +152,11 @@ func NewNonceClient() *NonceClient {
 	}
 }
 
-// SetRPCURL sets custom RPC URLs for a chain
+// SetRPCURL sets custom RPC URLs for a chain.
+// This method is thread-safe.
 func (c *NonceClient) SetRPCURL(chain string, urls []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.rpcURLs[chain] = urls
 }
 
@@ -179,7 +184,9 @@ type jsonRPCError struct {
 
 // GetNonce fetches the pending nonce for an address on an EVM chain
 func (c *NonceClient) GetNonce(ctx context.Context, chain, address string) (uint64, error) {
+	c.mu.RLock()
 	urls, ok := c.rpcURLs[chain]
+	c.mu.RUnlock()
 	if !ok || len(urls) == 0 {
 		return 0, fmt.Errorf("no RPC URL configured for chain: %s", chain)
 	}
@@ -257,7 +264,9 @@ func (c *NonceClient) getNonceFromRPC(ctx context.Context, rpcURL, address strin
 
 // GetGasPrice fetches the current gas price for an EVM chain
 func (c *NonceClient) GetGasPrice(ctx context.Context, chain string) (*big.Int, error) {
+	c.mu.RLock()
 	urls, ok := c.rpcURLs[chain]
+	c.mu.RUnlock()
 	if !ok || len(urls) == 0 {
 		return nil, fmt.Errorf("no RPC URL configured for chain: %s", chain)
 	}
