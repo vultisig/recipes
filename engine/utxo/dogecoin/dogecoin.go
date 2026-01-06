@@ -40,3 +40,4 @@ func (d *Dogecoin) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return d.engine.Evaluate(rule, txBytes)
 }
 
+

@@ -1,0 +1,66 @@
+{
+  "version": "0.1.0",
+  "name": "orca_whirlpool",
+  "metadata": {
+    "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+  },
+  "instructions": [
+    {
+      "name": "increaseLiquidity",
+      "accounts": [
+        {"name": "whirlpool", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "positionAuthority", "isMut": false, "isSigner": true},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "positionTokenAccount", "isMut": false, "isSigner": false},
+        {"name": "tokenOwnerAccountA", "isMut": true, "isSigner": false},
+        {"name": "tokenOwnerAccountB", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultA", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultB", "isMut": true, "isSigner": false},
+        {"name": "tickArrayLower", "isMut": true, "isSigner": false},
+        {"name": "tickArrayUpper", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "liquidityAmount", "type": "u64"},
+        {"name": "tokenMaxA", "type": "u64"},
+        {"name": "tokenMaxB", "type": "u64"}
+      ]
+    },
+    {
+      "name": "decreaseLiquidity",
+      "accounts": [
+        {"name": "whirlpool", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "positionAuthority", "isMut": false, "isSigner": true},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "positionTokenAccount", "isMut": false, "isSigner": false},
+        {"name": "tokenOwnerAccountA", "isMut": true, "isSigner": false},
+        {"name": "tokenOwnerAccountB", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultA", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultB", "isMut": true, "isSigner": false},
+        {"name": "tickArrayLower", "isMut": true, "isSigner": false},
+        {"name": "tickArrayUpper", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "liquidityAmount", "type": "u64"},
+        {"name": "tokenMinA", "type": "u64"},
+        {"name": "tokenMinB", "type": "u64"}
+      ]
+    },
+    {
+      "name": "collectFees",
+      "accounts": [
+        {"name": "whirlpool", "isMut": false, "isSigner": false},
+        {"name": "positionAuthority", "isMut": false, "isSigner": true},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "positionTokenAccount", "isMut": false, "isSigner": false},
+        {"name": "tokenOwnerAccountA", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultA", "isMut": true, "isSigner": false},
+        {"name": "tokenOwnerAccountB", "isMut": true, "isSigner": false},
+        {"name": "tokenVaultB", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    }
+  ]
+}

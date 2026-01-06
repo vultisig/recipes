@@ -41,3 +41,4 @@ func (l *Litecoin) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return l.engine.Evaluate(rule, txBytes)
 }
 
+

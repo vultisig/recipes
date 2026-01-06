@@ -105,7 +105,7 @@ Handles transaction signing and broadcasting. Only needed if your chain has uniq
 
 ### 4. MetaRule Layer (`metarule/`)
 
-Enables **Recurring Send** and **Recurring Swap** by transforming high-level intents into chain-specific rules.
+Enables **Recurring Send**, **Recurring Swap**, and **DeFi Operations** by transforming high-level intents into chain-specific rules.
 
 - **`metarule/metarule.go`** — Add a `handle<Chain>()` function for `send` and `swap` protocols
 - **`metarule/internal/thorchain/thorchain.go`** — Add ThorChain asset mapping:
@@ -113,6 +113,34 @@ Enables **Recurring Send** and **Recurring Swap** by transforming high-level int
   - Add to `parseNetwork()` switch
   - Add asset to pools list (e.g., `{asset: "ZEC.ZEC"}`)
   - Add shortcode to `ShortCode()` if applicable
+
+#### DeFi Meta-Protocols
+
+The metarule layer supports high-level DeFi operations through meta-protocols:
+
+| Protocol | Actions | Supported Protocols |
+|----------|---------|---------------------|
+| **lp** | `add`, `remove`, `collect_fees` | Uniswap V3 (EVM), Raydium CLMM, Orca Whirlpools, Meteora (Solana) |
+| **lend** | `supply`, `withdraw`, `borrow`, `repay` | AAVE V3, Compound V3 (EVM), Kamino, Marginfi, Solend (Solana) |
+| **perps** | `open_long`, `open_short`, `close`, `increase`, `decrease` | GMX V2, Hyperliquid, Lighter (EVM), Jupiter Perps, Drift (Solana) |
+| **bet** | `buy`, `sell`, `cancel` | Polymarket (Polygon) |
+
+**Example LP Rule:**
+```json
+{
+  "resource": "ethereum.lp",
+  "parameterConstraints": [
+    {"parameterName": "protocol", "constraint": {"type": "fixed", "value": "uniswap_v3"}},
+    {"parameterName": "action", "constraint": {"type": "fixed", "value": "add"}},
+    {"parameterName": "token0", "constraint": {"type": "fixed", "value": "0x..."}},
+    {"parameterName": "token1", "constraint": {"type": "fixed", "value": "0x..."}},
+    {"parameterName": "amount0", "constraint": {"type": "max", "value": "1000000000"}},
+    {"parameterName": "amount1", "constraint": {"type": "max", "value": "1000000000"}}
+  ]
+}
+```
+
+**ERC20 Approval Bundling:** All EVM DeFi operations automatically prepend the required `erc20.approve` rule with the exact amount constraint, enabling TSS to sign both approval and action in sequence
 
 ---
 

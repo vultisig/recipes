@@ -1,0 +1,96 @@
+{
+  "version": "0.1.0",
+  "name": "raydium_clmm",
+  "metadata": {
+    "address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
+  },
+  "instructions": [
+    {
+      "name": "openPosition",
+      "accounts": [
+        {"name": "payer", "isMut": true, "isSigner": true},
+        {"name": "positionNftOwner", "isMut": false, "isSigner": false},
+        {"name": "positionNftMint", "isMut": true, "isSigner": true},
+        {"name": "positionNftAccount", "isMut": true, "isSigner": false},
+        {"name": "poolState", "isMut": true, "isSigner": false},
+        {"name": "protocolPosition", "isMut": true, "isSigner": false},
+        {"name": "personalPosition", "isMut": true, "isSigner": false},
+        {"name": "tickArrayLower", "isMut": true, "isSigner": false},
+        {"name": "tickArrayUpper", "isMut": true, "isSigner": false},
+        {"name": "tokenAccount0", "isMut": true, "isSigner": false},
+        {"name": "tokenAccount1", "isMut": true, "isSigner": false},
+        {"name": "tokenVault0", "isMut": true, "isSigner": false},
+        {"name": "tokenVault1", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "liquidity", "type": "u64"},
+        {"name": "amount0Max", "type": "u64"},
+        {"name": "amount1Max", "type": "u64"}
+      ]
+    },
+    {
+      "name": "increaseLiquidity",
+      "accounts": [
+        {"name": "nftOwner", "isMut": false, "isSigner": true},
+        {"name": "nftAccount", "isMut": false, "isSigner": false},
+        {"name": "poolState", "isMut": true, "isSigner": false},
+        {"name": "protocolPosition", "isMut": true, "isSigner": false},
+        {"name": "personalPosition", "isMut": true, "isSigner": false},
+        {"name": "tickArrayLower", "isMut": true, "isSigner": false},
+        {"name": "tickArrayUpper", "isMut": true, "isSigner": false},
+        {"name": "tokenAccount0", "isMut": true, "isSigner": false},
+        {"name": "tokenAccount1", "isMut": true, "isSigner": false},
+        {"name": "tokenVault0", "isMut": true, "isSigner": false},
+        {"name": "tokenVault1", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "liquidity", "type": "u64"},
+        {"name": "amount0Max", "type": "u64"},
+        {"name": "amount1Max", "type": "u64"}
+      ]
+    },
+    {
+      "name": "decreaseLiquidity",
+      "accounts": [
+        {"name": "nftOwner", "isMut": false, "isSigner": true},
+        {"name": "nftAccount", "isMut": false, "isSigner": false},
+        {"name": "personalPosition", "isMut": true, "isSigner": false},
+        {"name": "poolState", "isMut": true, "isSigner": false},
+        {"name": "protocolPosition", "isMut": true, "isSigner": false},
+        {"name": "tokenVault0", "isMut": true, "isSigner": false},
+        {"name": "tokenVault1", "isMut": true, "isSigner": false},
+        {"name": "tickArrayLower", "isMut": true, "isSigner": false},
+        {"name": "tickArrayUpper", "isMut": true, "isSigner": false},
+        {"name": "recipientTokenAccount0", "isMut": true, "isSigner": false},
+        {"name": "recipientTokenAccount1", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "liquidity", "type": "u64"},
+        {"name": "amount0Min", "type": "u64"},
+        {"name": "amount1Min", "type": "u64"}
+      ]
+    },
+    {
+      "name": "collectFee",
+      "accounts": [
+        {"name": "nftOwner", "isMut": false, "isSigner": true},
+        {"name": "nftAccount", "isMut": false, "isSigner": false},
+        {"name": "personalPosition", "isMut": true, "isSigner": false},
+        {"name": "poolState", "isMut": true, "isSigner": false},
+        {"name": "protocolPosition", "isMut": true, "isSigner": false},
+        {"name": "tokenVault0", "isMut": true, "isSigner": false},
+        {"name": "tokenVault1", "isMut": true, "isSigner": false},
+        {"name": "recipientTokenAccount0", "isMut": true, "isSigner": false},
+        {"name": "recipientTokenAccount1", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount0Max", "type": "u64"},
+        {"name": "amount1Max", "type": "u64"}
+      ]
+    }
+  ]
+}
