@@ -239,7 +239,6 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	return res, nil
 }
 
-
 func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
 	switch metaProtocol(r.GetProtocolId()) {
 	case send:

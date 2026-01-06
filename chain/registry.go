@@ -12,6 +12,7 @@ import (
 	"github.com/vultisig/recipes/chain/tron"
 	"github.com/vultisig/recipes/chain/utxo/bitcoin"
 	"github.com/vultisig/recipes/chain/utxo/bitcoincash"
+	"github.com/vultisig/recipes/chain/utxo/dash"
 	"github.com/vultisig/recipes/chain/utxo/dogecoin"
 	"github.com/vultisig/recipes/chain/utxo/litecoin"
 	"github.com/vultisig/recipes/chain/utxo/zcash"
@@ -89,6 +90,7 @@ func init() {
 	// Register UTXO chains
 	RegisterChain(bitcoin.NewChain())
 	RegisterChain(bitcoincash.NewChain())
+	RegisterChain(dash.NewChain())
 	RegisterChain(dogecoin.NewChain())
 	RegisterChain(litecoin.NewChain())
 	RegisterChain(zcash.NewChain())
