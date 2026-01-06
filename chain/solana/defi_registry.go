@@ -18,8 +18,8 @@ var (
 
 // Lending Protocol Program IDs
 var (
-	// Kamino Finance Lending
-	KaminoLendingProgramID = solana.MustPublicKeyFromBase58("KLend2g3cP87ber41GYr72yfE9j6eBJYwRqVNMi6mHL")
+	// Kamino Finance Lending (official mainnet program ID)
+	KaminoLendingProgramID = solana.MustPublicKeyFromBase58("GzFgdRJXmawPhGeBsyRCDLx4jAKPsvbUqoqitzppkzkW")
 
 	// Marginfi
 	MarginfiProgramID = solana.MustPublicKeyFromBase58("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")

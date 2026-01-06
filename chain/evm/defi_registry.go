@@ -43,9 +43,10 @@ var CompoundV3CometWETH = map[common.Chain]string{
 }
 
 // GMX V2 Exchange Router addresses
+// Updated to latest deployed contracts as of Jan 2026
 var GMXV2ExchangeRouter = map[common.Chain]string{
-	common.Arbitrum:  "0x7C68C7866A64FA2160F78EEaE12217FFbf871fa8",
-	common.Avalanche: "0x79be2F4eC8A4143BaF963206cF133f3710856D0a",
+	common.Arbitrum:  "0x602b805EedddBbD9ddff44A7dcBD46cb07849685",
+	common.Avalanche: "0xFa843af557824Be5127eaCB3c4B5D86EADEB73A1",
 }
 
 // GMX V2 Order Vault addresses

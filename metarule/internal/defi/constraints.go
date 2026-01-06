@@ -156,45 +156,6 @@ func ParsePerpsConstraints(rule *types.Rule) (PerpsConstraints, error) {
 	return res, nil
 }
 
-// Helper functions for creating constraints
-
-// Fixed creates a fixed value constraint
-func Fixed(value string) *types.Constraint {
-	return &types.Constraint{
-		Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
-		Value: &types.Constraint_FixedValue{
-			FixedValue: value,
-		},
-	}
-}
-
-// Any creates an any-value constraint
-func Any() *types.Constraint {
-	return &types.Constraint{
-		Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
-	}
-}
-
-// Min creates a minimum value constraint
-func Min(value string) *types.Constraint {
-	return &types.Constraint{
-		Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-		Value: &types.Constraint_MinValue{
-			MinValue: value,
-		},
-	}
-}
-
-// Max creates a maximum value constraint
-func Max(value string) *types.Constraint {
-	return &types.Constraint{
-		Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
-		Value: &types.Constraint_MaxValue{
-			MaxValue: value,
-		},
-	}
-}
-
 // BetConstraints holds parsed bet meta-protocol constraints
 type BetConstraints struct {
 	Action   *types.Constraint // buy, sell, cancel
