@@ -223,3 +223,147 @@ func (s *Service) GetChainStatus(ctx context.Context, chain string) (*ProviderSt
 	}, nil
 }
 
+// SwapTxBundle contains both approval and swap transactions bundled together.
+// For ERC20 swaps on EVM chains, both transactions are included and must be
+// signed in a single keysign session with sequential nonces.
+type SwapTxBundle struct {
+	// Provider that will execute the swap
+	Provider string
+
+	// Quote information
+	ExpectedOutput *big.Int
+	MinimumOutput  *big.Int
+
+	// ApprovalTx is the ERC20 approval transaction (nil if not needed).
+	// When present, this transaction uses nonce N.
+	ApprovalTx *TxData
+
+	// SwapTx is the main swap transaction (always present).
+	// Uses nonce N+1 if ApprovalTx is present, otherwise nonce N.
+	SwapTx *TxData
+
+	// Memo for non-EVM chains (UTXO/Cosmos)
+	Memo string
+
+	// Original quote for reference
+	Quote *Quote
+
+	// NeedsApproval indicates if an approval transaction is required
+	NeedsApproval bool
+}
+
+// GetSwapTxBundle returns a complete transaction bundle ready for signing.
+// For ERC20 tokens on EVM chains, this includes both the approval transaction
+// and the swap transaction, bundled together with sequential nonces.
+//
+// This is the recommended entry point for applications that need to handle
+// ERC20 approvals. The returned bundle should be processed as follows:
+//
+//  1. If bundle.ApprovalTx != nil, create a keysign message for it
+//  2. Create a keysign message for bundle.SwapTx
+//  3. Sign both messages in a single keysign session
+//  4. Broadcast the approval tx first, wait for confirmation
+//  5. Broadcast the swap tx
+//
+// Example:
+//
+//	bundle, err := service.GetSwapTxBundle(ctx, params)
+//	if err != nil {
+//	    return err
+//	}
+//
+//	var messages []KeysignMessage
+//	if bundle.ApprovalTx != nil {
+//	    messages = append(messages, buildKeysignMessage(bundle.ApprovalTx))
+//	}
+//	messages = append(messages, buildKeysignMessage(bundle.SwapTx))
+//
+//	signatures := keysign(messages)
+//	// ... broadcast in order
+func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*SwapTxBundle, error) {
+	from := Asset{
+		Chain:    params.FromChain,
+		Symbol:   params.FromSymbol,
+		Address:  params.FromAddress,
+		Decimals: params.FromDecimals,
+	}
+
+	to := Asset{
+		Chain:    params.ToChain,
+		Symbol:   params.ToSymbol,
+		Address:  params.ToAddress,
+		Decimals: params.ToDecimals,
+	}
+
+	// Get quote
+	quote, err := s.router.GetQuote(ctx, QuoteRequest{
+		From:        from,
+		To:          to,
+		Amount:      params.Amount,
+		Sender:      params.Sender,
+		Destination: params.Destination,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get quote: %w", err)
+	}
+
+	// Build the swap bundle with approval if needed
+	bundle, err := s.router.BuildSwapBundle(ctx, SwapBundleRequest{
+		Quote:       quote,
+		Sender:      params.Sender,
+		Destination: params.Destination,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to build swap bundle: %w", err)
+	}
+
+	return &SwapTxBundle{
+		Provider:       bundle.Provider,
+		ExpectedOutput: bundle.ExpectedOutput,
+		MinimumOutput:  quote.MinimumOutput,
+		ApprovalTx:     bundle.ApprovalTx,
+		SwapTx:         bundle.SwapTx,
+		Memo:           quote.Memo,
+		Quote:          quote,
+		NeedsApproval:  bundle.ApprovalTx != nil,
+	}, nil
+}
+
+// GetQuote returns a swap quote without building transactions.
+// Use this when you need to show the user expected amounts before
+// they confirm the swap.
+func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, error) {
+	from := Asset{
+		Chain:    params.FromChain,
+		Symbol:   params.FromSymbol,
+		Address:  params.FromAddress,
+		Decimals: params.FromDecimals,
+	}
+
+	to := Asset{
+		Chain:    params.ToChain,
+		Symbol:   params.ToSymbol,
+		Address:  params.ToAddress,
+		Decimals: params.ToDecimals,
+	}
+
+	return s.router.GetQuote(ctx, QuoteRequest{
+		From:        from,
+		To:          to,
+		Amount:      params.Amount,
+		Sender:      params.Sender,
+		Destination: params.Destination,
+	})
+}
+
+// RequiresApproval checks if a swap will require an ERC20 approval.
+// This can be called before GetSwapTxBundle to inform the user.
+func (s *Service) RequiresApproval(params SwapParams) bool {
+	from := Asset{
+		Chain:   params.FromChain,
+		Symbol:  params.FromSymbol,
+		Address: params.FromAddress,
+	}
+	return IsApprovalRequired(from)
+}
+

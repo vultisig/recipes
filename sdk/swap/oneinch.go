@@ -149,13 +149,25 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		return nil, fmt.Errorf("invalid dstAmount: %s", swapResp.DstAmount)
 	}
 
+	// Determine router address for approval
+	routerAddress := swapResp.Tx.To
+	if routerInfo, err := ResolveOneInchRouter(req.From.Chain); err == nil && routerInfo.Address != "" {
+		routerAddress = routerInfo.Address
+	}
+
+	// Check if approval is needed (ERC20 token)
+	needsApproval := IsApprovalRequired(req.From)
+
 	return &Quote{
-		Provider:       p.Name(),
-		FromAsset:      req.From,
-		ToAsset:        req.To,
-		FromAmount:     req.Amount,
-		ExpectedOutput: dstAmount,
-		Router:         swapResp.Tx.To,
+		Provider:        p.Name(),
+		FromAsset:       req.From,
+		ToAsset:         req.To,
+		FromAmount:      req.Amount,
+		ExpectedOutput:  dstAmount,
+		Router:          routerAddress,
+		NeedsApproval:   needsApproval,
+		ApprovalSpender: routerAddress,
+		ApprovalAmount:  req.Amount,
 	}, nil
 }
 

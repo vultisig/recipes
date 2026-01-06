@@ -132,12 +132,29 @@ func (p *UniswapProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		return nil, fmt.Errorf("invalid quote amount: %s", quoteResp.Quote)
 	}
 
+	// Get router address for approval
+	routerAddress := quoteResp.MethodParameters.To
+	if routerAddress == "" {
+		if routerInfo, err := ResolveUniswapRouter(req.From.Chain); err == nil && routerInfo.Address != "" {
+			routerAddress = routerInfo.Address
+		} else {
+			routerAddress = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" // Fallback Universal Router
+		}
+	}
+
+	// Check if approval is needed (ERC20 token)
+	needsApproval := IsApprovalRequired(req.From)
+
 	return &Quote{
-		Provider:       p.Name(),
-		FromAsset:      req.From,
-		ToAsset:        req.To,
-		FromAmount:     req.Amount,
-		ExpectedOutput: quoteAmount,
+		Provider:        p.Name(),
+		FromAsset:       req.From,
+		ToAsset:         req.To,
+		FromAmount:      req.Amount,
+		ExpectedOutput:  quoteAmount,
+		Router:          routerAddress,
+		NeedsApproval:   needsApproval,
+		ApprovalSpender: routerAddress,
+		ApprovalAmount:  req.Amount,
 	}, nil
 }
 

@@ -117,6 +117,11 @@ type Quote struct {
 	Expiry          int64    // Quote expiry timestamp
 	StreamingSwap   bool     // Whether this is a streaming swap
 	StreamingBlocks int64    // Number of streaming blocks
+
+	// Approval info for ERC20 swaps on EVM chains
+	NeedsApproval   bool     // True if this is ERC20 on EVM chain
+	ApprovalSpender string   // Router contract address to approve
+	ApprovalAmount  *big.Int // Exact amount to approve (always exact, never unlimited)
 }
 
 // SwapRequest contains all parameters needed to build a swap transaction
@@ -157,5 +162,76 @@ type ProviderStatus struct {
 	ChainTradingPaused  bool
 	Router              string
 	InboundAddress      string
+}
+
+// EVMChains is the list of EVM-compatible chains that support ERC20 approvals
+var EVMChains = []string{
+	"Ethereum",
+	"BSC",
+	"Polygon",
+	"Arbitrum",
+	"Avalanche",
+	"Base",
+	"Optimism",
+	"Blast",
+	"CronosChain",
+	"ZkSync",
+}
+
+// IsEVMChain checks if a chain is an EVM-compatible chain
+func IsEVMChain(chain string) bool {
+	for _, c := range EVMChains {
+		if c == chain {
+			return true
+		}
+	}
+	return false
+}
+
+// IsApprovalRequired checks if an asset requires ERC20 approval for swapping.
+// Returns true if the asset is an ERC20 token (has contract address) on an EVM chain.
+func IsApprovalRequired(asset Asset) bool {
+	return IsEVMChain(asset.Chain) && asset.Address != ""
+}
+
+// TxData represents transaction data ready for signing
+type TxData struct {
+	To       string   // Destination address
+	Value    *big.Int // Native token value (wei)
+	Data     []byte   // Transaction calldata
+	Nonce    uint64   // Transaction nonce
+	GasLimit uint64   // Gas limit
+	ChainID  *big.Int // EVM chain ID
+}
+
+// SwapBundle contains the approval tx (if needed) and swap tx bundled together.
+// For ERC20 swaps on EVM chains, both transactions are included and must be
+// signed in a single keysign session with sequential nonces.
+type SwapBundle struct {
+	// ApprovalTx is the ERC20 approval transaction (nil if not needed).
+	// When present, uses nonce N.
+	ApprovalTx *TxData
+
+	// SwapTx is the main swap transaction (always present).
+	// Uses nonce N+1 if ApprovalTx is present, otherwise nonce N.
+	SwapTx *TxData
+
+	// Provider is the swap provider name
+	Provider string
+
+	// ExpectedOutput is the expected amount of destination token
+	ExpectedOutput *big.Int
+
+	// Quote is the original quote used to build this bundle
+	Quote *Quote
+}
+
+// SwapBundleRequest contains parameters for building a swap bundle
+type SwapBundleRequest struct {
+	Quote       *Quote
+	Sender      string   // Sender address
+	Destination string   // Destination address for swap output
+	Nonce       *uint64  // Optional: starting nonce (fetched if nil)
+	GasPrice    *big.Int // Optional: gas price (fetched if nil)
 }
 

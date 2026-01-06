@@ -155,17 +155,30 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 		return nil, fmt.Errorf("invalid toAmount: %s", quoteResp.Estimate.ToAmount)
 	}
 
-	quote := &Quote{
-		Provider:       p.Name(),
-		FromAsset:      req.From,
-		ToAsset:        req.To,
-		FromAmount:     req.Amount,
-		ExpectedOutput: toAmount,
+	// Determine router address for approval
+	routerAddress := ""
+	if quoteResp.TransactionRequest != nil {
+		routerAddress = quoteResp.TransactionRequest.To
 	}
 
-	// Store transaction request if available
-	if quoteResp.TransactionRequest != nil {
-		quote.Router = quoteResp.TransactionRequest.To
+	// Try to get the canonical router from resolver
+	if routerInfo, err := ResolveLiFiRouter(req.From.Chain); err == nil && routerInfo.Address != "" {
+		routerAddress = routerInfo.Address
+	}
+
+	// Check if approval is needed (ERC20 token on EVM chain)
+	needsApproval := IsApprovalRequired(req.From)
+
+	quote := &Quote{
+		Provider:        p.Name(),
+		FromAsset:       req.From,
+		ToAsset:         req.To,
+		FromAmount:      req.Amount,
+		ExpectedOutput:  toAmount,
+		Router:          routerAddress,
+		NeedsApproval:   needsApproval,
+		ApprovalSpender: routerAddress,
+		ApprovalAmount:  req.Amount,
 	}
 
 	return quote, nil

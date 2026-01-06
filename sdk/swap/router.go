@@ -223,3 +223,127 @@ func (r *Router) GetSupportedChains() []string {
 	return chains
 }
 
+// BuildSwapBundle builds a complete swap bundle including approval tx (if needed) and swap tx.
+// For ERC20 tokens on EVM chains, this always includes an approval transaction for the exact
+// swap amount, bundled with the swap transaction. Both transactions are built with sequential
+// nonces so they can be signed in a single keysign session.
+//
+// Security: This method enforces mandatory approval bundling - an approval tx can only exist
+// as part of a swap bundle, preventing orphaned approvals that could waste gas.
+func (r *Router) BuildSwapBundle(ctx context.Context, req SwapBundleRequest) (*SwapBundle, error) {
+	if req.Quote == nil {
+		return nil, fmt.Errorf("quote is required")
+	}
+
+	// Find the provider that issued the quote
+	var provider SwapProvider
+	for _, p := range r.providers {
+		if p.Name() == req.Quote.Provider {
+			provider = p
+			break
+		}
+	}
+
+	if provider == nil {
+		return nil, fmt.Errorf("provider %s not found", req.Quote.Provider)
+	}
+
+	// Build the swap transaction first to get the transaction data
+	swapResult, err := provider.BuildTx(ctx, SwapRequest{
+		Quote:       req.Quote,
+		Sender:      req.Sender,
+		Destination: req.Destination,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to build swap tx: %w", err)
+	}
+
+	// Get chain ID for EVM chains
+	chainID, err := GetEVMChainID(req.Quote.FromAsset.Chain)
+	if err != nil {
+		// Non-EVM chain - return just the swap tx without approval
+		return &SwapBundle{
+			ApprovalTx: nil,
+			SwapTx: &TxData{
+				To:    swapResult.ToAddress,
+				Value: swapResult.Value,
+				Data:  swapResult.TxData,
+			},
+			Provider:       req.Quote.Provider,
+			ExpectedOutput: req.Quote.ExpectedOutput,
+			Quote:          req.Quote,
+		}, nil
+	}
+
+	// Get nonce - either from request or fetch from chain
+	var nonce uint64
+	if req.Nonce != nil {
+		nonce = *req.Nonce
+	} else {
+		nonce, err = GetNonce(ctx, req.Quote.FromAsset.Chain, req.Sender)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get nonce: %w", err)
+		}
+	}
+
+	// Check if approval is needed
+	needsApproval := req.Quote.NeedsApproval || IsApprovalRequired(req.Quote.FromAsset)
+
+	var approvalTx *TxData
+	swapNonce := nonce
+
+	if needsApproval {
+		// Determine the spender (router) address
+		spender := req.Quote.ApprovalSpender
+		if spender == "" {
+			spender = req.Quote.Router
+		}
+		if spender == "" {
+			return nil, fmt.Errorf("no router/spender address available for approval")
+		}
+
+		// Determine the approval amount
+		approvalAmount := req.Quote.ApprovalAmount
+		if approvalAmount == nil {
+			approvalAmount = req.Quote.FromAmount
+		}
+		if approvalAmount == nil {
+			return nil, fmt.Errorf("no approval amount available")
+		}
+
+		// Build approval transaction
+		approvalTx, err = BuildApprovalTx(BuildApprovalInput{
+			TokenAddress: req.Quote.FromAsset.Address,
+			Spender:      spender,
+			Amount:       approvalAmount,
+			Nonce:        nonce,
+			GasLimit:     DefaultApprovalGasLimit,
+			ChainID:      chainID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build approval tx: %w", err)
+		}
+
+		// Swap tx uses next nonce
+		swapNonce = nonce + 1
+	}
+
+	// Build the swap TxData with correct nonce
+	swapTx := &TxData{
+		To:       swapResult.ToAddress,
+		Value:    swapResult.Value,
+		Data:     swapResult.TxData,
+		Nonce:    swapNonce,
+		GasLimit: 300000, // Default swap gas limit, should be estimated
+		ChainID:  chainID,
+	}
+
+	return &SwapBundle{
+		ApprovalTx:     approvalTx,
+		SwapTx:         swapTx,
+		Provider:       req.Quote.Provider,
+		ExpectedOutput: req.Quote.ExpectedOutput,
+		Quote:          req.Quote,
+	}, nil
+}
+

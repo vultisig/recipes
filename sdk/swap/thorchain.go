@@ -184,6 +184,15 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		return nil, fmt.Errorf("invalid expected_amount_out: %s", quoteResp.ExpectedAmountOut)
 	}
 
+	// Determine router address - try resolver first, fallback to quote response
+	routerAddress := quoteResp.Router
+	if routerInfo, err := ResolveTHORChainRouter(req.From.Chain); err == nil && routerInfo.Address != "" {
+		routerAddress = routerInfo.Address
+	}
+
+	// Check if approval is needed (ERC20 token on EVM chain)
+	needsApproval := IsApprovalRequired(req.From)
+
 	return &Quote{
 		Provider:        p.Name(),
 		FromAsset:       req.From,
@@ -192,10 +201,13 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		ExpectedOutput:  expectedOutput,
 		Memo:            quoteResp.Memo,
 		InboundAddress:  quoteResp.InboundAddress,
-		Router:          quoteResp.Router,
+		Router:          routerAddress,
 		Expiry:          quoteResp.Expiry,
 		StreamingSwap:   quoteResp.MaxStreamingQuantity > 0,
 		StreamingBlocks: quoteResp.StreamingSwapBlocks,
+		NeedsApproval:   needsApproval,
+		ApprovalSpender: routerAddress,
+		ApprovalAmount:  req.Amount,
 	}, nil
 }
 

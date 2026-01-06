@@ -418,3 +418,270 @@ func BenchmarkFindRoute(b *testing.B) {
 	}
 }
 
+// =============================================================================
+// Approval Bundle Tests
+// =============================================================================
+
+// TestSwapBundleERC20ToNative tests getting a swap bundle for ERC20 to native swap
+// This should include an approval transaction
+func TestSwapBundleERC20ToNative(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	service := swap.NewService()
+
+	params := swap.SwapParams{
+		FromChain:    "Ethereum",
+		FromSymbol:   "USDC",
+		FromAddress:  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+		FromDecimals: 6,
+		ToChain:      "Ethereum",
+		ToSymbol:     "ETH",
+		ToAddress:    "",
+		ToDecimals:   18,
+		Amount:       big.NewInt(100 * 1e6), // 100 USDC
+		Sender:       testEthAddress,
+		Destination:  testEthAddress,
+	}
+
+	bundle, err := service.GetSwapTxBundle(ctx, params)
+	if err != nil {
+		t.Logf("GetSwapTxBundle failed (provider may be unavailable): %v", err)
+		return
+	}
+
+	t.Logf("ERC20 to Native Swap Bundle:")
+	t.Logf("  Provider: %s", bundle.Provider)
+	t.Logf("  Needs Approval: %v", bundle.NeedsApproval)
+
+	// ERC20 swaps should always need approval
+	if !bundle.NeedsApproval {
+		t.Error("expected NeedsApproval to be true for ERC20 swap")
+	}
+
+	if bundle.ApprovalTx == nil {
+		t.Error("expected ApprovalTx to be present for ERC20 swap")
+	} else {
+		t.Logf("  Approval TX:")
+		t.Logf("    To: %s (token contract)", bundle.ApprovalTx.To)
+		t.Logf("    Nonce: %d", bundle.ApprovalTx.Nonce)
+		t.Logf("    Data length: %d bytes", len(bundle.ApprovalTx.Data))
+
+		// Verify approval tx data
+		if len(bundle.ApprovalTx.Data) != 68 {
+			t.Errorf("expected approval calldata length 68, got %d", len(bundle.ApprovalTx.Data))
+		}
+
+		// Verify approval is to token contract
+		if bundle.ApprovalTx.To != params.FromAddress {
+			t.Errorf("approval To should be token contract, got %s", bundle.ApprovalTx.To)
+		}
+
+		// Verify approval value is 0 (no ETH sent with approve)
+		if bundle.ApprovalTx.Value != nil && bundle.ApprovalTx.Value.Sign() != 0 {
+			t.Errorf("approval value should be 0, got %s", bundle.ApprovalTx.Value.String())
+		}
+	}
+
+	if bundle.SwapTx == nil {
+		t.Error("expected SwapTx to be present")
+	} else {
+		t.Logf("  Swap TX:")
+		t.Logf("    To: %s", bundle.SwapTx.To)
+		t.Logf("    Nonce: %d", bundle.SwapTx.Nonce)
+
+		// Verify swap nonce is approval nonce + 1
+		if bundle.ApprovalTx != nil && bundle.SwapTx.Nonce != bundle.ApprovalTx.Nonce+1 {
+			t.Errorf("swap nonce should be approval nonce + 1, got approval=%d, swap=%d",
+				bundle.ApprovalTx.Nonce, bundle.SwapTx.Nonce)
+		}
+	}
+
+	if bundle.ExpectedOutput == nil || bundle.ExpectedOutput.Sign() <= 0 {
+		t.Error("expected positive output amount")
+	}
+}
+
+// TestSwapBundleNativeToERC20 tests getting a swap bundle for native to ERC20 swap
+// This should NOT include an approval transaction
+func TestSwapBundleNativeToERC20(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	service := swap.NewService()
+
+	params := swap.SwapParams{
+		FromChain:    "Ethereum",
+		FromSymbol:   "ETH",
+		FromAddress:  "", // Native token
+		FromDecimals: 18,
+		ToChain:      "Ethereum",
+		ToSymbol:     "USDC",
+		ToAddress:    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+		ToDecimals:   6,
+		Amount:       big.NewInt(1e17), // 0.1 ETH
+		Sender:       testEthAddress,
+		Destination:  testEthAddress,
+	}
+
+	bundle, err := service.GetSwapTxBundle(ctx, params)
+	if err != nil {
+		t.Logf("GetSwapTxBundle failed (provider may be unavailable): %v", err)
+		return
+	}
+
+	t.Logf("Native to ERC20 Swap Bundle:")
+	t.Logf("  Provider: %s", bundle.Provider)
+	t.Logf("  Needs Approval: %v", bundle.NeedsApproval)
+
+	// Native token swaps should NOT need approval
+	if bundle.NeedsApproval {
+		t.Error("expected NeedsApproval to be false for native token swap")
+	}
+
+	if bundle.ApprovalTx != nil {
+		t.Error("expected ApprovalTx to be nil for native token swap")
+	}
+
+	if bundle.SwapTx == nil {
+		t.Error("expected SwapTx to be present")
+	} else {
+		t.Logf("  Swap TX:")
+		t.Logf("    To: %s", bundle.SwapTx.To)
+		t.Logf("    Value: %s wei", bundle.SwapTx.Value.String())
+	}
+
+	if bundle.ExpectedOutput == nil || bundle.ExpectedOutput.Sign() <= 0 {
+		t.Error("expected positive output amount")
+	}
+}
+
+// TestSwapBundleCrossChainWithApproval tests cross-chain ERC20 swap via THORChain
+func TestSwapBundleCrossChainWithApproval(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	service := swap.NewService()
+
+	params := swap.SwapParams{
+		FromChain:    "Ethereum",
+		FromSymbol:   "USDC",
+		FromAddress:  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+		FromDecimals: 6,
+		ToChain:      "Bitcoin",
+		ToSymbol:     "BTC",
+		ToAddress:    "", // Native
+		ToDecimals:   8,
+		Amount:       big.NewInt(1000 * 1e6), // 1000 USDC
+		Sender:       testEthAddress,
+		Destination:  testBtcAddress,
+	}
+
+	bundle, err := service.GetSwapTxBundle(ctx, params)
+	if err != nil {
+		t.Logf("GetSwapTxBundle failed (THORChain may be halted): %v", err)
+		return
+	}
+
+	t.Logf("Cross-chain ERC20 Swap Bundle (ETH USDC -> BTC):")
+	t.Logf("  Provider: %s", bundle.Provider)
+	t.Logf("  Needs Approval: %v", bundle.NeedsApproval)
+
+	// Cross-chain ERC20 swap should need approval
+	if !bundle.NeedsApproval {
+		t.Error("expected NeedsApproval to be true for cross-chain ERC20 swap")
+	}
+
+	if bundle.ApprovalTx == nil {
+		t.Error("expected ApprovalTx to be present for cross-chain ERC20 swap")
+	} else {
+		t.Logf("  Approval TX:")
+		t.Logf("    To: %s", bundle.ApprovalTx.To)
+		t.Logf("    Nonce: %d", bundle.ApprovalTx.Nonce)
+	}
+
+	if bundle.SwapTx == nil {
+		t.Error("expected SwapTx to be present")
+	} else {
+		t.Logf("  Swap TX:")
+		t.Logf("    To: %s (router/vault)", bundle.SwapTx.To)
+		t.Logf("    Nonce: %d", bundle.SwapTx.Nonce)
+	}
+
+	// Verify memo is set for THORChain
+	if bundle.Memo == "" {
+		t.Error("expected memo to be set for THORChain swap")
+	} else {
+		t.Logf("  Memo: %s", bundle.Memo)
+	}
+}
+
+// TestRequiresApproval tests the pre-check for approval requirement
+func TestRequiresApproval(t *testing.T) {
+	service := swap.NewService()
+
+	tests := []struct {
+		name     string
+		params   swap.SwapParams
+		expected bool
+	}{
+		{
+			name: "ERC20 on Ethereum needs approval",
+			params: swap.SwapParams{
+				FromChain:   "Ethereum",
+				FromSymbol:  "USDC",
+				FromAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+			},
+			expected: true,
+		},
+		{
+			name: "Native ETH does not need approval",
+			params: swap.SwapParams{
+				FromChain:   "Ethereum",
+				FromSymbol:  "ETH",
+				FromAddress: "",
+			},
+			expected: false,
+		},
+		{
+			name: "Native BTC does not need approval",
+			params: swap.SwapParams{
+				FromChain:   "Bitcoin",
+				FromSymbol:  "BTC",
+				FromAddress: "",
+			},
+			expected: false,
+		},
+		{
+			name: "ERC20 on Arbitrum needs approval",
+			params: swap.SwapParams{
+				FromChain:   "Arbitrum",
+				FromSymbol:  "USDC",
+				FromAddress: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.RequiresApproval(tt.params)
+			if result != tt.expected {
+				t.Errorf("RequiresApproval() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
