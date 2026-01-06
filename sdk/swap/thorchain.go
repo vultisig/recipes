@@ -25,6 +25,7 @@ const (
 	thorChainXRP  = "XRP"
 	thorChainGAIA = "GAIA"
 	thorChainTHOR = "THOR"
+	thorChainTRON = "TRX"
 )
 
 // THORChain supported chains mapped to their network identifiers
@@ -40,6 +41,7 @@ var thorChainNetworks = map[string]string{
 	"XRP":         thorChainXRP,
 	"Cosmos":      thorChainGAIA,
 	"THORChain":   thorChainTHOR,
+	"Tron":        thorChainTRON,
 }
 
 // Default THORChain endpoints
