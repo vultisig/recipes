@@ -126,6 +126,12 @@ func (p *JupiterProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		minOutput, _ = new(big.Int).SetString(quoteResp.OtherAmountThreshold, 10)
 	}
 
+	// Store the quote response for use in BuildTx (avoids re-fetching)
+	providerData, err := json.Marshal(quoteResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal quote data: %w", err)
+	}
+
 	return &Quote{
 		Provider:       p.Name(),
 		FromAsset:      req.From,
@@ -133,6 +139,7 @@ func (p *JupiterProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		FromAmount:     req.Amount,
 		ExpectedOutput: outAmount,
 		MinimumOutput:  minOutput,
+		ProviderData:   providerData,
 	}, nil
 }
 
@@ -142,56 +149,20 @@ func (p *JupiterProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		return nil, fmt.Errorf("quote is required")
 	}
 
-	// First get a fresh quote
-	inputMint := req.Quote.FromAsset.Address
-	if inputMint == "" {
-		inputMint = solanaNativeMint
-	}
-	outputMint := req.Quote.ToAsset.Address
-	if outputMint == "" {
-		outputMint = solanaNativeMint
+	// Use the stored quote data from GetQuote (avoids re-fetching)
+	if len(req.Quote.ProviderData) == 0 {
+		return nil, fmt.Errorf("quote missing provider data - was this quote obtained from GetQuote?")
 	}
 
-	// Get quote
-	params := url.Values{}
-	params.Set("swapMode", "ExactIn")
-	params.Set("inputMint", inputMint)
-	params.Set("outputMint", outputMint)
-	params.Set("amount", req.Quote.FromAmount.String())
-	params.Set("slippageBps", fmt.Sprintf("%d", jupiterDefaultSlippage))
-
-	quoteURL := fmt.Sprintf("%s/swap/v1/quote?%s", p.apiURL, params.Encode())
-
-	quoteReq, err := http.NewRequestWithContext(ctx, http.MethodGet, quoteURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create quote request: %w", err)
-	}
-	quoteReq.Header.Set("Accept", "application/json")
-
-	quoteResp, err := p.client.Do(quoteReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get quote: %w", err)
-	}
-	defer quoteResp.Body.Close()
-
-	quoteBody, err := io.ReadAll(quoteResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read quote response: %w", err)
+	var quoteResponse jupiterQuoteResponse
+	if err := json.Unmarshal(req.Quote.ProviderData, &quoteResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal stored quote: %w", err)
 	}
 
-	if quoteResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Jupiter quote error (status %d): %s", quoteResp.StatusCode, string(quoteBody))
-	}
-
-	var quote jupiterQuoteResponse
-	if err := json.Unmarshal(quoteBody, &quote); err != nil {
-		return nil, fmt.Errorf("failed to parse quote: %w", err)
-	}
-
-	// Get swap instructions
+	// Get swap instructions using the stored quote
 	swapReqBody := jupiterSwapRequest{
 		UserPublicKey:           req.Sender,
-		QuoteResponse:           quote,
+		QuoteResponse:           quoteResponse,
 		WrapAndUnwrapSol:        true,
 		UseSharedAccounts:       true,
 		AsLegacyTransaction:     false,
@@ -226,12 +197,10 @@ func (p *JupiterProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		return nil, fmt.Errorf("Jupiter swap error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	outAmount, _ := new(big.Int).SetString(quote.OutAmount, 10)
-
 	return &SwapResult{
 		Provider:    p.Name(),
 		TxData:      body, // Raw instruction data for Solana tx building
-		ExpectedOut: outAmount,
+		ExpectedOut: req.Quote.ExpectedOutput,
 	}, nil
 }
 

@@ -122,6 +122,10 @@ type Quote struct {
 	NeedsApproval   bool     // True if this is ERC20 on EVM chain
 	ApprovalSpender string   // Router contract address to approve
 	ApprovalAmount  *big.Int // Exact amount to approve (always exact, never unlimited)
+
+	// ProviderData stores provider-specific quote data for use in BuildTx.
+	// This avoids re-fetching quotes and ensures consistency between quote and tx.
+	ProviderData []byte
 }
 
 // SwapRequest contains all parameters needed to build a swap transaction
