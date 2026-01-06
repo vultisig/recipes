@@ -3386,7 +3386,7 @@ func TestTryFormat_ZcashSwap_ToNativeAsset(t *testing.T) {
 		fromAddress      = testZcashChangeAddress
 		fromAmount       = "10000000" // 0.1 ZEC in zatoshis
 		toChain          = "bitcoin"
-		toAsset          = ""                                             // Native BTC
+		toAsset          = "" // Native BTC
 		toAddress        = "bc1qw589q7vva3wxju9zxz8gt59pfz2frwsazglsj8"
 		expectedResource = "zcash.zec.transfer"
 	)
