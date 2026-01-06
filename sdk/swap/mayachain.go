@@ -198,12 +198,21 @@ func (p *MayachainProvider) BuildTx(ctx context.Context, req SwapRequest) (*Swap
 		return nil, fmt.Errorf("quote is required")
 	}
 
-	return &SwapResult{
+	result := &SwapResult{
 		Provider:    p.Name(),
 		ToAddress:   req.Quote.InboundAddress,
 		Memo:        req.Quote.Memo,
 		ExpectedOut: req.Quote.ExpectedOutput,
-	}, nil
+	}
+
+	// For EVM token swaps, set approval info using the router
+	if req.Quote.FromAsset.Address != "" && req.Quote.Router != "" {
+		result.NeedsApproval = true
+		result.ApprovalAddress = req.Quote.Router
+		result.ApprovalAmount = req.Quote.FromAmount
+	}
+
+	return result, nil
 }
 
 // formatAsset formats an asset for Mayachain API

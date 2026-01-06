@@ -248,12 +248,24 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 
 	toAmount, _ := new(big.Int).SetString(quoteResp.Estimate.ToAmount, 10)
 
+	// Get the approval spender address from resolver
+	approvalSpender := quoteResp.TransactionRequest.To
+	if routerInfo, err := ResolveLiFiRouter(req.Quote.FromAsset.Chain); err == nil {
+		approvalSpender = routerInfo.Address
+	}
+
+	// Token swaps need approval (not native token)
+	needsApproval := req.Quote.FromAsset.Address != ""
+
 	return &SwapResult{
-		Provider:    p.Name(),
-		TxData:      []byte(quoteResp.TransactionRequest.Data),
-		Value:       value,
-		ToAddress:   quoteResp.TransactionRequest.To,
-		ExpectedOut: toAmount,
+		Provider:        p.Name(),
+		TxData:          []byte(quoteResp.TransactionRequest.Data),
+		Value:           value,
+		ToAddress:       quoteResp.TransactionRequest.To,
+		ExpectedOut:     toAmount,
+		NeedsApproval:   needsApproval,
+		ApprovalAddress: approvalSpender,
+		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
 }
 

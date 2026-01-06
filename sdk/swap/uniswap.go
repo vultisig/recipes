@@ -204,17 +204,29 @@ func (p *UniswapProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		value = req.Quote.FromAmount
 	}
 
+	// Get the router address from resolver
 	toAddress := quoteResp.MethodParameters.To
 	if toAddress == "" {
-		toAddress = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" // Universal Router
+		if routerInfo, err := ResolveUniswapRouter(req.Quote.FromAsset.Chain); err == nil {
+			toAddress = routerInfo.Address
+		} else {
+			toAddress = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD" // Fallback Universal Router
+		}
 	}
 
+	// Token swaps need approval (not native token)
+	needsApproval := req.Quote.FromAsset.Address != ""
+	approvalSpender := toAddress
+
 	return &SwapResult{
-		Provider:    p.Name(),
-		TxData:      []byte(quoteResp.MethodParameters.Calldata),
-		Value:       value,
-		ToAddress:   toAddress,
-		ExpectedOut: req.Quote.ExpectedOutput,
+		Provider:        p.Name(),
+		TxData:          []byte(quoteResp.MethodParameters.Calldata),
+		Value:           value,
+		ToAddress:       toAddress,
+		ExpectedOut:     req.Quote.ExpectedOutput,
+		NeedsApproval:   needsApproval,
+		ApprovalAddress: approvalSpender,
+		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
 }
 

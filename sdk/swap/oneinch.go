@@ -228,12 +228,24 @@ func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 		value = big.NewInt(0)
 	}
 
+	// Get the approval spender address from resolver
+	approvalSpender := swapResp.Tx.To
+	if routerInfo, err := ResolveOneInchRouter(req.Quote.FromAsset.Chain); err == nil {
+		approvalSpender = routerInfo.Address
+	}
+
+	// Token swaps need approval (not native token)
+	needsApproval := req.Quote.FromAsset.Address != ""
+
 	return &SwapResult{
-		Provider:    p.Name(),
-		TxData:      []byte(swapResp.Tx.Data),
-		Value:       value,
-		ToAddress:   swapResp.Tx.To,
-		ExpectedOut: req.Quote.ExpectedOutput,
+		Provider:        p.Name(),
+		TxData:          []byte(swapResp.Tx.Data),
+		Value:           value,
+		ToAddress:       swapResp.Tx.To,
+		ExpectedOut:     req.Quote.ExpectedOutput,
+		NeedsApproval:   needsApproval,
+		ApprovalAddress: approvalSpender,
+		ApprovalAmount:  req.Quote.FromAmount,
 	}, nil
 }
 

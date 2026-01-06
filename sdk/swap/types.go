@@ -134,6 +134,11 @@ type SwapResult struct {
 	ToAddress   string   // Transaction destination address
 	Memo        string   // Transaction memo
 	ExpectedOut *big.Int // Expected output amount
+
+	// Approval info (for ERC20 swaps)
+	NeedsApproval   bool     // True if token approval is needed
+	ApprovalAddress string   // Spender address for approval
+	ApprovalAmount  *big.Int // Amount to approve (nil = unlimited)
 }
 
 // RouteResult contains the result of finding a swap route

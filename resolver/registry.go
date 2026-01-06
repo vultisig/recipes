@@ -21,6 +21,10 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 	registry.Register(NewTHORChainRouterResolver())
 	registry.Register(NewMayaChainVaultResolver())
 	registry.Register(NewMayaChainRouterResolver())
+	// Swap aggregator routers
+	registry.Register(NewLiFiRouterResolver())
+	registry.Register(NewOneInchRouterResolver())
+	registry.Register(NewUniswapRouterResolver())
 
 	return registry
 }
