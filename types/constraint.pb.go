@@ -92,25 +92,49 @@ const (
 	MagicConstant_THORCHAIN_ROUTER  MagicConstant = 3
 	MagicConstant_MAYACHAIN_VAULT   MagicConstant = 4
 	MagicConstant_MAYACHAIN_ROUTER  MagicConstant = 5
+	// Bridge routers - resolved dynamically
+	MagicConstant_LIFI_ROUTER MagicConstant = 6
+	// Native L2 bridge addresses (L1 side - on Ethereum)
+	MagicConstant_ARBITRUM_L1_GATEWAY MagicConstant = 7
+	MagicConstant_OPTIMISM_L1_BRIDGE  MagicConstant = 8
+	MagicConstant_BASE_L1_BRIDGE      MagicConstant = 9
+	// Native L2 bridge addresses (L2 side)
+	MagicConstant_ARBITRUM_L2_GATEWAY MagicConstant = 10
+	MagicConstant_OPTIMISM_L2_BRIDGE  MagicConstant = 11
+	MagicConstant_BASE_L2_BRIDGE      MagicConstant = 12
 )
 
 // Enum value maps for MagicConstant.
 var (
 	MagicConstant_name = map[int32]string{
-		0: "UNSPECIFIED",
-		1: "VULTISIG_TREASURY",
-		2: "THORCHAIN_VAULT",
-		3: "THORCHAIN_ROUTER",
-		4: "MAYACHAIN_VAULT",
-		5: "MAYACHAIN_ROUTER",
+		0:  "UNSPECIFIED",
+		1:  "VULTISIG_TREASURY",
+		2:  "THORCHAIN_VAULT",
+		3:  "THORCHAIN_ROUTER",
+		4:  "MAYACHAIN_VAULT",
+		5:  "MAYACHAIN_ROUTER",
+		6:  "LIFI_ROUTER",
+		7:  "ARBITRUM_L1_GATEWAY",
+		8:  "OPTIMISM_L1_BRIDGE",
+		9:  "BASE_L1_BRIDGE",
+		10: "ARBITRUM_L2_GATEWAY",
+		11: "OPTIMISM_L2_BRIDGE",
+		12: "BASE_L2_BRIDGE",
 	}
 	MagicConstant_value = map[string]int32{
-		"UNSPECIFIED":       0,
-		"VULTISIG_TREASURY": 1,
-		"THORCHAIN_VAULT":   2,
-		"THORCHAIN_ROUTER":  3,
-		"MAYACHAIN_VAULT":   4,
-		"MAYACHAIN_ROUTER":  5,
+		"UNSPECIFIED":         0,
+		"VULTISIG_TREASURY":   1,
+		"THORCHAIN_VAULT":     2,
+		"THORCHAIN_ROUTER":    3,
+		"MAYACHAIN_VAULT":     4,
+		"MAYACHAIN_ROUTER":    5,
+		"LIFI_ROUTER":         6,
+		"ARBITRUM_L1_GATEWAY": 7,
+		"OPTIMISM_L1_BRIDGE":  8,
+		"BASE_L1_BRIDGE":      9,
+		"ARBITRUM_L2_GATEWAY": 10,
+		"OPTIMISM_L2_BRIDGE":  11,
+		"BASE_L2_BRIDGE":      12,
 	}
 )
 
@@ -333,14 +357,22 @@ const file_constraint_proto_rawDesc = "" +
 	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\"\n" +
 	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\x04\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_ANY\x10\x05\x12\x1a\n" +
-	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*\x8d\x01\n" +
+	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*\xa8\x02\n" +
 	"\rMagicConstant\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11VULTISIG_TREASURY\x10\x01\x12\x13\n" +
 	"\x0fTHORCHAIN_VAULT\x10\x02\x12\x14\n" +
 	"\x10THORCHAIN_ROUTER\x10\x03\x12\x13\n" +
 	"\x0fMAYACHAIN_VAULT\x10\x04\x12\x14\n" +
-	"\x10MAYACHAIN_ROUTER\x10\x05B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x10MAYACHAIN_ROUTER\x10\x05\x12\x0f\n" +
+	"\vLIFI_ROUTER\x10\x06\x12\x17\n" +
+	"\x13ARBITRUM_L1_GATEWAY\x10\a\x12\x16\n" +
+	"\x12OPTIMISM_L1_BRIDGE\x10\b\x12\x12\n" +
+	"\x0eBASE_L1_BRIDGE\x10\t\x12\x17\n" +
+	"\x13ARBITRUM_L2_GATEWAY\x10\n" +
+	"\x12\x16\n" +
+	"\x12OPTIMISM_L2_BRIDGE\x10\v\x12\x12\n" +
+	"\x0eBASE_L2_BRIDGE\x10\fB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once

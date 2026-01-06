@@ -22,6 +22,16 @@ enum MagicConstant {
   THORCHAIN_ROUTER = 3;
   MAYACHAIN_VAULT = 4;
   MAYACHAIN_ROUTER = 5;
+  // Bridge routers - resolved dynamically
+  LIFI_ROUTER = 6;
+  // Native L2 bridge addresses (L1 side - on Ethereum)
+  ARBITRUM_L1_GATEWAY = 7;
+  OPTIMISM_L1_BRIDGE = 8;
+  BASE_L1_BRIDGE = 9;
+  // Native L2 bridge addresses (L2 side)
+  ARBITRUM_L2_GATEWAY = 10;
+  OPTIMISM_L2_BRIDGE = 11;
+  BASE_L2_BRIDGE = 12;
 }
 
 // Constraint defines restrictions on a parameter

@@ -21,6 +21,9 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 	registry.Register(NewTHORChainRouterResolver())
 	registry.Register(NewMayaChainVaultResolver())
 	registry.Register(NewMayaChainRouterResolver())
+	// Bridge resolvers
+	registry.Register(NewLiFiRouterResolver())
+	registry.Register(NewNativeBridgeResolver())
 
 	return registry
 }
