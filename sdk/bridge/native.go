@@ -96,9 +96,9 @@ var l1BridgeAddresses = map[string]L1BridgeConfig{
 		BridgeType:    BridgeTypeArbitrumGateway,
 	},
 	// Optimism L1 Standard Bridge (Proxy)
-	// Verified: https://etherscan.io/address/0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1
+	// Verified: https://etherscan.io/address/0x40E0C049f4671846E9Cff93AAEd88f2B48E527bB
 	"Optimism": {
-		GatewayRouter: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+		GatewayRouter: "0x40E0C049f4671846E9Cff93AAEd88f2B48E527bB",
 		BridgeType:    BridgeTypeOptimismStandard,
 	},
 	// Base L1 Standard Bridge (Proxy)

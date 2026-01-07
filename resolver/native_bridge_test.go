@@ -112,7 +112,7 @@ func TestNativeBridgeAddressValues(t *testing.T) {
 		{
 			name:     "Optimism L1 Bridge",
 			actual:   OptimismL1StandardBridge,
-			expected: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+			expected: "0x40E0C049f4671846E9Cff93AAEd88f2B48E527bB",
 		},
 		{
 			name:     "Base L1 Bridge",
