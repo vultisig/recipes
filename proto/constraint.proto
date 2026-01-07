@@ -22,6 +22,10 @@ enum MagicConstant {
   THORCHAIN_ROUTER = 3;
   MAYACHAIN_VAULT = 4;
   MAYACHAIN_ROUTER = 5;
+  // Swap aggregator routers - resolved dynamically
+  LIFI_ROUTER = 6;
+  ONEINCH_ROUTER = 7;
+  UNISWAP_UNIVERSAL_ROUTER = 8;
 }
 
 // Constraint defines restrictions on a parameter

@@ -92,6 +92,10 @@ const (
 	MagicConstant_THORCHAIN_ROUTER  MagicConstant = 3
 	MagicConstant_MAYACHAIN_VAULT   MagicConstant = 4
 	MagicConstant_MAYACHAIN_ROUTER  MagicConstant = 5
+	// Swap aggregator routers - resolved dynamically
+	MagicConstant_LIFI_ROUTER              MagicConstant = 6
+	MagicConstant_ONEINCH_ROUTER           MagicConstant = 7
+	MagicConstant_UNISWAP_UNIVERSAL_ROUTER MagicConstant = 8
 )
 
 // Enum value maps for MagicConstant.
@@ -103,14 +107,20 @@ var (
 		3: "THORCHAIN_ROUTER",
 		4: "MAYACHAIN_VAULT",
 		5: "MAYACHAIN_ROUTER",
+		6: "LIFI_ROUTER",
+		7: "ONEINCH_ROUTER",
+		8: "UNISWAP_UNIVERSAL_ROUTER",
 	}
 	MagicConstant_value = map[string]int32{
-		"UNSPECIFIED":       0,
-		"VULTISIG_TREASURY": 1,
-		"THORCHAIN_VAULT":   2,
-		"THORCHAIN_ROUTER":  3,
-		"MAYACHAIN_VAULT":   4,
-		"MAYACHAIN_ROUTER":  5,
+		"UNSPECIFIED":              0,
+		"VULTISIG_TREASURY":        1,
+		"THORCHAIN_VAULT":          2,
+		"THORCHAIN_ROUTER":         3,
+		"MAYACHAIN_VAULT":          4,
+		"MAYACHAIN_ROUTER":         5,
+		"LIFI_ROUTER":              6,
+		"ONEINCH_ROUTER":           7,
+		"UNISWAP_UNIVERSAL_ROUTER": 8,
 	}
 )
 
@@ -333,14 +343,17 @@ const file_constraint_proto_rawDesc = "" +
 	"\x13CONSTRAINT_TYPE_MIN\x10\x03\x12\"\n" +
 	"\x1eCONSTRAINT_TYPE_MAGIC_CONSTANT\x10\x04\x12\x17\n" +
 	"\x13CONSTRAINT_TYPE_ANY\x10\x05\x12\x1a\n" +
-	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*\x8d\x01\n" +
+	"\x16CONSTRAINT_TYPE_REGEXP\x10\x06*\xd0\x01\n" +
 	"\rMagicConstant\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11VULTISIG_TREASURY\x10\x01\x12\x13\n" +
 	"\x0fTHORCHAIN_VAULT\x10\x02\x12\x14\n" +
 	"\x10THORCHAIN_ROUTER\x10\x03\x12\x13\n" +
 	"\x0fMAYACHAIN_VAULT\x10\x04\x12\x14\n" +
-	"\x10MAYACHAIN_ROUTER\x10\x05B#Z!github.com/vultisig/recipes/typesb\x06proto3"
+	"\x10MAYACHAIN_ROUTER\x10\x05\x12\x0f\n" +
+	"\vLIFI_ROUTER\x10\x06\x12\x12\n" +
+	"\x0eONEINCH_ROUTER\x10\a\x12\x1c\n" +
+	"\x18UNISWAP_UNIVERSAL_ROUTER\x10\bB#Z!github.com/vultisig/recipes/typesb\x06proto3"
 
 var (
 	file_constraint_proto_rawDescOnce sync.Once
