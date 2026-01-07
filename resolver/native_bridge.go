@@ -25,8 +25,8 @@ const (
 	ArbitrumL1GatewayRouter = "0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef"
 
 	// Optimism L1 Standard Bridge (Proxy)
-	// Verified: https://etherscan.io/address/0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1
-	OptimismL1StandardBridge = "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
+	// Verified: https://etherscan.io/address/0x40E0C049f4671846E9Cff93AAEd88f2B48E527bB
+	OptimismL1StandardBridge = "0x40E0C049f4671846E9Cff93AAEd88f2B48E527bB"
 
 	// Base L1 Standard Bridge (Proxy)
 	// Verified: https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35
