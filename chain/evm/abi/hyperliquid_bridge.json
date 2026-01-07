@@ -1,0 +1,60 @@
+[
+  {
+    "inputs": [
+      {"internalType": "address", "name": "destination", "type": "address"},
+      {"internalType": "uint64", "name": "usd", "type": "uint64"}
+    ],
+    "name": "batchedDepositWithPermit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint64", "name": "usd", "type": "uint64"}
+    ],
+    "name": "initiateWithdrawal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "user", "type": "address"},
+      {"internalType": "uint64", "name": "usd", "type": "uint64"},
+      {"internalType": "uint64", "name": "nonce", "type": "uint64"}
+    ],
+    "name": "finalizeWithdrawal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "user", "type": "address"},
+      {"internalType": "bool", "name": "isBid", "type": "bool"},
+      {"internalType": "uint32", "name": "asset", "type": "uint32"},
+      {"internalType": "uint64", "name": "limitPx", "type": "uint64"},
+      {"internalType": "uint64", "name": "sz", "type": "uint64"},
+      {"internalType": "bool", "name": "reduceOnly", "type": "bool"},
+      {"internalType": "uint8", "name": "orderType", "type": "uint8"},
+      {"internalType": "uint64", "name": "cloid", "type": "uint64"}
+    ],
+    "name": "order",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint32", "name": "asset", "type": "uint32"},
+      {"internalType": "uint64", "name": "cloid", "type": "uint64"}
+    ],
+    "name": "cancel",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
+
+

@@ -1,0 +1,130 @@
+{
+  "version": "0.1.0",
+  "name": "jupiter_perpetuals",
+  "metadata": {
+    "address": "PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu"
+  },
+  "instructions": [
+    {
+      "name": "increaseSize",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "fundingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "price", "type": "u64"},
+        {"name": "collateral", "type": "u64"},
+        {"name": "size", "type": "u64"}
+      ]
+    },
+    {
+      "name": "decreaseSize",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "receivingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "price", "type": "u64"},
+        {"name": "size", "type": "u64"}
+      ]
+    },
+    {
+      "name": "openPosition",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "fundingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "price", "type": "u64"},
+        {"name": "collateral", "type": "u64"},
+        {"name": "size", "type": "u64"},
+        {"name": "side", "type": "u8"}
+      ]
+    },
+    {
+      "name": "closePosition",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "receivingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "price", "type": "u64"}
+      ]
+    },
+    {
+      "name": "addCollateral",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "fundingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "collateral", "type": "u64"}
+      ]
+    },
+    {
+      "name": "removeCollateral",
+      "accounts": [
+        {"name": "owner", "isMut": true, "isSigner": true},
+        {"name": "receivingAccount", "isMut": true, "isSigner": false},
+        {"name": "perpetuals", "isMut": false, "isSigner": false},
+        {"name": "pool", "isMut": true, "isSigner": false},
+        {"name": "position", "isMut": true, "isSigner": false},
+        {"name": "custody", "isMut": true, "isSigner": false},
+        {"name": "custodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustody", "isMut": true, "isSigner": false},
+        {"name": "collateralCustodyOracleAccount", "isMut": false, "isSigner": false},
+        {"name": "collateralCustodyTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "collateralUsd", "type": "u64"}
+      ]
+    }
+  ]
+}

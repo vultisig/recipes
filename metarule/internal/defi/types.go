@@ -69,7 +69,7 @@ const (
 // IsEVMProtocol returns true if the protocol is EVM-based
 func IsEVMProtocol(p Protocol) bool {
 	switch p {
-	case ProtocolUniswapV3, ProtocolAave, ProtocolCompound, ProtocolGMX, ProtocolHyperliquid, ProtocolPolymarket:
+	case ProtocolUniswapV3, ProtocolAave, ProtocolCompound, ProtocolGMX, ProtocolLighter, ProtocolHyperliquid, ProtocolPolymarket:
 		return true
 	default:
 		return false

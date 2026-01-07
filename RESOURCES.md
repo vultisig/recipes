@@ -117,6 +117,809 @@ Transfer Dogecoin to another address
 ```
 
 
+### ethereum.aavev3_pool.borrow
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.borrow  
+
+Call the borrow function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| interestRateMode | decimal | interestRateMode parameter of type uint256 |
+| referralCode | decimal | referralCode parameter of type uint16 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.borrow",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "interestRateMode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "referralCode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.getUserAccountData
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.getUserAccountData  
+
+Call the getUserAccountData function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| user | address | user parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.getUserAccountData",
+  "effect": "ALLOW",
+  "constraints": {
+    "user": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.repay
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.repay  
+
+Call the repay function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| interestRateMode | decimal | interestRateMode parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.repay",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "interestRateMode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.repayWithPermit
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.repayWithPermit  
+
+Call the repayWithPermit function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| interestRateMode | decimal | interestRateMode parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+| deadline | decimal | deadline parameter of type uint256 |
+| permitV | decimal | permitV parameter of type uint8 |
+| permitR | string | permitR parameter of type bytes32 |
+| permitS | string | permitS parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.repayWithPermit",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "interestRateMode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "deadline": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitV": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitR": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitS": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.setUserUseReserveAsCollateral
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.setUserUseReserveAsCollateral  
+
+Call the setUserUseReserveAsCollateral function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| useAsCollateral | boolean | useAsCollateral parameter of type bool |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.setUserUseReserveAsCollateral",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "useAsCollateral": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.supply
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.supply  
+
+Call the supply function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+| referralCode | decimal | referralCode parameter of type uint16 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.supply",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "referralCode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.supplyWithPermit
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.supplyWithPermit  
+
+Call the supplyWithPermit function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+| referralCode | decimal | referralCode parameter of type uint16 |
+| deadline | decimal | deadline parameter of type uint256 |
+| permitV | decimal | permitV parameter of type uint8 |
+| permitR | string | permitR parameter of type bytes32 |
+| permitS | string | permitS parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.supplyWithPermit",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "referralCode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "deadline": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitV": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitR": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "permitS": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.withdraw
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.withdraw  
+
+Call the withdraw function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| to | address | to parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.withdraw",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.balanceOf
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.balanceOf  
+
+Call the balanceOf function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.balanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.baseToken
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.baseToken  
+
+Call the baseToken function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.baseToken",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.borrowBalanceOf
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.borrowBalanceOf  
+
+Call the borrowBalanceOf function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.borrowBalanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.collateralBalanceOf
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.collateralBalanceOf  
+
+Call the collateralBalanceOf function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+| asset | address | asset parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.collateralBalanceOf",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.isBorrowCollateralized
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.isBorrowCollateralized  
+
+Call the isBorrowCollateralized function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.isBorrowCollateralized",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.supply
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.supply  
+
+Call the supply function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.supply",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.supplyFrom
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.supplyFrom  
+
+Call the supplyFrom function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| from | address | from parameter of type address |
+| dst | address | dst parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.supplyFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "from": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "dst": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.supplyTo
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.supplyTo  
+
+Call the supplyTo function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| dst | address | dst parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.supplyTo",
+  "effect": "ALLOW",
+  "constraints": {
+    "dst": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.withdraw
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.withdraw  
+
+Call the withdraw function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.withdraw",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.withdrawFrom
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.withdrawFrom  
+
+Call the withdrawFrom function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| src | address | src parameter of type address |
+| to | address | to parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.withdrawFrom",
+  "effect": "ALLOW",
+  "constraints": {
+    "src": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.compoundv3_comet.withdrawTo
+
+**Chain:** Ethereum  
+**Protocol:** compoundv3_comet  
+**Function:** compoundv3_comet.withdrawTo  
+
+Call the withdrawTo function on compoundv3_comet
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | address | to parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.compoundv3_comet.withdrawTo",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.dai.allowance
 
 **Chain:** Ethereum  
@@ -438,6 +1241,653 @@ Transfer Ether to another address
       "value": "example_value"
     },
     "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.cancelOrder
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.cancelOrder  
+
+Call the cancelOrder function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| key | string | key parameter of type bytes32 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.cancelOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "key": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.createOrder
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.createOrder  
+
+Call the createOrder function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | string | params parameter of type struct IBaseOrderUtils.CreateOrderParams |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.createOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "params": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.multicall
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.multicall  
+
+Call the multicall function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | array | data parameter of type bytes[] |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.multicall",
+  "effect": "ALLOW",
+  "constraints": {
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.sendTokens
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.sendTokens  
+
+Call the sendTokens function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| token | address | token parameter of type address |
+| receiver | address | receiver parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.sendTokens",
+  "effect": "ALLOW",
+  "constraints": {
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "receiver": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.sendWnt
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.sendWnt  
+
+Call the sendWnt function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| receiver | address | receiver parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.sendWnt",
+  "effect": "ALLOW",
+  "constraints": {
+    "receiver": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.gmxv2_exchange_router.updateOrder
+
+**Chain:** Ethereum  
+**Protocol:** gmxv2_exchange_router  
+**Function:** gmxv2_exchange_router.updateOrder  
+
+Call the updateOrder function on gmxv2_exchange_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| key | string | key parameter of type bytes32 |
+| sizeDeltaUsd | decimal | sizeDeltaUsd parameter of type uint256 |
+| acceptablePrice | decimal | acceptablePrice parameter of type uint256 |
+| triggerPrice | decimal | triggerPrice parameter of type uint256 |
+| minOutputAmount | decimal | minOutputAmount parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.gmxv2_exchange_router.updateOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "key": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "sizeDeltaUsd": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "acceptablePrice": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "triggerPrice": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "minOutputAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.hyperliquid_bridge.batchedDepositWithPermit
+
+**Chain:** Ethereum  
+**Protocol:** hyperliquid_bridge  
+**Function:** hyperliquid_bridge.batchedDepositWithPermit  
+
+Call the batchedDepositWithPermit function on hyperliquid_bridge
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| destination | address | destination parameter of type address |
+| usd | decimal | usd parameter of type uint64 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.hyperliquid_bridge.batchedDepositWithPermit",
+  "effect": "ALLOW",
+  "constraints": {
+    "destination": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "usd": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.hyperliquid_bridge.cancel
+
+**Chain:** Ethereum  
+**Protocol:** hyperliquid_bridge  
+**Function:** hyperliquid_bridge.cancel  
+
+Call the cancel function on hyperliquid_bridge
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | decimal | asset parameter of type uint32 |
+| cloid | decimal | cloid parameter of type uint64 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.hyperliquid_bridge.cancel",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "cloid": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.hyperliquid_bridge.finalizeWithdrawal
+
+**Chain:** Ethereum  
+**Protocol:** hyperliquid_bridge  
+**Function:** hyperliquid_bridge.finalizeWithdrawal  
+
+Call the finalizeWithdrawal function on hyperliquid_bridge
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| user | address | user parameter of type address |
+| usd | decimal | usd parameter of type uint64 |
+| nonce | decimal | nonce parameter of type uint64 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.hyperliquid_bridge.finalizeWithdrawal",
+  "effect": "ALLOW",
+  "constraints": {
+    "user": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "usd": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "nonce": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.hyperliquid_bridge.initiateWithdrawal
+
+**Chain:** Ethereum  
+**Protocol:** hyperliquid_bridge  
+**Function:** hyperliquid_bridge.initiateWithdrawal  
+
+Call the initiateWithdrawal function on hyperliquid_bridge
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| usd | decimal | usd parameter of type uint64 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.hyperliquid_bridge.initiateWithdrawal",
+  "effect": "ALLOW",
+  "constraints": {
+    "usd": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.hyperliquid_bridge.order
+
+**Chain:** Ethereum  
+**Protocol:** hyperliquid_bridge  
+**Function:** hyperliquid_bridge.order  
+
+Call the order function on hyperliquid_bridge
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| user | address | user parameter of type address |
+| isBid | boolean | isBid parameter of type bool |
+| asset | decimal | asset parameter of type uint32 |
+| limitPx | decimal | limitPx parameter of type uint64 |
+| sz | decimal | sz parameter of type uint64 |
+| reduceOnly | boolean | reduceOnly parameter of type bool |
+| orderType | decimal | orderType parameter of type uint8 |
+| cloid | decimal | cloid parameter of type uint64 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.hyperliquid_bridge.order",
+  "effect": "ALLOW",
+  "constraints": {
+    "user": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "isBid": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "limitPx": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "sz": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "reduceOnly": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "orderType": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "cloid": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf.setApprovalForAll
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf  
+**Function:** polymarket_ctf.setApprovalForAll  
+
+Call the setApprovalForAll function on polymarket_ctf
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| operator | address | operator parameter of type address |
+| approved | boolean | approved parameter of type bool |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf.setApprovalForAll",
+  "effect": "ALLOW",
+  "constraints": {
+    "operator": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "approved": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.cancelOrder
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.cancelOrder  
+
+Call the cancelOrder function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct Order |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.cancelOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.cancelOrders
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.cancelOrders  
+
+Call the cancelOrders function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| orders | array | orders parameter of type struct Order[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.cancelOrders",
+  "effect": "ALLOW",
+  "constraints": {
+    "orders": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.fillOrder
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.fillOrder  
+
+Call the fillOrder function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct Order |
+| fillAmount | decimal | fillAmount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.fillOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "fillAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.fillOrders
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.fillOrders  
+
+Call the fillOrders function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| orders | array | orders parameter of type struct Order[] |
+| fillAmounts | decimal | fillAmounts parameter of type uint256[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.fillOrders",
+  "effect": "ALLOW",
+  "constraints": {
+    "orders": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "fillAmounts": {
       "type": "fixed",
       "value": "example_value"
     },
@@ -4217,6 +5667,260 @@ Swap tokens for exact amount of other tokens with maximum input protection
       "value": "example_value"
     },
     "deadline": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.burn
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.burn  
+
+Call the burn function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| tokenId | decimal | tokenId parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.burn",
+  "effect": "ALLOW",
+  "constraints": {
+    "tokenId": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.collect
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.collect  
+
+Call the collect function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | string | params parameter of type struct INonfungiblePositionManager.CollectParams |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.collect",
+  "effect": "ALLOW",
+  "constraints": {
+    "params": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.decreaseLiquidity
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.decreaseLiquidity  
+
+Call the decreaseLiquidity function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | string | params parameter of type struct INonfungiblePositionManager.DecreaseLiquidityParams |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.decreaseLiquidity",
+  "effect": "ALLOW",
+  "constraints": {
+    "params": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.increaseLiquidity
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.increaseLiquidity  
+
+Call the increaseLiquidity function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | string | params parameter of type struct INonfungiblePositionManager.IncreaseLiquidityParams |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.increaseLiquidity",
+  "effect": "ALLOW",
+  "constraints": {
+    "params": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.mint
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.mint  
+
+Call the mint function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | string | params parameter of type struct INonfungiblePositionManager.MintParams |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.mint",
+  "effect": "ALLOW",
+  "constraints": {
+    "params": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.multicall
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.multicall  
+
+Call the multicall function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | array | data parameter of type bytes[] |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.multicall",
+  "effect": "ALLOW",
+  "constraints": {
+    "data": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.uniswapv3_nonfungible_position_manager.positions
+
+**Chain:** Ethereum  
+**Protocol:** uniswapv3_nonfungible_position_manager  
+**Function:** uniswapv3_nonfungible_position_manager.positions  
+
+Call the positions function on uniswapv3_nonfungible_position_manager
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| tokenId | decimal | tokenId parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.uniswapv3_nonfungible_position_manager.positions",
+  "effect": "ALLOW",
+  "constraints": {
+    "tokenId": {
       "type": "fixed",
       "value": "example_value"
     },

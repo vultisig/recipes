@@ -98,3 +98,4 @@ func NewChain() types.Chain {
 	return &Dash{}
 }
 
+

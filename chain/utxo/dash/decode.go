@@ -121,3 +121,4 @@ func (p *ParsedDashTransaction) GetInputCount() int {
 	return len(p.tx.TxIn)
 }
 
+
