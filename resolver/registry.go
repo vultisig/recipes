@@ -25,6 +25,8 @@ func NewMagicConstantRegistry() *MagicConstantRegistry {
 	registry.Register(NewLiFiRouterResolver())
 	registry.Register(NewOneInchRouterResolver())
 	registry.Register(NewUniswapRouterResolver())
+	// Native L2 bridge resolvers
+	registry.Register(NewNativeBridgeResolver())
 
 	return registry
 }

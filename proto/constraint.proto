@@ -26,6 +26,14 @@ enum MagicConstant {
   LIFI_ROUTER = 6;
   ONEINCH_ROUTER = 7;
   UNISWAP_UNIVERSAL_ROUTER = 8;
+  // Native L2 bridge addresses (L1 side - on Ethereum)
+  ARBITRUM_L1_GATEWAY = 9;
+  OPTIMISM_L1_BRIDGE = 10;
+  BASE_L1_BRIDGE = 11;
+  // Native L2 bridge addresses (L2 side)
+  ARBITRUM_L2_GATEWAY = 12;
+  OPTIMISM_L2_BRIDGE = 13;
+  BASE_L2_BRIDGE = 14;
 }
 
 // Constraint defines restrictions on a parameter

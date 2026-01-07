@@ -12,7 +12,7 @@ import (
 var uniswapUniversalRouters = map[string]string{
 	"Ethereum": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
 	"Polygon":  "0x1095692a6237d83c6a72f3f5efedb9a670c49223",
-	"Arbitrum": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+	"Arbitrum": "0x5E325eDA8064b456f4781070C0738d849c824258",
 	"Optimism": "0x851116d9223fabed8e56c0e6b8ad0c31d98b3507",
 	"Base":     "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
 	"BSC":      "0x1906c1d672b88cd1b9ac7593301ca990f94eae07",

@@ -24,8 +24,9 @@ func NewMetaRule() *MetaRule {
 type metaProtocol string
 
 const (
-	send metaProtocol = "send"
-	swap metaProtocol = "swap"
+	send   metaProtocol = "send"
+	swap   metaProtocol = "swap"
+	bridge metaProtocol = "bridge"
 )
 
 func getOneInchSpender(chain common.Chain) (string, error) {
@@ -231,6 +232,60 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	}
 	if res.amount == nil {
 		return res, fmt.Errorf("failed to find constraint: amount")
+	}
+	if res.toAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: to_address")
+	}
+
+	return res, nil
+}
+
+// bridgeConstraints holds parameters for bridge operations (same asset across chains)
+type bridgeConstraints struct {
+	fromAsset   *types.Constraint // Token address on source chain (empty for native)
+	fromAddress *types.Constraint // Sender address
+	fromAmount  *types.Constraint // Amount to bridge
+	toChain     *types.Constraint // Destination chain
+	toAsset     *types.Constraint // Token address on destination (empty for native)
+	toAddress   *types.Constraint // Recipient address on destination
+}
+
+func getBridgeConstraints(rule *types.Rule) (bridgeConstraints, error) {
+	res := bridgeConstraints{}
+
+	for _, c := range rule.GetParameterConstraints() {
+		switch c.GetParameterName() {
+		case "from_asset":
+			res.fromAsset = c.GetConstraint()
+		case "from_address":
+			res.fromAddress = c.GetConstraint()
+		case "from_amount":
+			res.fromAmount = c.GetConstraint()
+		case "to_chain":
+			res.toChain = c.GetConstraint()
+		case "to_asset":
+			res.toAsset = c.GetConstraint()
+		case "to_address":
+			res.toAddress = c.GetConstraint()
+		}
+	}
+
+	// from_asset can be empty (native token), so we initialize it if nil
+	if res.fromAsset == nil {
+		res.fromAsset = fixed("")
+	}
+	if res.fromAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: from_address")
+	}
+	if res.fromAmount == nil {
+		return res, fmt.Errorf("failed to find constraint: from_amount")
+	}
+	if res.toChain == nil {
+		return res, fmt.Errorf("failed to find constraint: to_chain")
+	}
+	// to_asset can be empty (native token), so we initialize it if nil
+	if res.toAsset == nil {
+		res.toAsset = fixed("")
 	}
 	if res.toAddress == nil {
 		return res, fmt.Errorf("failed to find constraint: to_address")
@@ -468,6 +523,92 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			}
 		}
 
+		if c.fromAsset.GetFixedValue() != "" {
+			approve := proto.Clone(in).(*types.Rule)
+			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+			approve.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+				Target: &types.Target_Address{
+					Address: c.fromAsset.GetFixedValue(),
+				},
+			}
+			approve.ParameterConstraints = []*types.ParameterConstraint{
+				{
+					ParameterName: "amount",
+					Constraint: &types.Constraint{
+						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+						Value: &types.Constraint_MinValue{
+							MinValue: c.fromAmount.GetFixedValue(),
+						},
+					},
+				},
+				{
+					ParameterName: "spender",
+					Constraint:    router,
+				},
+			}
+			rules = append(rules, approve)
+		}
+
+		return rules, nil
+	case bridge:
+		c, err := getBridgeConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse bridge constraints: %w", err)
+		}
+
+		chain, err := common.FromString(r.GetChainId())
+		if err != nil {
+			return nil, fmt.Errorf("invalid chainID: %w", err)
+		}
+
+		rules := make([]*types.Rule, 0)
+
+		// Determine bridge provider based on route
+		// LiFi is the default for cross-chain EVM bridges
+		router := &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+			Value: &types.Constraint_MagicConstantValue{
+				MagicConstantValue: types.MagicConstant_LIFI_ROUTER,
+			},
+		}
+
+		// Create bridge rule for LiFi Diamond contract call
+		// LiFi uses a generic call pattern through its Diamond proxy
+		bridgeRule := proto.Clone(in).(*types.Rule)
+		bridgeRule.Resource = fmt.Sprintf("%s.lifi_bridge.bridge", strings.ToLower(chain.String()))
+		bridgeRule.Effect = types.Effect_EFFECT_ALLOW
+		bridgeRule.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_LIFI_ROUTER,
+			},
+		}
+		bridgeRule.ParameterConstraints = []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint:    c.fromAsset,
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint:    c.fromAmount,
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint:    c.toChain,
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint:    c.toAsset,
+			},
+			{
+				ParameterName: "to_address",
+				Constraint:    c.toAddress,
+			},
+		}
+		rules = append(rules, bridgeRule)
+
+		// If bridging ERC20 token, add approval rule
 		if c.fromAsset.GetFixedValue() != "" {
 			approve := proto.Clone(in).(*types.Rule)
 			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))

@@ -23,6 +23,8 @@ var lifiRouters = map[string]string{
 	"Base":      "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
 	"Fantom":    "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
 	"Gnosis":    "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+	"Blast":     "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+	"Zksync":    "0x341e94069f53234fE6DabeF707aD424830525715", // zkSync has different address
 }
 
 type LiFiRouterResolver struct {
@@ -106,4 +108,3 @@ type lifiChain struct {
 	ChainID        int64  `json:"id"`
 	DiamondAddress string `json:"diamondAddress"`
 }
-
