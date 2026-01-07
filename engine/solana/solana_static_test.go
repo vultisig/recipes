@@ -543,7 +543,7 @@ func TestEvaluate_SPLTokenTransfer(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -618,7 +618,7 @@ func TestEvaluate_SPLTokenTransfer_InvalidAmount(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -700,7 +700,7 @@ func TestEvaluate_SPLTokenTransfer_InvalidRecipient(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -776,7 +776,7 @@ func TestEvaluate_SPLTokenTransfer_MinAmount(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -851,7 +851,7 @@ func TestEvaluate_SPLTokenTransfer_MinAmount_Invalid(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -931,7 +931,7 @@ func TestEvaluate_SPLTokenTransfer_MaxAmount(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -1006,7 +1006,7 @@ func TestEvaluate_SPLTokenTransfer_MaxAmount_Invalid(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -1121,7 +1121,7 @@ func TestEvaluate_SPLTokenTransfer_InvalidProgram(t *testing.T) {
 
 	rule := &types.Rule{
 		Effect:   types.Effect_EFFECT_ALLOW,
-		Resource: "solana.spl_token.transfer",
+		Resource: "solana.token.transfer",
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
