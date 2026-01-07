@@ -1,19 +1,18 @@
 package resolver
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
+	"io"
+	"net/http"
+	"time"
 
 	"github.com/vultisig/recipes/types"
 )
 
-// ============================================================================
-// LiFi Diamond Contract Addresses
-// ============================================================================
+// LiFi contract addresses per chain
+// These are the official LiFi Diamond contracts
 // Source: https://docs.li.fi/list-of-all-lifi-contract-addresses
-// VERIFIED: These addresses are the same across most EVM chains (Diamond proxy pattern)
-// ============================================================================
-
 var lifiRouters = map[string]string{
 	"Ethereum":  "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
 	"Arbitrum":  "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
@@ -28,71 +27,84 @@ var lifiRouters = map[string]string{
 	"Zksync":    "0x341e94069f53234fE6DabeF707aD424830525715", // zkSync has different address
 }
 
-// LiFiRouterResolver resolves LiFi Diamond contract addresses
-type LiFiRouterResolver struct{}
-
-// NewLiFiRouterResolver creates a new LiFi router resolver
-func NewLiFiRouterResolver() Resolver {
-	return &LiFiRouterResolver{}
+type LiFiRouterResolver struct {
+	client  *http.Client
+	baseURL string
 }
 
-// Supports returns true if this resolver handles LIFI_ROUTER
+func NewLiFiRouterResolver() Resolver {
+	return &LiFiRouterResolver{
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		baseURL: "https://li.quest/v1",
+	}
+}
+
 func (r *LiFiRouterResolver) Supports(constant types.MagicConstant) bool {
 	return constant == types.MagicConstant_LIFI_ROUTER
 }
 
-// Resolve returns the LiFi Diamond address for the given chain
 func (r *LiFiRouterResolver) Resolve(constant types.MagicConstant, chainID, _ string) (string, string, error) {
 	if !r.Supports(constant) {
 		return "", "", fmt.Errorf("LiFiRouterResolver does not support type: %v", constant)
 	}
 
-	// Normalize chain ID (handle case variations)
-	normalizedChain := normalizeChainID(chainID)
+	// First check our known addresses
+	if router, ok := lifiRouters[chainID]; ok {
+		return router, "", nil
+	}
 
-	router, ok := lifiRouters[normalizedChain]
-	if !ok {
-		return "", "", fmt.Errorf("no LiFi router found for chain %s", chainID)
+	// Fallback: fetch from LiFi chains endpoint
+	router, err := r.fetchRouterFromAPI(chainID)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get LiFi router for chain %s: %w", chainID, err)
 	}
 
 	return router, "", nil
 }
 
-// normalizeChainID normalizes chain ID strings for lookup
-func normalizeChainID(chainID string) string {
-	// Map common variations to canonical names
-	normalized := strings.ToLower(chainID)
-	switch normalized {
-	case "ethereum", "eth":
-		return "Ethereum"
-	case "arbitrum", "arb", "arbitrumone":
-		return "Arbitrum"
-	case "optimism", "op":
-		return "Optimism"
-	case "polygon", "matic":
-		return "Polygon"
-	case "bsc", "binance", "bnb":
-		return "BSC"
-	case "avalanche", "avax":
-		return "Avalanche"
-	case "base":
-		return "Base"
-	case "fantom", "ftm":
-		return "Fantom"
-	case "gnosis", "xdai":
-		return "Gnosis"
-	case "blast":
-		return "Blast"
-	case "zksync", "zksyncera":
-		return "Zksync"
-	default:
-		return chainID
+func (r *LiFiRouterResolver) fetchRouterFromAPI(chainID string) (string, error) {
+	url := r.baseURL + "/chains"
+
+	resp, err := r.client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("HTTP request failed: %w", err)
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API request failed with status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var chainsResp lifiChainsResponse
+	if err := json.Unmarshal(body, &chainsResp); err != nil {
+		return "", fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	for _, chain := range chainsResp.Chains {
+		if chain.Name == chainID || chain.Key == chainID {
+			if chain.DiamondAddress != "" {
+				return chain.DiamondAddress, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no LiFi router found for chain %s", chainID)
 }
 
-// ResolveLiFiRouter is a convenience function to get LiFi router address
-func ResolveLiFiRouter(chainID string) (string, error) {
-	resolver := NewLiFiRouterResolver()
-	addr, _, err := resolver.Resolve(types.MagicConstant_LIFI_ROUTER, chainID, "")
-	return addr, err
+type lifiChainsResponse struct {
+	Chains []lifiChain `json:"chains"`
+}
+
+type lifiChain struct {
+	Key            string `json:"key"`
+	Name           string `json:"name"`
+	ChainID        int64  `json:"id"`
+	DiamondAddress string `json:"diamondAddress"`
 }
