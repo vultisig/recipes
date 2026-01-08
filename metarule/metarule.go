@@ -345,7 +345,11 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 		// Determine token program - defaults to SPL Token program
 		tokenProgramID := solana.TokenProgramID
 		if c.tokenProgram != nil && c.tokenProgram.GetFixedValue() != "" {
-			tokenProgramID = solana.MustPublicKeyFromBase58(c.tokenProgram.GetFixedValue())
+			var err error
+			tokenProgramID, err = solana.PublicKeyFromBase58(c.tokenProgram.GetFixedValue())
+			if err != nil {
+				return nil, fmt.Errorf("invalid token_program: %w", err)
+			}
 		}
 
 		src, err := DeriveATAWithProgram(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue(), tokenProgramID)
@@ -1308,12 +1312,20 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 	// Determine token programs - defaults to SPL Token program
 	fromTokenProgramID := solana.TokenProgramID
 	if c.fromTokenProgram != nil && c.fromTokenProgram.GetFixedValue() != "" {
-		fromTokenProgramID = solana.MustPublicKeyFromBase58(c.fromTokenProgram.GetFixedValue())
+		var err error
+		fromTokenProgramID, err = solana.PublicKeyFromBase58(c.fromTokenProgram.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("invalid from_token_program: %w", err)
+		}
 	}
 
 	toTokenProgramID := solana.TokenProgramID
 	if c.toTokenProgram != nil && c.toTokenProgram.GetFixedValue() != "" {
-		toTokenProgramID = solana.MustPublicKeyFromBase58(c.toTokenProgram.GetFixedValue())
+		var err error
+		toTokenProgramID, err = solana.PublicKeyFromBase58(c.toTokenProgram.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("invalid to_token_program: %w", err)
+		}
 	}
 
 	sourceATA, err := DeriveATAWithProgram(fromAddressStr, sourceMint, fromTokenProgramID)

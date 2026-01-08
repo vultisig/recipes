@@ -1908,6 +1908,118 @@ func TestTryFormat_SolanaSPLToken2022Transfer(t *testing.T) {
 	assert.Equal(t, expectedDestATA, paramByName["account_destination"].Constraint.GetFixedValue())
 }
 
+func TestTryFormat_SolanaSPLToken2022Transfer_InvalidTokenProgram(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "5w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "invalid-token-program"},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid token_program")
+}
+
+func TestTryFormat_SolanaSwapToToken2022_InvalidTokenProgram(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: ""},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "solana"},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "to_token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "not-a-valid-pubkey"},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid to_token_program")
+}
+
 func TestTryFormat_SolanaSwapToToken2022(t *testing.T) {
 	metaRule := NewMetaRule()
 
