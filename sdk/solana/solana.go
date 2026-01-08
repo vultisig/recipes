@@ -15,6 +15,7 @@ import (
 
 type RPCClient interface {
 	SendTransaction(ctx context.Context, tx *solana.Transaction) (solana.Signature, error)
+	GetAccountInfo(ctx context.Context, account solana.PublicKey) (*rpc.GetAccountInfoResult, error)
 }
 
 type HTTPRPCClient struct {
@@ -51,6 +52,10 @@ func (c *HTTPRPCClient) SendTransaction(ctx context.Context, tx *solana.Transact
 	}
 
 	return sig, nil
+}
+
+func (c *HTTPRPCClient) GetAccountInfo(ctx context.Context, account solana.PublicKey) (*rpc.GetAccountInfoResult, error) {
+	return c.client.GetAccountInfo(ctx, account)
 }
 
 func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignResponse) ([]byte, error) {
@@ -166,4 +171,39 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// GetTokenProgram queries the mint account to determine which token program owns it.
+// Returns the token program public key string (TokenProgramID for legacy SPL tokens or
+// Token2022ProgramID for Token-2022 tokens).
+// If mint is empty or SOL (native), returns empty string (no token program needed).
+func (sdk *SDK) GetTokenProgram(ctx context.Context, mint string) (string, error) {
+	// Native SOL doesn't have a token program
+	if mint == "" || mint == "SOL" || mint == "So11111111111111111111111111111111111111112" {
+		return "", nil
+	}
+
+	mintPubkey, err := solana.PublicKeyFromBase58(mint)
+	if err != nil {
+		return "", fmt.Errorf("invalid mint address: %w", err)
+	}
+
+	accountInfo, err := sdk.rpcClient.GetAccountInfo(ctx, mintPubkey)
+	if err != nil {
+		return "", fmt.Errorf("failed to get mint account info: %w", err)
+	}
+
+	if accountInfo.Value == nil {
+		return "", fmt.Errorf("mint account not found: %s", mint)
+	}
+
+	owner := accountInfo.Value.Owner
+	if owner == solana.TokenProgramID {
+		return solana.TokenProgramID.String(), nil
+	}
+	if owner == solana.Token2022ProgramID {
+		return solana.Token2022ProgramID.String(), nil
+	}
+
+	return "", fmt.Errorf("mint account is not owned by a token program: %s", owner)
 }

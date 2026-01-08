@@ -162,7 +162,9 @@ type swapConstraints struct {
 func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 	res := swapConstraints{}
 
+	fmt.Printf("[DEBUG getSwapConstraints] Parsing %d parameter constraints\n", len(rule.GetParameterConstraints()))
 	for _, c := range rule.GetParameterConstraints() {
+		fmt.Printf("[DEBUG getSwapConstraints] Found constraint: %s = %v\n", c.GetParameterName(), c.GetConstraint().GetFixedValue())
 		switch c.GetParameterName() {
 		case "from_asset":
 			res.fromAsset = c.GetConstraint()
@@ -1309,12 +1311,21 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 	fromTokenProgramID := solana.TokenProgramID
 	if c.fromTokenProgram != nil && c.fromTokenProgram.GetFixedValue() != "" {
 		fromTokenProgramID = solana.MustPublicKeyFromBase58(c.fromTokenProgram.GetFixedValue())
+		fmt.Printf("[DEBUG metarule] Using fromTokenProgram from constraint: %s\n", fromTokenProgramID)
+	} else {
+		fmt.Printf("[DEBUG metarule] fromTokenProgram constraint is nil or empty, using default SPL Token: %s\n", fromTokenProgramID)
 	}
 
 	toTokenProgramID := solana.TokenProgramID
 	if c.toTokenProgram != nil && c.toTokenProgram.GetFixedValue() != "" {
 		toTokenProgramID = solana.MustPublicKeyFromBase58(c.toTokenProgram.GetFixedValue())
+		fmt.Printf("[DEBUG metarule] Using toTokenProgram from constraint: %s\n", toTokenProgramID)
+	} else {
+		fmt.Printf("[DEBUG metarule] toTokenProgram constraint is nil or empty, using default SPL Token: %s\n", toTokenProgramID)
 	}
+
+	fmt.Printf("[DEBUG metarule] Deriving ATAs - fromAddress=%s, sourceMint=%s, fromTokenProgram=%s\n", fromAddressStr, sourceMint, fromTokenProgramID)
+	fmt.Printf("[DEBUG metarule] Deriving ATAs - toAddress=%s, destMint=%s, toTokenProgram=%s\n", toAddressStr, destMint, toTokenProgramID)
 
 	sourceATA, err := DeriveATAWithProgram(fromAddressStr, sourceMint, fromTokenProgramID)
 	if err != nil {
@@ -1490,6 +1501,9 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    anyConstraint(), // Can be SPL Token or Token-2022
+		}, {
 			ParameterName: "account_user_transfer_authority",
 			Constraint:    anyConstraint(),
 		}, {
@@ -1542,6 +1556,9 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    anyConstraint(), // Can be SPL Token or Token-2022
+		}, {
 			ParameterName: "account_program_authority",
 			Constraint:    anyConstraint(),
 		}, {
