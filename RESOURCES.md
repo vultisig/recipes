@@ -117,6 +117,735 @@ Transfer Dogecoin to another address
 ```
 
 
+### ethereum.airdrop_merkle_indexed.claim
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_indexed  
+**Function:** airdrop_merkle_indexed.claim  
+
+Call the claim function on airdrop_merkle_indexed
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| index | decimal | index parameter of type uint256 |
+| account | address | account parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| merkleProof | array | merkleProof parameter of type bytes32[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_indexed.claim",
+  "effect": "ALLOW",
+  "constraints": {
+    "index": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "merkleProof": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_indexed.claimAndDelegate
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_indexed  
+**Function:** airdrop_merkle_indexed.claimAndDelegate  
+
+Call the claimAndDelegate function on airdrop_merkle_indexed
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| index | decimal | index parameter of type uint256 |
+| account | address | account parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| merkleProof | array | merkleProof parameter of type bytes32[] |
+| delegatee | address | delegatee parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_indexed.claimAndDelegate",
+  "effect": "ALLOW",
+  "constraints": {
+    "index": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "merkleProof": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "delegatee": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_indexed.isClaimed
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_indexed  
+**Function:** airdrop_merkle_indexed.isClaimed  
+
+Call the isClaimed function on airdrop_merkle_indexed
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| index | decimal | index parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_indexed.isClaimed",
+  "effect": "ALLOW",
+  "constraints": {
+    "index": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_indexed.merkleRoot
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_indexed  
+**Function:** airdrop_merkle_indexed.merkleRoot  
+
+Call the merkleRoot function on airdrop_merkle_indexed
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_indexed.merkleRoot",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_indexed.token
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_indexed  
+**Function:** airdrop_merkle_indexed.token  
+
+Call the token function on airdrop_merkle_indexed
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_indexed.token",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.claim
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.claim  
+
+Call the claim function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| amount | decimal | amount parameter of type uint256 |
+| merkleProof | array | merkleProof parameter of type bytes32[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.claim",
+  "effect": "ALLOW",
+  "constraints": {
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "merkleProof": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.claimAndDelegate
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.claimAndDelegate  
+
+Call the claimAndDelegate function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| amount | decimal | amount parameter of type uint256 |
+| merkleProof | array | merkleProof parameter of type bytes32[] |
+| delegatee | address | delegatee parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.claimAndDelegate",
+  "effect": "ALLOW",
+  "constraints": {
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "merkleProof": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "delegatee": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.claimDeadline
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.claimDeadline  
+
+Call the claimDeadline function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.claimDeadline",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.claimed
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.claimed  
+
+Call the claimed function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| claimer | address | claimer parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.claimed",
+  "effect": "ALLOW",
+  "constraints": {
+    "claimer": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.hasClaimed
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.hasClaimed  
+
+Call the hasClaimed function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| claimer | address | claimer parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.hasClaimed",
+  "effect": "ALLOW",
+  "constraints": {
+    "claimer": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.isClaimed
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.isClaimed  
+
+Call the isClaimed function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| claimer | address | claimer parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.isClaimed",
+  "effect": "ALLOW",
+  "constraints": {
+    "claimer": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.merkleRoot
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.merkleRoot  
+
+Call the merkleRoot function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.merkleRoot",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_merkle_simple.token
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_merkle_simple  
+**Function:** airdrop_merkle_simple.token  
+
+Call the token function on airdrop_merkle_simple
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_merkle_simple.token",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claim
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claim  
+
+Call the claim function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claim",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claimAndDelegate
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claimAndDelegate  
+
+Call the claimAndDelegate function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| delegatee | address | delegatee parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claimAndDelegate",
+  "effect": "ALLOW",
+  "constraints": {
+    "delegatee": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claimAndDelegateWithSig
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claimAndDelegateWithSig  
+
+Call the claimAndDelegateWithSig function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| delegatee | address | delegatee parameter of type address |
+| expiry | decimal | expiry parameter of type uint256 |
+| v | decimal | v parameter of type uint8 |
+| r | string | r parameter of type bytes32 |
+| s | string | s parameter of type bytes32 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claimAndDelegateWithSig",
+  "effect": "ALLOW",
+  "constraints": {
+    "delegatee": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "expiry": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "v": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "r": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "s": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claimPeriodEnd
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claimPeriodEnd  
+
+Call the claimPeriodEnd function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claimPeriodEnd",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claimPeriodStart
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claimPeriodStart  
+
+Call the claimPeriodStart function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claimPeriodStart",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.claimableTokens
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.claimableTokens  
+
+Call the claimableTokens function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.claimableTokens",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.getClaimableAmount
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.getClaimableAmount  
+
+Call the getClaimableAmount function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.getClaimableAmount",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.hasClaimed
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.hasClaimed  
+
+Call the hasClaimed function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| account | address | account parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.hasClaimed",
+  "effect": "ALLOW",
+  "constraints": {
+    "account": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.airdrop_onchain.token
+
+**Chain:** Ethereum  
+**Protocol:** airdrop_onchain  
+**Function:** airdrop_onchain.token  
+
+Call the token function on airdrop_onchain
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.airdrop_onchain.token",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
 ### ethereum.dai.allowance
 
 **Chain:** Ethereum  

@@ -1,0 +1,90 @@
+{
+  "description": "Example airdrop claim recipes using the 3 unified patterns",
+  "recipes": [
+    {
+      "id": "merkle-indexed-claim",
+      "name": "Merkle Indexed Airdrop Claim",
+      "description": "Claims for airdrops using index-based merkle proofs (UNI, BLUR, 1INCH, SAFE, OP)",
+      "rules": [
+        {
+          "id": "merkle-indexed-claim",
+          "description": "Claim tokens using index-based merkle distributor",
+          "resource": "ethereum.airdrop_merkle_indexed.claim",
+          "target": {
+            "target_type": "TARGET_TYPE_ADDRESS",
+            "address": "CONTRACT_ADDRESS_HERE"
+          },
+          "parameter_constraints": [
+            {
+              "parameter_name": "account",
+              "constraint": {
+                "type": "CONSTRAINT_TYPE_ANY",
+                "required": true
+              }
+            },
+            {
+              "parameter_name": "amount",
+              "constraint": {
+                "type": "CONSTRAINT_TYPE_ANY",
+                "required": true
+              }
+            }
+          ],
+          "effect": "EFFECT_ALLOW"
+        }
+      ],
+      "configuration": {}
+    },
+    {
+      "id": "merkle-simple-claim",
+      "name": "Merkle Simple Airdrop Claim",
+      "description": "Claims for airdrops using address-based merkle proofs (ENS, dYdX, LOOKS, ZRO, STRK, ZK)",
+      "rules": [
+        {
+          "id": "merkle-simple-claim",
+          "description": "Claim tokens using simple merkle distributor",
+          "resource": "ethereum.airdrop_merkle_simple.claim",
+          "target": {
+            "target_type": "TARGET_TYPE_ADDRESS",
+            "address": "CONTRACT_ADDRESS_HERE"
+          },
+          "parameter_constraints": [
+            {
+              "parameter_name": "amount",
+              "constraint": {
+                "type": "CONSTRAINT_TYPE_ANY",
+                "required": true
+              }
+            }
+          ],
+          "effect": "EFFECT_ALLOW"
+        }
+      ],
+      "configuration": {}
+    },
+    {
+      "id": "onchain-claim",
+      "name": "On-Chain Airdrop Claim",
+      "description": "Claims for airdrops with on-chain eligibility (ARB, EIGEN)",
+      "rules": [
+        {
+          "id": "onchain-claim",
+          "description": "Claim tokens from on-chain distributor - no params needed",
+          "resource": "arbitrum.airdrop_onchain.claim",
+          "target": {
+            "target_type": "TARGET_TYPE_ADDRESS",
+            "address": "CONTRACT_ADDRESS_HERE"
+          },
+          "parameter_constraints": [],
+          "effect": "EFFECT_ALLOW"
+        }
+      ],
+      "configuration": {}
+    }
+  ],
+  "howToCheck": {
+    "merkle_indexed": "Call isClaimed(index) on contract to check if already claimed. Need to get index from eligibility API.",
+    "merkle_simple": "Call claimed(address) or isClaimed(address) on contract with your wallet address.",
+    "onchain": "Call claimableTokens(address) on contract to get claimable amount. If > 0, you can claim."
+  }
+}

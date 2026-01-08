@@ -1,0 +1,148 @@
+{
+  "description": "Registry of known airdrops with contract addresses and claim information. This serves as a reference for claim patterns used by various protocols.",
+  "version": "1.0.0",
+  "airdrops": [
+    {
+      "id": "uni",
+      "name": "Uniswap",
+      "token": "UNI",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_indexed",
+      "contract": "0x090D4613473dEE047c3f2706764f49E0821D256e",
+      "tokenContract": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "claimFunction": "claim(uint256,address,uint256,bytes32[])"
+    },
+    {
+      "id": "arb",
+      "name": "Arbitrum",
+      "token": "ARB",
+      "chain": "arbitrum",
+      "chainId": 42161,
+      "type": "onchain",
+      "contract": "0x67a24CE4321aB3aF51c2D0a4801c3E111D88C9d9",
+      "tokenContract": "0x912CE59144191C1204E64559FE8253a0e49E6548",
+      "claimFunction": "claim()",
+      "checkFunction": "claimableTokens(address)"
+    },
+    {
+      "id": "op",
+      "name": "Optimism",
+      "token": "OP",
+      "chain": "optimism",
+      "chainId": 10,
+      "type": "merkle_indexed",
+      "contract": "0xFeDFAF1A10335448b7FA0268F56D2B44DBD357de",
+      "tokenContract": "0x4200000000000000000000000000000000000042",
+      "claimFunction": "claim(uint256,uint256,bytes32[])"
+    },
+    {
+      "id": "ens",
+      "name": "ENS",
+      "token": "ENS",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_simple",
+      "contract": "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72",
+      "tokenContract": "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72",
+      "claimFunction": "claimTokens(uint256,address,bytes32[])"
+    },
+    {
+      "id": "blur",
+      "name": "Blur",
+      "token": "BLUR",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_indexed",
+      "contract": "0x0000000000A39bb272e79075ade125fd351887Ac",
+      "tokenContract": "0x5283D291DBCF85356A21bA090E6db59121208b44",
+      "claimFunction": "claim(uint256,address,uint256,bytes32[])"
+    },
+    {
+      "id": "dydx",
+      "name": "dYdX",
+      "token": "DYDX",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_simple",
+      "contract": "0x01d3348601968aB85b4bb028979006eac235a588",
+      "tokenContract": "0x92D6C1e31e14520e676a687F0a93788B716BEff5",
+      "claimFunction": "claimRewards(uint256,bytes32[])"
+    },
+    {
+      "id": "1inch",
+      "name": "1inch",
+      "token": "1INCH",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_indexed",
+      "contract": "0xE295aD71242373C37C5FdA7B57F26f9eA1088AFe",
+      "tokenContract": "0x111111111117dC0aa78b770fA6A738034120C302",
+      "claimFunction": "claim(uint256,address,uint256,bytes32[])"
+    },
+    {
+      "id": "looks",
+      "name": "LooksRare",
+      "token": "LOOKS",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_simple",
+      "contract": "0xA35dce3e0E6ceb67a30b8D7f4aEe721C949B5970",
+      "tokenContract": "0xf4d2888d29D722226FafA5d9B24F9164c092421E",
+      "claimFunction": "claim(uint256,bytes32[])"
+    },
+    {
+      "id": "hop",
+      "name": "Hop Protocol",
+      "token": "HOP",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_simple",
+      "contract": "0x28cDe69d5893fB48F6a33Ddd0E7b0d86d98e0A6c",
+      "tokenContract": "0xc5102fE9359FD9a28f877a67E36B0F050d81a3CC",
+      "claimFunction": "claim(address,uint256,bytes32[])"
+    },
+    {
+      "id": "safe",
+      "name": "Safe",
+      "token": "SAFE",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_indexed",
+      "contract": "0xA0b937D5c8E32a80E3a8ed4227CD020221544ee6",
+      "tokenContract": "0x5aFE3855358E112B5647B952709E6165e1c1eEEe",
+      "claimFunction": "claim(uint256,uint128,bytes32[])"
+    },
+    {
+      "id": "cow",
+      "name": "CoW Swap",
+      "token": "COW",
+      "chain": "ethereum",
+      "chainId": 1,
+      "type": "merkle_indexed",
+      "contract": "0x68FFAaC7A431f276fe73604C127Bd78E49070c92",
+      "tokenContract": "0xDEf1CA1fb7FBcDC777520aa7f396b4E015F497aB",
+      "claimFunction": "claim(uint256,uint256,uint8,address,uint256,bytes32[])"
+    }
+  ],
+  "claimTypes": {
+    "merkle_indexed": {
+      "description": "Index-based merkle proof claims (Uniswap pattern)",
+      "abi": "airdrop_merkle_indexed.json",
+      "checkMethod": "Call isClaimed(index) to check if already claimed",
+      "claimParams": ["index", "account", "amount", "merkleProof"]
+    },
+    "merkle_simple": {
+      "description": "Address-based merkle proof claims (newer airdrops)",
+      "abi": "airdrop_merkle_simple.json",
+      "checkMethod": "Call claimed(address) or hasClaimed(address) or isClaimed(address)",
+      "claimParams": ["amount", "merkleProof"]
+    },
+    "onchain": {
+      "description": "On-chain calculated claims (Arbitrum pattern)",
+      "abi": "airdrop_onchain.json",
+      "checkMethod": "Call claimableTokens(address) to get claimable amount",
+      "claimParams": []
+    }
+  }
+}
