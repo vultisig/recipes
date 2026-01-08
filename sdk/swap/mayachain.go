@@ -133,10 +133,18 @@ func (p *MayachainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		return nil, fmt.Errorf("invalid to asset: %w", err)
 	}
 
+	// Convert amount from native decimals to Mayachain's 8 decimals
+	// Note: Mayachain uses the same 8 decimal format as THORChain
+	fromDecimals := req.From.Decimals
+	if fromDecimals == 0 {
+		fromDecimals = 18 // Default to 18 for EVM native tokens
+	}
+	mayaAmount := toThorChainAmount(req.Amount, fromDecimals)
+
 	params := url.Values{}
 	params.Set("from_asset", fromAsset)
 	params.Set("to_asset", toAsset)
-	params.Set("amount", req.Amount.String())
+	params.Set("amount", mayaAmount.String())
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
@@ -187,10 +195,18 @@ func (p *MayachainProvider) fetchQuote(ctx context.Context, endpoint string, par
 		return nil, fmt.Errorf("failed to parse quote response: %w", err)
 	}
 
-	expectedOutput, ok := new(big.Int).SetString(quoteResp.ExpectedAmountOut, 10)
+	// Parse expected output from Mayachain (in 8 decimals)
+	expectedOutputMaya, ok := new(big.Int).SetString(quoteResp.ExpectedAmountOut, 10)
 	if !ok {
 		return nil, fmt.Errorf("invalid expected_amount_out: %s", quoteResp.ExpectedAmountOut)
 	}
+
+	// Convert expected output from Mayachain's 8 decimals to destination asset's native decimals
+	toDecimals := req.To.Decimals
+	if toDecimals == 0 {
+		toDecimals = 18 // Default to 18 for EVM native tokens
+	}
+	expectedOutput := fromThorChainAmount(expectedOutputMaya, toDecimals)
 
 	// Determine router address - try resolver first, fallback to quote response
 	routerAddress := quoteResp.Router

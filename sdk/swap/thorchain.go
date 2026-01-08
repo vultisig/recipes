@@ -27,7 +27,44 @@ const (
 	thorChainGAIA = "GAIA"
 	thorChainTHOR = "THOR"
 	thorChainTRON = "TRX"
+
+	// THORChain uses 8 decimals for all internal amounts
+	thorChainDecimals = 8
 )
+
+// toThorChainAmount converts an amount from native decimals to THORChain's 8 decimals
+func toThorChainAmount(amount *big.Int, nativeDecimals int) *big.Int {
+	if nativeDecimals == thorChainDecimals {
+		return amount
+	}
+	result := new(big.Int).Set(amount)
+	diff := nativeDecimals - thorChainDecimals
+	if diff > 0 {
+		divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(diff)), nil)
+		result.Div(result, divisor)
+	} else {
+		multiplier := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-diff)), nil)
+		result.Mul(result, multiplier)
+	}
+	return result
+}
+
+// fromThorChainAmount converts an amount from THORChain's 8 decimals to native decimals
+func fromThorChainAmount(amount *big.Int, nativeDecimals int) *big.Int {
+	if nativeDecimals == thorChainDecimals {
+		return amount
+	}
+	result := new(big.Int).Set(amount)
+	diff := nativeDecimals - thorChainDecimals
+	if diff > 0 {
+		multiplier := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(diff)), nil)
+		result.Mul(result, multiplier)
+	} else {
+		divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-diff)), nil)
+		result.Div(result, divisor)
+	}
+	return result
+}
 
 // THORChain supported chains mapped to their network identifiers
 var thorChainNetworks = map[string]string{
@@ -142,10 +179,17 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		return nil, fmt.Errorf("invalid to asset: %w", err)
 	}
 
+	// Convert amount from native decimals to THORChain's 8 decimals
+	fromDecimals := req.From.Decimals
+	if fromDecimals == 0 {
+		fromDecimals = 18 // Default to 18 for EVM native tokens
+	}
+	thorAmount := toThorChainAmount(req.Amount, fromDecimals)
+
 	params := url.Values{}
 	params.Set("from_asset", fromAsset)
 	params.Set("to_asset", toAsset)
-	params.Set("amount", req.Amount.String())
+	params.Set("amount", thorAmount.String())
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
@@ -197,10 +241,18 @@ func (p *THORChainProvider) fetchQuote(ctx context.Context, endpoint string, par
 		return nil, fmt.Errorf("failed to parse quote response: %w", err)
 	}
 
-	expectedOutput, ok := new(big.Int).SetString(quoteResp.ExpectedAmountOut, 10)
+	// Parse expected output from THORChain (in 8 decimals)
+	expectedOutputThor, ok := new(big.Int).SetString(quoteResp.ExpectedAmountOut, 10)
 	if !ok {
 		return nil, fmt.Errorf("invalid expected_amount_out: %s", quoteResp.ExpectedAmountOut)
 	}
+
+	// Convert expected output from THORChain's 8 decimals to destination asset's native decimals
+	toDecimals := req.To.Decimals
+	if toDecimals == 0 {
+		toDecimals = 18 // Default to 18 for EVM native tokens
+	}
+	expectedOutput := fromThorChainAmount(expectedOutputThor, toDecimals)
 
 	// Determine router address - try resolver first, fallback to quote response
 	routerAddress := quoteResp.Router
