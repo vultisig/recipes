@@ -49,7 +49,7 @@ func getOneInchSpender(chain common.Chain) (string, error) {
 }
 
 // TryFormat meta-rule to exact rule(s). For example:
-// solana.send -> solana.system.transfer or solana.spl_token.transfer
+// solana.send -> solana.system.transfer or solana.token.transfer
 // solana.system.transfer -> unmodified solana.system.transfer
 // *.*.* (any 3 fields rule) -> unmodified *.*.*
 func (m *MetaRule) TryFormat(in *types.Rule) ([]*types.Rule, error) {
@@ -149,12 +149,14 @@ func (m *MetaRule) TryFormat(in *types.Rule) ([]*types.Rule, error) {
 }
 
 type swapConstraints struct {
-	fromAsset   *types.Constraint
-	fromAddress *types.Constraint
-	fromAmount  *types.Constraint
-	toChain     *types.Constraint
-	toAsset     *types.Constraint
-	toAddress   *types.Constraint
+	fromAsset        *types.Constraint
+	fromAddress      *types.Constraint
+	fromAmount       *types.Constraint
+	fromTokenProgram *types.Constraint // optional, defaults to TokenProgramID
+	toChain          *types.Constraint
+	toAsset          *types.Constraint
+	toAddress        *types.Constraint
+	toTokenProgram   *types.Constraint // optional, defaults to TokenProgramID
 }
 
 func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
@@ -168,12 +170,16 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 			res.fromAddress = c.GetConstraint()
 		case "from_amount":
 			res.fromAmount = c.GetConstraint()
+		case "from_token_program":
+			res.fromTokenProgram = c.GetConstraint()
 		case "to_chain":
 			res.toChain = c.GetConstraint()
 		case "to_asset":
 			res.toAsset = c.GetConstraint()
 		case "to_address":
 			res.toAddress = c.GetConstraint()
+		case "to_token_program":
+			res.toTokenProgram = c.GetConstraint()
 		}
 	}
 
@@ -200,10 +206,11 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 }
 
 type sendConstraints struct {
-	asset       *types.Constraint
-	fromAddress *types.Constraint
-	amount      *types.Constraint
-	toAddress   *types.Constraint
+	asset        *types.Constraint
+	fromAddress  *types.Constraint
+	amount       *types.Constraint
+	toAddress    *types.Constraint
+	tokenProgram *types.Constraint // optional, defaults to TokenProgramID for SPL tokens
 	// memo not supported yet
 }
 
@@ -220,6 +227,8 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 			res.amount = c.GetConstraint()
 		case "to_address":
 			res.toAddress = c.GetConstraint()
+		case "token_program":
+			res.tokenProgram = c.GetConstraint()
 			// memo not supported yet
 		}
 	}
@@ -333,21 +342,31 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			return nil, fmt.Errorf("`to_address` " + onlyFixed)
 		}
 
-		src, err := DeriveATA(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue())
+		// Determine token program - defaults to SPL Token program
+		tokenProgramID := solana.TokenProgramID
+		if c.tokenProgram != nil && c.tokenProgram.GetFixedValue() != "" {
+			var err error
+			tokenProgramID, err = solana.PublicKeyFromBase58(c.tokenProgram.GetFixedValue())
+			if err != nil {
+				return nil, fmt.Errorf("invalid token_program: %w", err)
+			}
+		}
+
+		src, err := DeriveATAWithProgram(c.fromAddress.GetFixedValue(), c.asset.GetFixedValue(), tokenProgramID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive src ATA: %w", err)
 		}
-		dst, err := DeriveATA(c.toAddress.GetFixedValue(), c.asset.GetFixedValue())
+		dst, err := DeriveATAWithProgram(c.toAddress.GetFixedValue(), c.asset.GetFixedValue(), tokenProgramID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive dst ATA: %w", err)
 		}
 
-		// SPL token transfer
-		out.Resource = "solana.spl_token.transfer"
+		// Token transfer (works for both SPL Token and Token-2022)
+		out.Resource = "solana.token.transfer"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: solana.TokenProgramID.String(),
+				Address: tokenProgramID.String(),
 			},
 		}
 		out.ParameterConstraints = []*types.ParameterConstraint{{
@@ -383,7 +402,7 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 				Constraint:    fixed(solana.SystemProgramID.String()),
 			}, {
 				ParameterName: "account_token_program",
-				Constraint:    fixed(solana.TokenProgramID.String()),
+				Constraint:    fixed(tokenProgramID.String()),
 			}},
 			Target: &types.Target{
 				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
@@ -1201,8 +1220,10 @@ func getFixed(c *types.Constraint) (string, error) {
 	return c.GetFixedValue(), nil
 }
 
-// DeriveATA derives the Associated Token Account address for a given owner and mint
-func DeriveATA(ownerStr, mintStr string) (string, error) {
+// DeriveATAWithProgram derives the Associated Token Account address for a given owner, mint, and token program.
+// The token program ID is used as a seed in the ATA derivation, so Token-2022 tokens will have different
+// ATA addresses than SPL tokens for the same owner and mint.
+func DeriveATAWithProgram(ownerStr, mintStr string, tokenProgramID solana.PublicKey) (string, error) {
 	owner, err := solana.PublicKeyFromBase58(ownerStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid owner address: %w", err)
@@ -1216,7 +1237,7 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 	ataAddr, _, err := solana.FindProgramAddress(
 		[][]byte{
 			owner.Bytes(),
-			solana.TokenProgramID.Bytes(),
+			tokenProgramID.Bytes(),
 			mint.Bytes(),
 		},
 		solana.SPLAssociatedTokenAccountProgramID,
@@ -1226,6 +1247,12 @@ func DeriveATA(ownerStr, mintStr string) (string, error) {
 	}
 
 	return ataAddr.String(), nil
+}
+
+// DeriveATA derives the Associated Token Account address for a given owner and mint
+// using the default SPL Token program. For Token-2022 tokens, use DeriveATAWithProgram instead.
+func DeriveATA(ownerStr, mintStr string) (string, error) {
+	return DeriveATAWithProgram(ownerStr, mintStr, solana.TokenProgramID)
 }
 
 func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types.Rule, error) {
@@ -1282,12 +1309,31 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 		destinationMintConstraint = fixed(destMint)
 	}
 
-	sourceATA, err := DeriveATA(fromAddressStr, sourceMint)
+	// Determine token programs - defaults to SPL Token program
+	fromTokenProgramID := solana.TokenProgramID
+	if c.fromTokenProgram != nil && c.fromTokenProgram.GetFixedValue() != "" {
+		var err error
+		fromTokenProgramID, err = solana.PublicKeyFromBase58(c.fromTokenProgram.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("invalid from_token_program: %w", err)
+		}
+	}
+
+	toTokenProgramID := solana.TokenProgramID
+	if c.toTokenProgram != nil && c.toTokenProgram.GetFixedValue() != "" {
+		var err error
+		toTokenProgramID, err = solana.PublicKeyFromBase58(c.toTokenProgram.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("invalid to_token_program: %w", err)
+		}
+	}
+
+	sourceATA, err := DeriveATAWithProgram(fromAddressStr, sourceMint, fromTokenProgramID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive source ATA for owner %s and mint %s: %w", fromAddressStr, sourceMint, err)
 	}
 
-	destATA, err := DeriveATA(toAddressStr, destMint)
+	destATA, err := DeriveATAWithProgram(toAddressStr, destMint, toTokenProgramID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive destination ATA for owner %s and mint %s: %w", toAddressStr, destMint, err)
 	}
@@ -1333,7 +1379,7 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 		}),
 	)
 
-	createATARule := func(payer, ata, owner, mint *types.Constraint) *types.Rule {
+	createATARule := func(payer, ata, owner, mint *types.Constraint, tokenProgram solana.PublicKey) *types.Rule {
 		return &types.Rule{
 			Resource: "solana.associated_token_account.create",
 			Effect:   types.Effect_EFFECT_ALLOW,
@@ -1354,7 +1400,7 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 				Constraint:    fixed(solana.SystemProgramID.String()),
 			}, {
 				ParameterName: "account_token_program",
-				Constraint:    fixed(solana.TokenProgramID.String()),
+				Constraint:    fixed(tokenProgram.String()),
 			}},
 			Target: &types.Target{
 				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
@@ -1368,14 +1414,14 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 	// Add create for source and destination ATAs
 	// Jupiter requires wrapped SOL token accounts even for native SOL swaps
 	rules = append(rules,
-		createATARule(c.fromAddress, sourceTokenAccountConstraint, c.fromAddress, sourceMintConstraint),
-		createATARule(c.fromAddress, destinationTokenAccountConstraint, c.toAddress, destinationMintConstraint),
+		createATARule(c.fromAddress, sourceTokenAccountConstraint, c.fromAddress, sourceMintConstraint, fromTokenProgramID),
+		createATARule(c.fromAddress, destinationTokenAccountConstraint, c.toAddress, destinationMintConstraint, toTokenProgramID),
 	)
 
-	// SPL Token syncNative - syncs native SOL balance in WSOL account after wrapping
+	// Token syncNative - syncs native SOL balance in WSOL account after wrapping
 	// This is required after transferring SOL to a WSOL ATA to update the token account balance
 	rules = append(rules, &types.Rule{
-		Resource: "solana.spl_token.syncNative",
+		Resource: "solana.token.syncNative",
 		Effect:   types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: []*types.ParameterConstraint{{
 			ParameterName: "account_account",
@@ -1389,14 +1435,14 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 		},
 	})
 
-	// SPL Token Approve - account_source must be an Associated Token Account (ATA)
+	// Token Approve - account_source must be an Associated Token Account (ATA)
 	// The account_source constraint ensures the approved token account is derived from the ATA program
 	rules = append(rules, &types.Rule{
-		Resource: "solana.spl_token.approve",
+		Resource: "solana.token.approve",
 		Effect:   types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: []*types.ParameterConstraint{{
 			ParameterName: "account_source",
-			// sourceTokenAccountConstraint is derived using DeriveATA() which uses
+			// sourceTokenAccountConstraint is derived using DeriveATAWithProgram() which uses
 			// the Associated Token Account Program (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL)
 			Constraint: sourceTokenAccountConstraint,
 		}, {
@@ -1418,14 +1464,14 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
 				// Target is the Token Program that executes the approve instruction
-				Address: solana.TokenProgramID.String(),
+				Address: fromTokenProgramID.String(),
 			},
 		},
 	})
 
-	// SPL Token CloseAccount - closes wSOL account and unwraps back to native SOL
+	// Token CloseAccount - closes wSOL account and unwraps back to native SOL
 	rules = append(rules, &types.Rule{
-		Resource: "solana.spl_token.closeAccount",
+		Resource: "solana.token.closeAccount",
 		Effect:   types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: []*types.ParameterConstraint{{
 			ParameterName: "account_account",
@@ -1456,9 +1502,6 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_token_program",
-			Constraint:    fixed(solana.TokenProgramID.String()),
-		}, {
 			ParameterName: "account_user_transfer_authority",
 			Constraint:    anyConstraint(),
 		}, {
@@ -1511,9 +1554,6 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
-			ParameterName: "account_token_program",
-			Constraint:    fixed(solana.TokenProgramID.String()),
-		}, {
 			ParameterName: "account_program_authority",
 			Constraint:    anyConstraint(),
 		}, {

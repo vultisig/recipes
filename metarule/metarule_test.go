@@ -195,7 +195,7 @@ func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	require.Len(t, result, 2)
-	assert.Equal(t, "solana.spl_token.transfer", result[0].Resource)
+	assert.Equal(t, "solana.token.transfer", result[0].Resource)
 	assert.Equal(t, solana.TokenProgramID.String(), result[0].Target.GetAddress())
 	assert.Len(t, result[0].ParameterConstraints, 4)
 }
@@ -1164,11 +1164,11 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", destAtaRule.Target.GetAddress())
 
 	// Fifth rule should be syncNative
-	assert.Equal(t, "solana.spl_token.syncNative", result[4].Resource)
+	assert.Equal(t, "solana.token.syncNative", result[4].Resource)
 
 	// Sixth rule should be SPL token approve
 	approveRule := result[5]
-	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, "solana.token.approve", approveRule.Resource)
 	assert.Equal(t, types.Effect_EFFECT_ALLOW, approveRule.Effect)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 	require.Len(t, approveRule.ParameterConstraints, 4)
@@ -1198,7 +1198,7 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 
 	// Seventh rule should be SPL token closeAccount
 	closeAccountRule := result[6]
-	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+	assert.Equal(t, "solana.token.closeAccount", closeAccountRule.Resource)
 	assert.Equal(t, tokenProgramAddress, closeAccountRule.Target.GetAddress())
 	require.Len(t, closeAccountRule.ParameterConstraints, 3)
 
@@ -1206,13 +1206,13 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	jupiterRouteRule := result[7]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterRouteRule.Target.GetAddress())
-	require.Len(t, jupiterRouteRule.ParameterConstraints, 14)
+	require.Len(t, jupiterRouteRule.ParameterConstraints, 13)
 
 	// Ninth rule should be Jupiter shared_accounts_route
 	jupiterSharedAccountsRouteRule := result[8]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.shared_accounts_route", jupiterSharedAccountsRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterSharedAccountsRouteRule.Target.GetAddress())
-	require.Len(t, jupiterSharedAccountsRouteRule.ParameterConstraints, 19)
+	require.Len(t, jupiterSharedAccountsRouteRule.ParameterConstraints, 18)
 
 	// Verify route rule parameters
 	jupiterRule := jupiterRouteRule
@@ -1221,9 +1221,6 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	for _, param := range jupiterRule.ParameterConstraints {
 		paramByName[param.ParameterName] = param
 	}
-
-	assert.Contains(t, paramByName, "account_token_program")
-	assert.Equal(t, tokenProgramAddress, paramByName["account_token_program"].Constraint.GetFixedValue())
 
 	assert.Contains(t, paramByName, "account_user_transfer_authority")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["account_user_transfer_authority"].Constraint.Type)
@@ -1360,16 +1357,16 @@ func TestTryFormat_SolanaSwapNativeAsset(t *testing.T) {
 	assert.Equal(t, "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", ataRule.Target.GetAddress())
 
 	// Fifth rule should be syncNative for WSOL
-	assert.Equal(t, "solana.spl_token.syncNative", result[4].Resource)
+	assert.Equal(t, "solana.token.syncNative", result[4].Resource)
 
 	// Sixth rule should be WSOL approve
 	approveRule := result[5]
-	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, "solana.token.approve", approveRule.Resource)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 
 	// Seventh rule should be SPL token closeAccount
 	closeAccountRule := result[6]
-	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+	assert.Equal(t, "solana.token.closeAccount", closeAccountRule.Resource)
 
 	// Eighth rule should be Jupiter route
 	jupiterRouteRule := result[7]
@@ -1800,6 +1797,331 @@ func TestDeriveATA_WSOLDestination(t *testing.T) {
 	ata, err := DeriveATA(owner, mint)
 	require.NoError(t, err)
 	assert.Equal(t, expectedATA, ata)
+}
+
+func TestDeriveATAWithProgram_Token2022(t *testing.T) {
+	// PYUSD is a Token-2022 token
+	// Mint: 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo (PYUSD on mainnet)
+	// When using Token-2022 program, the ATA is different from the legacy program
+	owner := "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	mint := "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo" // PYUSD
+
+	// Derive with legacy Token program
+	legacyATA, err := DeriveATAWithProgram(owner, mint, solana.TokenProgramID)
+	require.NoError(t, err)
+
+	// Derive with Token-2022 program
+	token2022ATA, err := DeriveATAWithProgram(owner, mint, solana.Token2022ProgramID)
+	require.NoError(t, err)
+
+	// The ATAs should be different because the token program is part of the seed
+	assert.NotEqual(t, legacyATA, token2022ATA, "Token-2022 ATA should be different from legacy ATA")
+
+	// Verify DeriveATA uses legacy by default
+	defaultATA, err := DeriveATA(owner, mint)
+	require.NoError(t, err)
+	assert.Equal(t, legacyATA, defaultATA, "DeriveATA should default to legacy token program")
+}
+
+func TestTryFormat_SolanaSPLToken2022Transfer(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	fromAddress := "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	toAddress := "5w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	pyusdMint := "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo" // PYUSD
+	token2022ProgramID := "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+
+	rule := &types.Rule{
+		Resource: "solana.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: pyusdMint},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: fromAddress},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: toAddress},
+				},
+			},
+			{
+				ParameterName: "token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: token2022ProgramID},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+	require.Len(t, result, 2)
+
+	// First rule should be transfer with Token-2022 target
+	transferRule := result[0]
+	assert.Equal(t, "solana.token.transfer", transferRule.Resource)
+	assert.Equal(t, token2022ProgramID, transferRule.Target.GetAddress())
+
+	// Second rule should be ATA creation with Token-2022 program
+	ataRule := result[1]
+	assert.Equal(t, "solana.associated_token_account.create", ataRule.Resource)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range ataRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	// The token_program should be Token-2022
+	assert.Equal(t, token2022ProgramID, paramByName["account_token_program"].Constraint.GetFixedValue())
+
+	// Verify ATAs are derived with Token-2022 program
+	expectedSourceATA, err := DeriveATAWithProgram(fromAddress, pyusdMint, solana.Token2022ProgramID)
+	require.NoError(t, err)
+	expectedDestATA, err := DeriveATAWithProgram(toAddress, pyusdMint, solana.Token2022ProgramID)
+	require.NoError(t, err)
+
+	paramByName = make(map[string]*types.ParameterConstraint)
+	for _, param := range transferRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+
+	assert.Equal(t, expectedSourceATA, paramByName["account_source"].Constraint.GetFixedValue())
+	assert.Equal(t, expectedDestATA, paramByName["account_destination"].Constraint.GetFixedValue())
+}
+
+func TestTryFormat_SolanaSPLToken2022Transfer_InvalidTokenProgram(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.send",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "5w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "invalid-token-program"},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid token_program")
+}
+
+func TestTryFormat_SolanaSwapToToken2022_InvalidTokenProgram(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: ""},
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "solana"},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"},
+				},
+			},
+			{
+				ParameterName: "to_token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "not-a-valid-pubkey"},
+				},
+			},
+		},
+	}
+
+	_, err := metaRule.TryFormat(rule)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid to_token_program")
+}
+
+func TestTryFormat_SolanaSwapToToken2022(t *testing.T) {
+	metaRule := NewMetaRule()
+
+	fromAddress := "4w3VdMehnFqFTNEg9jZtKS76n4pNcVjaDZK9TQtw9jKM"
+	toAddress := fromAddress // swap to self
+	pyusdMint := "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"
+	token2022ProgramID := "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+
+	rule := &types.Rule{
+		Resource: "solana.swap",
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "from_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: ""}, // Native SOL
+				},
+			},
+			{
+				ParameterName: "from_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: fromAddress},
+				},
+			},
+			{
+				ParameterName: "from_amount",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_MAX,
+					Value: &types.Constraint_MaxValue{MaxValue: "1000000000"},
+				},
+			},
+			{
+				ParameterName: "to_chain",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: "solana"},
+				},
+			},
+			{
+				ParameterName: "to_asset",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: pyusdMint},
+				},
+			},
+			{
+				ParameterName: "to_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: toAddress},
+				},
+			},
+			{
+				ParameterName: "to_token_program",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: token2022ProgramID},
+				},
+			},
+		},
+	}
+
+	result, err := metaRule.TryFormat(rule)
+	require.NoError(t, err)
+
+	// Expected rules for native SOL to Token-2022 token swap:
+	// 1. System transfer (fee)
+	// 2. System transfer (to WSOL)
+	// 3. Create source ATA (WSOL - legacy program)
+	// 4. Create destination ATA for PYUSD (Token-2022 program)
+	// 5. syncNative
+	// 6. approve (source is WSOL, so legacy program)
+	// 7. closeAccount
+	// 8. jupiter route
+	// 9. jupiter shared_accounts_route
+	require.Len(t, result, 9)
+
+	// Verify the destination ATA creation uses Token-2022 program (4th rule)
+	destATARule := result[3]
+	assert.Equal(t, "solana.associated_token_account.create", destATARule.Resource)
+
+	paramByName := make(map[string]*types.ParameterConstraint)
+	for _, param := range destATARule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+	assert.Equal(t, token2022ProgramID, paramByName["account_token_program"].Constraint.GetFixedValue())
+
+	// Verify destination ATA is derived correctly
+	expectedDestATA, err := DeriveATAWithProgram(toAddress, pyusdMint, solana.Token2022ProgramID)
+	require.NoError(t, err)
+	assert.Equal(t, expectedDestATA, paramByName["account_associated_token_account"].Constraint.GetFixedValue())
+
+	// Verify Jupiter route rule has the correct destination token account (8th rule)
+	jupiterRouteRule := result[7]
+	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
+
+	paramByName = make(map[string]*types.ParameterConstraint)
+	for _, param := range jupiterRouteRule.ParameterConstraints {
+		paramByName[param.ParameterName] = param
+	}
+	assert.Equal(t, expectedDestATA, paramByName["account_user_destination_token_account"].Constraint.GetFixedValue())
 }
 
 // ==================== TRON TESTS ====================
@@ -2851,16 +3173,16 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Equal(t, "solana.associated_token_account.create", result[3].Resource)
 
 	// Fifth rule should be syncNative for WSOL
-	assert.Equal(t, "solana.spl_token.syncNative", result[4].Resource)
+	assert.Equal(t, "solana.token.syncNative", result[4].Resource)
 
 	// Sixth rule should be SPL token approve for WSOL
 	approveRule := result[5]
-	assert.Equal(t, "solana.spl_token.approve", approveRule.Resource)
+	assert.Equal(t, "solana.token.approve", approveRule.Resource)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", approveRule.Target.GetAddress())
 
 	// Seventh rule should be SPL token closeAccount
 	closeAccountRule := result[6]
-	assert.Equal(t, "solana.spl_token.closeAccount", closeAccountRule.Resource)
+	assert.Equal(t, "solana.token.closeAccount", closeAccountRule.Resource)
 	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", closeAccountRule.Target.GetAddress())
 
 	// Find route rule
@@ -2880,7 +3202,6 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	}
 
 	// Verify all account constraints are present
-	assert.Contains(t, paramByName, "account_token_program")
 	assert.Contains(t, paramByName, "account_user_transfer_authority")
 	assert.Contains(t, paramByName, "account_user_source_token_account")
 	assert.Contains(t, paramByName, "account_user_destination_token_account")
@@ -2898,9 +3219,6 @@ func TestCreateJupiterRule_StrictConstraints(t *testing.T) {
 	assert.Contains(t, paramByName, "arg_platform_fee_bps")
 
 	// Verify FIXED constraints
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_token_program"].Constraint.Type)
-	assert.Equal(t, "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", paramByName["account_token_program"].Constraint.GetFixedValue())
-
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["account_destination_mint"].Constraint.Type)
 	assert.Equal(t, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", paramByName["account_destination_mint"].Constraint.GetFixedValue())
 
