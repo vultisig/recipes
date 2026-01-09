@@ -195,9 +195,9 @@ func TestTryFormat_SolanaSPLTokenTransfer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	require.Len(t, result, 2)
-	assert.Equal(t, "solana.token.transfer", result[0].Resource)
+	assert.Equal(t, "solana.token.transferChecked", result[0].Resource)
 	assert.Equal(t, solana.TokenProgramID.String(), result[0].Target.GetAddress())
-	assert.Len(t, result[0].ParameterConstraints, 4)
+	assert.Len(t, result[0].ParameterConstraints, 6) // source, mint, destination, authority, amount, decimals
 }
 
 func TestTryFormat_SolanaMissingRecipientConstraint(t *testing.T) {
@@ -1206,13 +1206,13 @@ func TestTryFormat_SolanaSwap(t *testing.T) {
 	jupiterRouteRule := result[7]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.route", jupiterRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterRouteRule.Target.GetAddress())
-	require.Len(t, jupiterRouteRule.ParameterConstraints, 13)
+	require.Len(t, jupiterRouteRule.ParameterConstraints, 14)
 
 	// Ninth rule should be Jupiter shared_accounts_route
 	jupiterSharedAccountsRouteRule := result[8]
 	assert.Equal(t, "solana.jupiter_aggregatorv6.shared_accounts_route", jupiterSharedAccountsRouteRule.Resource)
 	assert.Equal(t, jupiterAddress, jupiterSharedAccountsRouteRule.Target.GetAddress())
-	require.Len(t, jupiterSharedAccountsRouteRule.ParameterConstraints, 18)
+	require.Len(t, jupiterSharedAccountsRouteRule.ParameterConstraints, 19)
 
 	// Verify route rule parameters
 	jupiterRule := jupiterRouteRule
@@ -1876,9 +1876,9 @@ func TestTryFormat_SolanaSPLToken2022Transfer(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result, 2)
 
-	// First rule should be transfer with Token-2022 target
+	// First rule should be transferChecked with Token-2022 target
 	transferRule := result[0]
-	assert.Equal(t, "solana.token.transfer", transferRule.Resource)
+	assert.Equal(t, "solana.token.transferChecked", transferRule.Resource)
 	assert.Equal(t, token2022ProgramID, transferRule.Target.GetAddress())
 
 	// Second rule should be ATA creation with Token-2022 program

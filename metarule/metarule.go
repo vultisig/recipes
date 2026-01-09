@@ -361,8 +361,8 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			return nil, fmt.Errorf("failed to derive dst ATA: %w", err)
 		}
 
-		// Token transfer (works for both SPL Token and Token-2022)
-		out.Resource = "solana.token.transfer"
+		// Token transferChecked (works for both SPL Token and Token-2022)
+		out.Resource = "solana.token.transferChecked"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
@@ -373,6 +373,9 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 			ParameterName: "account_source",
 			Constraint:    fixed(src),
 		}, {
+			ParameterName: "account_mint",
+			Constraint:    c.asset,
+		}, {
 			ParameterName: "account_destination",
 			Constraint:    fixed(dst),
 		}, {
@@ -381,6 +384,9 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 		}, {
 			ParameterName: "arg_amount",
 			Constraint:    c.amount,
+		}, {
+			ParameterName: "arg_decimals",
+			Constraint:    anyConstraint(),
 		}}
 		return []*types.Rule{out, {
 			Resource: "solana.associated_token_account.create",
@@ -1502,6 +1508,9 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    anyConstraint(), // Can be SPL Token or Token-2022
+		}, {
 			ParameterName: "account_user_transfer_authority",
 			Constraint:    anyConstraint(),
 		}, {
@@ -1554,6 +1563,9 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 			},
 		},
 		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_token_program",
+			Constraint:    anyConstraint(), // Can be SPL Token or Token-2022
+		}, {
 			ParameterName: "account_program_authority",
 			Constraint:    anyConstraint(),
 		}, {
