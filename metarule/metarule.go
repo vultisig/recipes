@@ -211,7 +211,7 @@ type sendConstraints struct {
 	amount       *types.Constraint
 	toAddress    *types.Constraint
 	tokenProgram *types.Constraint // optional, defaults to TokenProgramID for SPL tokens
-	// memo not supported yet
+	memo         *types.Constraint // optional memo field for CEX transfers and other memo-based chains
 }
 
 func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
@@ -229,7 +229,8 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 			res.toAddress = c.GetConstraint()
 		case "token_program":
 			res.tokenProgram = c.GetConstraint()
-			// memo not supported yet
+		case "memo":
+			res.memo = c.GetConstraint()
 		}
 	}
 
@@ -934,7 +935,7 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}
 
-		out.ParameterConstraints = []*types.ParameterConstraint{
+		constraints := []*types.ParameterConstraint{
 			{
 				ParameterName: "recipient",
 				Constraint:    c.toAddress,
@@ -944,6 +945,16 @@ func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				Constraint:    c.amount,
 			},
 		}
+
+		// Add memo constraint if provided
+		if c.memo != nil {
+			constraints = append(constraints, &types.ParameterConstraint{
+				ParameterName: "memo",
+				Constraint:    c.memo,
+			})
+		}
+
+		out.ParameterConstraints = constraints
 
 		return []*types.Rule{out}, nil
 	case swap:
