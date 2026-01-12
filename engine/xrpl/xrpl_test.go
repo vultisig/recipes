@@ -648,3 +648,80 @@ func TestXRPL_Evaluate_Swap_ShortformAsset_Success(t *testing.T) {
 	err = xrpl.Evaluate(rule, txBytes)
 	assert.NoError(t, err, "Swap should pass validation with flexible asset pattern that accepts both BTC.BTC and b")
 }
+
+func TestXRPL_Send_Success_WithMemo(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Use real swap transaction that contains a memo (Payment transaction type)
+	// Memo: =:BTC.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:1000
+	txHex := "1200002405e7f5d4201b05e8c5766140000000000f42406840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83144ba9f4163bafd86f5ecc6793d43cff31a9f32275f9ea7c0e74686f72636861696e2d6d656d6f7d393d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a31303030e1f1"
+
+	txBytes, err := hex.DecodeString(txHex)
+	assert.NoError(t, err)
+
+	// Create rule that validates Payment with memo constraint
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "ripple.xrp.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss",
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "=:BTC.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:1000",
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.NoError(t, err, "Payment transaction with memo should pass validation")
+}
+
+func TestXRPL_Send_Failure_WrongMemo(t *testing.T) {
+	xrpl := NewXRPL()
+
+	// Use same transaction with memo: =:BTC.BTC:bc1qz6erfztfn4ge32fh9nlrdl89h0ymurz36dcetg:1000
+	txHex := "1200002405e7f5d4201b05e8c5766140000000000f42406840000000000000328114fac6c2bb1eb09b66cabfde78b33927d2dc7f365d83144ba9f4163bafd86f5ecc6793d43cff31a9f32275f9ea7c0e74686f72636861696e2d6d656d6f7d393d3a4254432e4254433a626331717a366572667a74666e34676533326668396e6c72646c38396830796d75727a333664636574673a31303030e1f1"
+
+	txBytes, err := hex.DecodeString(txHex)
+	assert.NoError(t, err)
+
+	// Create rule that expects WRONG memo value
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "ripple.xrp.transfer",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: "rfunGxj8FWbK3iYuxQvYMA9LGhJ9mYFuss",
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{
+						FixedValue: "12345678", // Wrong memo - transaction has THORChain memo
+					},
+					Required: true,
+				},
+			},
+		},
+	}
+
+	err = xrpl.Evaluate(rule, txBytes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to compare fixed values",
+		"Should fail with wrong memo constraint")
+}
