@@ -3673,10 +3673,10 @@ func TestTryFormat_ZcashSwap(t *testing.T) {
 		paramByName[param.ParameterName] = param
 	}
 
-	// Output 0: vault address (magic constant)
+	// Output 0: vault address (magic constant) - Zcash uses MayaChain
 	assert.Contains(t, paramByName, "output_address_0")
 	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
-	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
+	assert.Equal(t, types.MagicConstant_MAYACHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
 
 	// Output 0: swap amount
 	assert.Contains(t, paramByName, "output_value_0")

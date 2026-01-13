@@ -56,11 +56,11 @@ type UnsignedTx struct {
 	SigHashes [][]byte // Pre-computed signature hashes for each input
 }
 
-// ConsensusBranchID is the NU6 consensus branch ID for signature hash personalization.
+// ConsensusBranchID is the NU6.1 consensus branch ID for signature hash personalization.
 // Although we use v4 transactions (Sapling format), we must use the
 // consensus branch ID of the current epoch for signature hashing.
-// NU6 activated on November 23, 2024.
-const ConsensusBranchID = 0xC8E71055
+// NU6.1 activated on November 24, 2025 at block height 3146400.
+const ConsensusBranchID = 0x4dec4df0
 
 // Zcash v4 transaction constants
 const (

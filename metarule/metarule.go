@@ -1175,22 +1175,23 @@ func (m *MetaRule) handleZcash(in *types.Rule, r *types.ResourcePath) ([]*types.
 			return nil, fmt.Errorf("failed to parse chain id: %w", err)
 		}
 
-		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		// Zcash swaps use MayaChain, not THORChain
+		mayaAsset, err := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
 		if err != nil {
-			return nil, fmt.Errorf("failed to make thor asset: %w", err)
+			return nil, fmt.Errorf("failed to make maya asset: %w", err)
 		}
 
 		// Create asset pattern that accepts both full form and shortform
-		shortCode := thorchain.ShortCode(thorAsset)
+		shortCode := mayachain.ShortCode(mayaAsset)
 		var assetPattern string
 		if shortCode != "" {
 			// Accept both full form and shortform: (ZEC\.ZEC|z)
 			assetPattern = fmt.Sprintf("(%s|%s)",
-				regexp.QuoteMeta(thorAsset),
+				regexp.QuoteMeta(mayaAsset),
 				regexp.QuoteMeta(shortCode))
 		} else {
 			// Fallback to full asset name only
-			assetPattern = regexp.QuoteMeta(thorAsset)
+			assetPattern = regexp.QuoteMeta(mayaAsset)
 		}
 
 		out.ParameterConstraints = []*types.ParameterConstraint{{
@@ -1198,7 +1199,7 @@ func (m *MetaRule) handleZcash(in *types.Rule, r *types.ResourcePath) ([]*types.
 			Constraint: &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					MagicConstantValue: types.MagicConstant_MAYACHAIN_VAULT,
 				},
 			},
 		}, {
