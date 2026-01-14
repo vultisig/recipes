@@ -1,6 +1,7 @@
 package xrpl
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
@@ -213,4 +214,9 @@ func (x *XRPL) assertArgsByType(chainId, inputName string, arg interface{}, cons
 		return fmt.Errorf("unsupported parameter type: %T", actual)
 	}
 	return nil
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded XRPL transaction.
+func (x *XRPL) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }

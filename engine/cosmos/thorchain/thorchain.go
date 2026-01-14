@@ -48,3 +48,8 @@ func (t *Thorchain) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return t.engine.Evaluate(rule, txBytes)
 }
 
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Thorchain transaction.
+func (t *Thorchain) ExtractTxBytes(txData string) ([]byte, error) {
+	return t.engine.ExtractTxBytes(txData)
+}
+

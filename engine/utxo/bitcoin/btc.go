@@ -33,3 +33,8 @@ func (b *Btc) Supports(chain common.Chain) bool {
 func (b *Btc) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return b.engine.Evaluate(rule, txBytes)
 }
+
+// ExtractTxBytes extracts transaction bytes from a PSBT string.
+func (b *Btc) ExtractTxBytes(txData string) ([]byte, error) {
+	return b.engine.ExtractTxBytes(txData)
+}

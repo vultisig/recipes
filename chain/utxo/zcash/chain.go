@@ -2,7 +2,6 @@ package zcash
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/vultisig/mobile-tss-lib/tss"
 
 	"github.com/vultisig/recipes/chain/utxo"
-	"github.com/vultisig/recipes/sdk/zcash"
 	"github.com/vultisig/recipes/types"
 )
 
@@ -260,19 +258,6 @@ func writeZcashOutput(buf *bytes.Buffer, output *ZcashOutput) error {
 	}
 	_, err := buf.Write(output.PkScript)
 	return err
-}
-
-func (z *Zcash) ExtractTxBytes(txData string) ([]byte, error) {
-	b, err := base64.StdEncoding.DecodeString(txData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode base64: %w", err)
-	}
-	// Strip embedded metadata (sighashes, pubkey)
-	txBytes, _, _, err := zcash.ParseWithMetadata(b)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse metadata: %w", err)
-	}
-	return txBytes, nil
 }
 
 // NewChain creates a new Zcash chain instance

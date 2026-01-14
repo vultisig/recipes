@@ -85,15 +85,6 @@ func GetChain(id string) (types.Chain, error) {
 	return DefaultRegistry.Get(id)
 }
 
-// ExtractTxBytes extracts transaction bytes using the appropriate chain handler.
-func ExtractTxBytes(chainID string, txData string) ([]byte, error) {
-	c, err := GetChain(chainID)
-	if err != nil {
-		return nil, fmt.Errorf("unsupported chain %q: %w", chainID, err)
-	}
-	return c.ExtractTxBytes(txData)
-}
-
 // init registers built-in chains
 func init() {
 	// Register UTXO chains

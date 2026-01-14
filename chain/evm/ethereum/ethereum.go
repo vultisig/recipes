@@ -1,7 +1,6 @@
 package ethereum
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -214,10 +213,6 @@ func (e *Ethereum) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) 
 		return "", fmt.Errorf("gethtypes.NewTx.WithSignature: %w", err)
 	}
 	return tx.Hash().Hex(), nil
-}
-
-func (e *Ethereum) ExtractTxBytes(txData string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(txData)
 }
 
 // NewEthereum creates a new Ethereum chain instance

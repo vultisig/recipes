@@ -3,7 +3,6 @@
 package evm
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -135,10 +134,6 @@ func (c *Chain) GetProtocol(id string) (vultisigTypes.Protocol, error) {
 		), nil
 	}
 	return nil, fmt.Errorf("protocol %q not found on %s", id, c.config.Name)
-}
-
-func (c *Chain) ExtractTxBytes(txData string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(txData)
 }
 
 // ComputeTxHash computes the transaction hash from the proposed transaction and signatures.

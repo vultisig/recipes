@@ -225,3 +225,12 @@ func (e *Engine) validateParameterConstraints(rule *types.Rule, resourcePattern 
 
 	return nil
 }
+
+// ExtractTxBytes extracts transaction bytes from the given transaction data for the specified chain.
+func (e *Engine) ExtractTxBytes(chain common.Chain, txData string) ([]byte, error) {
+	chainEngine, err := e.registry.GetEngine(chain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get engine for chain %s: %w", chain.String(), err)
+	}
+	return chainEngine.ExtractTxBytes(txData)
+}

@@ -23,6 +23,7 @@ import (
 type ChainEngine interface {
 	Evaluate(rule *types.Rule, txBytes []byte) error
 	Supports(chain common.Chain) bool
+	ExtractTxBytes(txData string) ([]byte, error)
 }
 
 // SupportedEVMChains is the list of all EVM chains that have engines registered.

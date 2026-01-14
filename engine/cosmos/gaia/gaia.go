@@ -39,3 +39,8 @@ func (g *Gaia) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return g.engine.Evaluate(rule, txBytes)
 }
 
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Cosmos transaction.
+func (g *Gaia) ExtractTxBytes(txData string) ([]byte, error) {
+	return g.engine.ExtractTxBytes(txData)
+}
+
