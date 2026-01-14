@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	chainsolana "github.com/vultisig/recipes/chain/solana"
@@ -98,4 +99,9 @@ func findInstruction(insts []idlInstruction, name string) (idlInstruction, error
 		}
 	}
 	return idlInstruction{}, fmt.Errorf("instruction not found: %s", name)
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Solana transaction.
+func (s *Solana) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }

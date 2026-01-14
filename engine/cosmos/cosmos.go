@@ -2,6 +2,7 @@
 package cosmos
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
@@ -416,5 +417,10 @@ func (e *Engine) assertArgsByType(chainId, inputName string, arg any, constraint
 		return fmt.Errorf("unsupported parameter type: %T", actual)
 	}
 	return nil
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Cosmos transaction.
+func (e *Engine) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 

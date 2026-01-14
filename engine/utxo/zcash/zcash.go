@@ -1,14 +1,16 @@
 package zcash
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/vultisig/recipes/chain/utxo/zcash"
+	chainzcash "github.com/vultisig/recipes/chain/utxo/zcash"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
+	sdkzcash "github.com/vultisig/recipes/sdk/zcash"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
@@ -44,17 +46,17 @@ func (z *Zcash) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return nil
 }
 
-func (z *Zcash) parseTx(txBytes []byte) (*zcash.ZcashTransaction, error) {
-	parsed, err := zcash.ParseZcashTransactionWithNetwork(
+func (z *Zcash) parseTx(txBytes []byte) (*chainzcash.ZcashTransaction, error) {
+	parsed, err := chainzcash.ParseZcashTransactionWithNetwork(
 		fmt.Sprintf("%x", txBytes),
-		zcash.ZcashMainNetParams,
+		chainzcash.ZcashMainNetParams,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transaction: %w", err)
 	}
 
 	// Type assert to get the underlying transaction
-	zcashParsed, ok := parsed.(*zcash.ParsedZcashTransaction)
+	zcashParsed, ok := parsed.(*chainzcash.ParsedZcashTransaction)
 	if !ok {
 		return nil, fmt.Errorf("unexpected transaction type")
 	}
@@ -68,7 +70,7 @@ type outputConstraints struct {
 	data    *types.ParameterConstraint
 }
 
-func (z *Zcash) validateOutputs(rule *types.Rule, tx *zcash.ZcashTransaction) error {
+func (z *Zcash) validateOutputs(rule *types.Rule, tx *chainzcash.ZcashTransaction) error {
 	outputs := make(map[int]*outputConstraints)
 
 	for _, constraint := range rule.GetParameterConstraints() {
@@ -147,7 +149,7 @@ func (z *Zcash) setConstraint(
 	}
 }
 
-func (z *Zcash) validateOutputConstraintCounts(outputConstraints map[int]*outputConstraints, tx *zcash.ZcashTransaction) error {
+func (z *Zcash) validateOutputConstraintCounts(outputConstraints map[int]*outputConstraints, tx *chainzcash.ZcashTransaction) error {
 	if len(outputConstraints) != len(tx.Outputs) {
 		return fmt.Errorf("output count mismatch: rule has %d outputs, tx has %d outputs", len(outputConstraints), len(tx.Outputs))
 	}
@@ -182,7 +184,7 @@ func (z *Zcash) validateOutputConstraintCounts(outputConstraints map[int]*output
 func (z *Zcash) validateOutputConstraints(
 	constraintList []*types.ParameterConstraint,
 	outputConstraints map[int]*outputConstraints,
-	tx *zcash.ZcashTransaction,
+	tx *chainzcash.ZcashTransaction,
 ) error {
 	const chainID = "zcash"
 
@@ -230,10 +232,24 @@ func (z *Zcash) validateOutputConstraints(
 	return nil
 }
 
-func (z *Zcash) extractAddress(txOut *zcash.ZcashOutput) (string, error) {
-	addr, err := zcash.ExtractZcashAddress(txOut.PkScript, zcash.ZcashMainNetParams)
+func (z *Zcash) extractAddress(txOut *chainzcash.ZcashOutput) (string, error) {
+	addr, err := chainzcash.ExtractZcashAddress(txOut.PkScript, chainzcash.ZcashMainNetParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract address from script: %w", err)
 	}
 	return addr, nil
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Zcash transaction.
+func (z *Zcash) ExtractTxBytes(txData string) ([]byte, error) {
+	b, err := base64.StdEncoding.DecodeString(txData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64: %w", err)
+	}
+	// Strip embedded metadata (sighashes, pubkey)
+	txBytes, _, _, err := sdkzcash.ParseWithMetadata(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse metadata: %w", err)
+	}
+	return txBytes, nil
 }
