@@ -1,6 +1,7 @@
 package xrpl
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -191,5 +192,9 @@ func (c *Chain) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (st
 	// XRPL transaction hash computation would require proper signature assembly
 	// For now, return an error as this needs chain-specific implementation
 	return "", fmt.Errorf("ComputeTxHash not yet implemented for XRPL")
+}
+
+func (c *Chain) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 

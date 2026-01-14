@@ -28,4 +28,9 @@ type Chain interface {
 	// `sigs` is slice, not a map, because we need to preserve the order of signatures
 	// for R,S ordered apply for BTC for example
 	ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (string, error)
+
+	// ExtractTxBytes extracts raw transaction bytes from encoded transaction data.
+	// This handles chain-specific encoding (PSBT, base64, metadata wrapping, etc.)
+	// and returns bytes suitable for policy evaluation.
+	ExtractTxBytes(txData string) ([]byte, error)
 }

@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -200,6 +201,10 @@ func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
 		return c.config.GetProtocol(id)
 	}
 	return nil, fmt.Errorf("protocol %q not found on %s", id, c.config.Name)
+}
+
+func (c *Chain) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 
 // From returns the sender address from the first message.

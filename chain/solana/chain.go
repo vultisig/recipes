@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -178,6 +179,10 @@ func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
 		return NewSOL(), nil
 	}
 	return nil, fmt.Errorf("protocol %q not found on Solana", id)
+}
+
+func (c *Chain) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 
 // cleanHex strips 0x/0X prefix and whitespace from a hex string.

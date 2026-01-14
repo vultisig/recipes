@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
+	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
@@ -91,6 +93,18 @@ func (d *Dogecoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) 
 	}
 
 	return tx.TxHash().String(), nil
+}
+
+func (d *Dogecoin) ExtractTxBytes(txData string) ([]byte, error) {
+	p, err := psbt.NewFromRawBytes(strings.NewReader(txData), true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse PSBT: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := p.UnsignedTx.Serialize(&buf); err != nil {
+		return nil, fmt.Errorf("failed to serialize unsigned tx: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 // NewChain creates a new Dogecoin chain instance

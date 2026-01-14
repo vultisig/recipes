@@ -2,6 +2,7 @@ package tron
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -612,5 +613,9 @@ func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
 		return NewTRX(), nil
 	}
 	return nil, fmt.Errorf("protocol %q not found on TRON", id)
+}
+
+func (c *Chain) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 
