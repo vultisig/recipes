@@ -447,6 +447,181 @@ Transfer Ether to another address
 ```
 
 
+### ethereum.polymarket_ctf.setApprovalForAll
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf  
+**Function:** polymarket_ctf.setApprovalForAll  
+
+Call the setApprovalForAll function on polymarket_ctf
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| operator | address | operator parameter of type address |
+| approved | boolean | approved parameter of type bool |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf.setApprovalForAll",
+  "effect": "ALLOW",
+  "constraints": {
+    "operator": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "approved": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.cancelOrder
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.cancelOrder  
+
+Call the cancelOrder function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct Order |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.cancelOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.cancelOrders
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.cancelOrders  
+
+Call the cancelOrders function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| orders | array | orders parameter of type struct Order[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.cancelOrders",
+  "effect": "ALLOW",
+  "constraints": {
+    "orders": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.fillOrder
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.fillOrder  
+
+Call the fillOrder function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| order | string | order parameter of type struct Order |
+| fillAmount | decimal | fillAmount parameter of type uint256 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.fillOrder",
+  "effect": "ALLOW",
+  "constraints": {
+    "order": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "fillAmount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.polymarket_ctf_exchange.fillOrders
+
+**Chain:** Ethereum  
+**Protocol:** polymarket_ctf_exchange  
+**Function:** polymarket_ctf_exchange.fillOrders  
+
+Call the fillOrders function on polymarket_ctf_exchange
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| orders | array | orders parameter of type struct Order[] |
+| fillAmounts | decimal | fillAmounts parameter of type uint256[] |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.polymarket_ctf_exchange.fillOrders",
+  "effect": "ALLOW",
+  "constraints": {
+    "orders": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "fillAmounts": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.routerv6_1inch.advanceEpoch
 
 **Chain:** Ethereum  

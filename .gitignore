@@ -35,3 +35,6 @@ cmd/worker
 bin/*
 
 .serena
+
+# Cursor IDE (never commit)
+.cursor/

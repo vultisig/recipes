@@ -532,7 +532,7 @@ func TestZcash_Evaluate_WithTarget_ShouldFail(t *testing.T) {
 		},
 	}, txBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "target must be nil for Zcash")
+	assert.Contains(t, err.Error(), "target type must be unspecified for Zcash")
 }
 
 // Test a MayaChain swap transaction structure:

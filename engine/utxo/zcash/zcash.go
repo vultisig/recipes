@@ -28,8 +28,8 @@ func (z *Zcash) Evaluate(rule *types.Rule, txBytes []byte) error {
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
-	if rule.GetTarget() != nil {
-		return fmt.Errorf("target must be nil for Zcash, got: %s", rule.GetTarget().String())
+	if rule.GetTarget().GetTargetType() != types.TargetType_TARGET_TYPE_UNSPECIFIED {
+		return fmt.Errorf("target type must be unspecified for Zcash, got: %s", rule.GetTarget().GetTargetType().String())
 	}
 
 	tx, err := z.parseTx(txBytes)
