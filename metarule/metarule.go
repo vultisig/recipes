@@ -439,35 +439,64 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("invalid chainID: %w", err)
 		}
 
+		toChain, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse to chain: %w", err)
+		}
+
 		rules := make([]*types.Rule, 0)
 
-		var router *types.Constraint
-		if r.GetChainId() == strings.ToLower(c.toChain.GetFixedValue()) {
-			// same chain - 1inch
-			oneinchRouter, out, er := oneinchSwap(chain, c)
-			if er != nil {
-				return nil, fmt.Errorf("failed to create oneinch swap rule: %w", er)
-			}
+		isSameChain := chain == toChain
 
+		out, thorErr := thorchainSwap(chain, c)
+		if thorErr == nil {
 			rules = append(rules, out)
-			router = fixed(oneinchRouter)
-		} else {
-			// cross-chain - ThorChain
-			// here we don't care is a bridge direction supported — it's a plugin responsibility
-			// we build a safe ThorChain rule mapping to the swap request
-			out, er := thorchainSwap(chain, c)
-			if er != nil {
-				return nil, fmt.Errorf("failed to create thorchain swap rule: %w", er)
-			}
-
-			rules = append(rules, out)
-			router = &types.Constraint{
+			router := &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 				Value: &types.Constraint_MagicConstantValue{
 					MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
 				},
 			}
+
+			if c.fromAsset.GetFixedValue() != "" {
+				approve := proto.Clone(in).(*types.Rule)
+				approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+				approve.Target = &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: c.fromAsset.GetFixedValue(),
+					},
+				}
+				approve.ParameterConstraints = []*types.ParameterConstraint{
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+							Value: &types.Constraint_MinValue{
+								MinValue: c.fromAmount.GetFixedValue(),
+							},
+						},
+					},
+					{
+						ParameterName: "spender",
+						Constraint:    router,
+					},
+				}
+				rules = append(rules, approve)
+			}
+
+			return rules, nil
 		}
+
+		if !isSameChain {
+			return nil, fmt.Errorf("failed to create thorchain swap rule for cross-chain swap: %w", thorErr)
+		}
+
+		routerAddr, swapRule, err := oneinchSwap(chain, c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create 1inch swap rule: %w", err)
+		}
+		rules = append(rules, swapRule)
 
 		if c.fromAsset.GetFixedValue() != "" {
 			approve := proto.Clone(in).(*types.Rule)
@@ -490,7 +519,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				},
 				{
 					ParameterName: "spender",
-					Constraint:    router,
+					Constraint:    fixed(routerAddr),
 				},
 			}
 			rules = append(rules, approve)
