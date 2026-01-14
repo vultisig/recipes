@@ -1,6 +1,7 @@
 package tron
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
@@ -197,5 +198,10 @@ func (t *Tron) assertArgsByType(chainId, inputName string, arg interface{}, cons
 		return fmt.Errorf("unsupported parameter type: %T", actual)
 	}
 	return nil
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Tron transaction.
+func (t *Tron) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }
 

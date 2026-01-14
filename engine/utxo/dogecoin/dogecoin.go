@@ -40,3 +40,8 @@ func (d *Dogecoin) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return d.engine.Evaluate(rule, txBytes)
 }
 
+// ExtractTxBytes extracts transaction bytes from a PSBT string.
+func (d *Dogecoin) ExtractTxBytes(txData string) ([]byte, error) {
+	return d.engine.ExtractTxBytes(txData)
+}
+

@@ -48,3 +48,8 @@ func (m *Maya) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return m.engine.Evaluate(rule, txBytes)
 }
 
+// ExtractTxBytes extracts transaction bytes from a base64-encoded Maya transaction.
+func (m *Maya) ExtractTxBytes(txData string) ([]byte, error) {
+	return m.engine.ExtractTxBytes(txData)
+}
+

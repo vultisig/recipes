@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
@@ -58,6 +59,19 @@ func (e *Engine) Supports(chain common.Chain) bool {
 		}
 	}
 	return false
+}
+
+// ExtractTxBytes extracts transaction bytes from a PSBT string.
+func (e *Engine) ExtractTxBytes(txData string) ([]byte, error) {
+	p, err := psbt.NewFromRawBytes(strings.NewReader(txData), true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse PSBT: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := p.UnsignedTx.Serialize(&buf); err != nil {
+		return nil, fmt.Errorf("failed to serialize unsigned tx: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 // Evaluate validates a transaction against the given rule.

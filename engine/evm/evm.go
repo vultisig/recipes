@@ -2,6 +2,7 @@ package evm
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"path"
@@ -384,4 +385,9 @@ func assertArgsByType(chainId, inputName string, arg any, constraints []*types.P
 		return fmt.Errorf("unsupported arg type: %s", input.Type.String())
 	}
 	return nil
+}
+
+// ExtractTxBytes extracts transaction bytes from a base64-encoded EVM transaction.
+func (e *Evm) ExtractTxBytes(txData string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(txData)
 }

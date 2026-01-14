@@ -103,7 +103,7 @@ func (b *Bitcoin) ComputeTxHash(proposedTx []byte, sigs []tss.KeysignResponse) (
 	return tx.TxHash().String(), nil
 }
 
-// NewBitcoin creates a new Bitcoin chain instance
+// NewChain creates a new Bitcoin chain instance
 func NewChain() types.Chain {
 	return &Bitcoin{}
 }

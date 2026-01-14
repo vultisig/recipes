@@ -41,3 +41,8 @@ func (l *Litecoin) Evaluate(rule *types.Rule, txBytes []byte) error {
 	return l.engine.Evaluate(rule, txBytes)
 }
 
+// ExtractTxBytes extracts transaction bytes from a PSBT string.
+func (l *Litecoin) ExtractTxBytes(txData string) ([]byte, error) {
+	return l.engine.ExtractTxBytes(txData)
+}
+
