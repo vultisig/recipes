@@ -87,7 +87,9 @@ func (sdk *SDK) Sign(psbtBytes []byte, signatures map[string]tss.KeysignResponse
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode DER signature for input %d: %w", i, err)
 		}
-		fullSig := append(der, sighashType)
+		fullSig := make([]byte, len(der)+1)
+		copy(fullSig, der)
+		fullSig[len(der)] = sighashType
 
 		pubkey, err := sdk.extractPubkeyForInput(input)
 		if err != nil {
