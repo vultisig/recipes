@@ -131,10 +131,12 @@ func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 	var prevValue int64
 	var prevScript []byte
 
-	if input.WitnessUtxo != nil {
+	switch {
+	case input.WitnessUtxo != nil:
 		prevValue = input.WitnessUtxo.Value
 		prevScript = input.WitnessUtxo.PkScript
-	} else if input.NonWitnessUtxo != nil {
+
+	case input.NonWitnessUtxo != nil:
 		outIndex := pkt.UnsignedTx.TxIn[inputIndex].PreviousOutPoint.Index
 		if int(outIndex) >= len(input.NonWitnessUtxo.TxOut) {
 			return nil, fmt.Errorf("invalid previous output index %d", outIndex)
@@ -142,7 +144,8 @@ func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 		prevOutput := input.NonWitnessUtxo.TxOut[outIndex]
 		prevValue = prevOutput.Value
 		prevScript = prevOutput.PkScript
-	} else {
+
+	default:
 		return nil, fmt.Errorf("input %d missing both witness and non-witness UTXO", inputIndex)
 	}
 
