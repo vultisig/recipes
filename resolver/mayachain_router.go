@@ -109,20 +109,24 @@ func (r *MayaChainRouterResolver) findRouterForChain(addresses []MayaInboundAddr
 }
 
 // getMayaChainSymbol maps chain IDs to MayaChain's expected symbols
-// MayaChain router is only used for Arbitrum (ThorChain handles ETH, BASE, BSC)
+// MayaChain router is used for:
+// - Arbitrum: all swaps to/from ARB
+// - Ethereum: swaps to Maya-only chains (ZEC, DASH) that THORChain doesn't support
 func (r *MayaChainRouterResolver) getMayaChainSymbol(chainID string) (string, error) {
 	switch strings.ToLower(chainID) {
 	case "arbitrum":
 		return "ARB", nil
+	case "ethereum":
+		return "ETH", nil
 	default:
-		return "", fmt.Errorf("chain %s not supported by MayaChain router (use ThorChain for ETH/BASE/BSC)", chainID)
+		return "", fmt.Errorf("chain %s not supported by MayaChain router", chainID)
 	}
 }
 
 // isEVMChain returns true if the chain is an EVM-compatible chain supported by MayaChain
 func (r *MayaChainRouterResolver) isEVMChain(chainID string) bool {
 	switch strings.ToLower(chainID) {
-	case "arbitrum":
+	case "arbitrum", "ethereum":
 		return true
 	default:
 		return false

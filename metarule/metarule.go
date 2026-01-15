@@ -1015,22 +1015,35 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			return nil, fmt.Errorf("failed to parse chain id: %w", err)
 		}
 
-		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
-		if err != nil {
-			return nil, fmt.Errorf("failed to make thor asset: %w", err)
-		}
-
-		// Create asset pattern that accepts both full form and shortform
-		shortCode := thorchain.ShortCode(thorAsset)
+		// Try THORChain first, fall back to Maya for unsupported destinations (like ZEC)
+		thorAsset, thorErr := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
 		var assetPattern string
-		if shortCode != "" {
-			// Accept both full form and shortform: (BTC\.BTC|b)
-			assetPattern = fmt.Sprintf("(%s|%s)",
-				regexp.QuoteMeta(thorAsset),
-				regexp.QuoteMeta(shortCode))
+		var vaultMagicConst types.MagicConstant
+
+		if thorErr == nil {
+			vaultMagicConst = types.MagicConstant_THORCHAIN_VAULT
+			shortCode := thorchain.ShortCode(thorAsset)
+			if shortCode != "" {
+				assetPattern = fmt.Sprintf("(%s|%s)",
+					regexp.QuoteMeta(thorAsset),
+					regexp.QuoteMeta(shortCode))
+			} else {
+				assetPattern = regexp.QuoteMeta(thorAsset)
+			}
 		} else {
-			// Fallback to full asset name only
-			assetPattern = regexp.QuoteMeta(thorAsset)
+			mayaAsset, mayaErr := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+			if mayaErr != nil {
+				return nil, fmt.Errorf("failed to make asset: thorchain: %v, maya: %w", thorErr, mayaErr)
+			}
+			vaultMagicConst = types.MagicConstant_MAYACHAIN_VAULT
+			shortCode := mayachain.ShortCode(mayaAsset)
+			if shortCode != "" {
+				assetPattern = fmt.Sprintf("(%s|%s)",
+					regexp.QuoteMeta(mayaAsset),
+					regexp.QuoteMeta(shortCode))
+			} else {
+				assetPattern = regexp.QuoteMeta(mayaAsset)
+			}
 		}
 
 		out.ParameterConstraints = []*types.ParameterConstraint{{
@@ -1038,7 +1051,7 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			Constraint: &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					MagicConstantValue: vaultMagicConst,
 				},
 			},
 		}, {

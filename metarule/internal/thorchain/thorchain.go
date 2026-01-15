@@ -60,7 +60,6 @@ var pools = []metadata{
 	{asset: "THOR.TCY"},
 	{asset: "XRP.XRP"},
 	{asset: "TRON.TRX"},
-	{asset: "ZEC.ZEC"},
 }
 
 type network string
@@ -78,7 +77,6 @@ const (
 	thorchain network = "THOR"
 	gaia      network = "GAIA"
 	tron      network = "TRON"
-	zec       network = "ZEC"
 )
 
 func parseNetwork(c common.Chain) (network, error) {
@@ -107,8 +105,6 @@ func parseNetwork(c common.Chain) (network, error) {
 		return gaia, nil
 	case common.Tron:
 		return tron, nil
-	case common.Zcash:
-		return zec, nil
 	default:
 		return "", errors.New("unknown chain")
 	}
@@ -200,8 +196,6 @@ func ShortCode(asset string) string {
 		return "x"
 	case "SOL.SOL":
 		return "o"
-	case "ZEC.ZEC":
-		return "z"
 	default:
 		return ""
 	}
