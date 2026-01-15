@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log"
 
 	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -170,10 +169,6 @@ func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate BCH signature hash: %w", err)
 	}
-
-	// Debug logging
-	log.Printf("[BCH SDK] CalculateInputSignatureHash input=%d prevValue=%d prevScript=%x sigHash=%x derivedKey=%s",
-		inputIndex, prevValue, prevScript, sigHash, sdk.deriveKeyFromMessage(sigHash))
 
 	return sigHash, nil
 }
