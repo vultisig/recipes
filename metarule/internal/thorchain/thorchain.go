@@ -67,6 +67,9 @@ type network string
 
 const (
 	btc       network = "BTC"
+	ltc       network = "LTC"
+	bch       network = "BCH"
+	doge      network = "DOGE"
 	eth       network = "ETH"
 	bsc       network = "BSC"
 	base      network = "BASE"
@@ -82,6 +85,12 @@ func parseNetwork(c common.Chain) (network, error) {
 	switch c {
 	case common.Bitcoin:
 		return btc, nil
+	case common.Litecoin:
+		return ltc, nil
+	case common.BitcoinCash:
+		return bch, nil
+	case common.Dogecoin:
+		return doge, nil
 	case common.Ethereum:
 		return eth, nil
 	case common.BscChain:
