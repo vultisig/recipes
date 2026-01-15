@@ -528,6 +528,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		isSameChain := chain == toChain
 
+		// Priority 1: Try THORChain first (always)
 		out, thorErr := thorchainSwap(chain, c)
 		if thorErr == nil {
 			rules = append(rules, out)
@@ -564,20 +565,60 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 				}
 				rules = append(rules, approve)
 			}
-
 			return rules, nil
 		}
 
+		// Priority 2: Try Maya if THORChain failed
+		mayaOut, mayaErr := mayachainSwap(chain, c)
+		if mayaErr == nil {
+			rules = append(rules, mayaOut)
+			router := &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
+				},
+			}
+
+			if c.fromAsset.GetFixedValue() != "" {
+				approve := proto.Clone(in).(*types.Rule)
+				approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+				approve.Target = &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target: &types.Target_Address{
+						Address: c.fromAsset.GetFixedValue(),
+					},
+				}
+				approve.ParameterConstraints = []*types.ParameterConstraint{
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+							Value: &types.Constraint_MinValue{
+								MinValue: c.fromAmount.GetFixedValue(),
+							},
+						},
+					},
+					{
+						ParameterName: "spender",
+						Constraint:    router,
+					},
+				}
+				rules = append(rules, approve)
+			}
+			return rules, nil
+		}
+
+		// Priority 3: For same-chain only, try 1inch as last resort
 		if !isSameChain {
-			return nil, fmt.Errorf("failed to create thorchain swap rule for cross-chain swap: %w", thorErr)
+			return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
 		}
 
-		routerAddr, swapRule, err := oneinchSwap(chain, c)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create 1inch swap rule: %w", err)
+		routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
+		if oneinchErr != nil {
+			return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
 		}
+
 		rules = append(rules, swapRule)
-
 		if c.fromAsset.GetFixedValue() != "" {
 			approve := proto.Clone(in).(*types.Rule)
 			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
@@ -762,6 +803,84 @@ func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 						// Validates the destination asset in ThorChain notation
 						// Validates the destination address
 						// Allows optional parameters (streaming options, min amount, affiliate, etc.)
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+			{
+				ParameterName: "expiration",
+				Constraint:    anyConstraint(),
+			},
+		},
+	}
+
+	return rule, nil
+}
+
+func mayachainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
+	asset := c.fromAsset.GetFixedValue()
+	amount := c.fromAmount
+	if asset == "" {
+		asset = evm.ZeroAddress.String()
+		amount = fixed("0")
+	}
+
+	chainInt, err := common.FromString(c.toChain.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse chain id: %w", err)
+	}
+
+	mayaAsset, err := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to make maya asset: %w", err)
+	}
+
+	shortCode := mayachain.ShortCode(mayaAsset)
+	var assetPattern string
+	if shortCode != "" {
+		assetPattern = fmt.Sprintf("(%s|%s)",
+			regexp.QuoteMeta(mayaAsset),
+			regexp.QuoteMeta(shortCode))
+	} else {
+		assetPattern = regexp.QuoteMeta(mayaAsset)
+	}
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: fmt.Sprintf("%s.mayachain_router.depositWithExpiry", strings.ToLower(chain.String())),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_MAYACHAIN_ROUTER,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "vault",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_MAYACHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "asset",
+				Constraint:    fixed(asset),
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    amount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
 						RegexpValue: fmt.Sprintf(
 							"^=:%s:%s:.*",
 							assetPattern,
