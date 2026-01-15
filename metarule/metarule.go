@@ -1937,7 +1937,7 @@ func (m *MetaRule) handleBitcoinCash(in *types.Rule, r *types.ResourcePath) ([]*
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "bitcoincash.bch.transfer"
+		out.Resource = "bitcoin-cash.bch.transfer"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}
@@ -1963,7 +1963,7 @@ func (m *MetaRule) handleBitcoinCash(in *types.Rule, r *types.ResourcePath) ([]*
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "bitcoincash.bch.transfer"
+		out.Resource = "bitcoin-cash.bch.transfer"
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}

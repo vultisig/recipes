@@ -163,7 +163,7 @@ func TestTHORChainRouterResolver_UnsupportedConstant(t *testing.T) {
 func TestTHORChainRouterResolver_NonEvmChainError(t *testing.T) {
 	resolver := NewTHORChainRouterResolver()
 
-	nonEvmChains := []string{"bitcoin", "ripple", "litecoin", "dogecoin", "bitcoincash"}
+	nonEvmChains := []string{"bitcoin", "ripple", "litecoin", "dogecoin", "bitcoin-cash"}
 
 	for _, chainID := range nonEvmChains {
 		t.Run(chainID, func(t *testing.T) {
