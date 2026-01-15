@@ -41,11 +41,11 @@ func TestRouterFindRoute(t *testing.T) {
 			wantErr: false, // May succeed or fail depending on THORChain status
 		},
 		{
-			name: "Solana to Solana via LiFi",
+			name: "Solana to Solana via Jupiter",
 			from: Asset{Chain: "Solana", Symbol: "SOL"},
 			to:   Asset{Chain: "Solana", Symbol: "USDC", Address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"},
-			// LiFi has higher priority (3) than Jupiter (5) and supports Solana
-			wantProvider: "LiFi",
+			// For same-chain swaps, DEX aggregators are preferred. Jupiter is the best for Solana same-chain.
+			wantProvider: "Jupiter",
 			wantErr:      false,
 		},
 		{
@@ -388,5 +388,78 @@ func TestUnitConversions(t *testing.T) {
 	if usdcAmount.String() != "100000000" {
 		t.Errorf("ToBaseUnits(100.0, 6) = %s, want 100000000", usdcAmount.String())
 	}
+}
+
+func TestSmartProviderRouting(t *testing.T) {
+	router := NewDefaultRouter()
+
+	t.Run("Same-chain EVM prefers 1inch", func(t *testing.T) {
+		from := Asset{Chain: "Ethereum", Symbol: "ETH"}
+		to := Asset{Chain: "Ethereum", Symbol: "USDC", Address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"}
+
+		ordered := router.getOrderedProviders(from, to)
+
+		// First provider should be 1inch for same-chain EVM swaps
+		if len(ordered) == 0 {
+			t.Fatal("expected at least one provider")
+		}
+		if ordered[0].Name() != "1inch" {
+			t.Errorf("expected first provider to be 1inch for same-chain EVM, got %s", ordered[0].Name())
+		}
+	})
+
+	t.Run("Same-chain Solana prefers Jupiter", func(t *testing.T) {
+		from := Asset{Chain: "Solana", Symbol: "SOL"}
+		to := Asset{Chain: "Solana", Symbol: "USDC"}
+
+		ordered := router.getOrderedProviders(from, to)
+
+		// For same-chain Solana, Jupiter should be second (after 1inch which doesn't support Solana)
+		// So we check that Jupiter is before THORChain
+		jupiterIdx := -1
+		thorchainIdx := -1
+		for i, p := range ordered {
+			if p.Name() == "Jupiter" {
+				jupiterIdx = i
+			}
+			if p.Name() == "THORChain" {
+				thorchainIdx = i
+			}
+		}
+
+		if jupiterIdx == -1 || thorchainIdx == -1 {
+			t.Fatal("expected both Jupiter and THORChain in providers")
+		}
+		if jupiterIdx > thorchainIdx {
+			t.Errorf("expected Jupiter (idx=%d) before THORChain (idx=%d) for same-chain Solana", jupiterIdx, thorchainIdx)
+		}
+	})
+
+	t.Run("Cross-chain prefers THORChain", func(t *testing.T) {
+		from := Asset{Chain: "Bitcoin", Symbol: "BTC"}
+		to := Asset{Chain: "Ethereum", Symbol: "ETH"}
+
+		ordered := router.getOrderedProviders(from, to)
+
+		// First provider should be THORChain for cross-chain swaps
+		if len(ordered) == 0 {
+			t.Fatal("expected at least one provider")
+		}
+		if ordered[0].Name() != "THORChain" {
+			t.Errorf("expected first provider to be THORChain for cross-chain, got %s", ordered[0].Name())
+		}
+	})
+
+	t.Run("isSameChainSwap function", func(t *testing.T) {
+		sameChain := Asset{Chain: "Ethereum", Symbol: "ETH"}
+		differentChain := Asset{Chain: "Bitcoin", Symbol: "BTC"}
+
+		if !isSameChainSwap(sameChain, sameChain) {
+			t.Error("expected same chain to return true")
+		}
+		if isSameChainSwap(sameChain, differentChain) {
+			t.Error("expected different chains to return false")
+		}
+	})
 }
 
