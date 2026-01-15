@@ -92,7 +92,7 @@ func TestTHORChainVaultResolver_Resolve_Integration(t *testing.T) {
 		},
 		{
 			name:    "resolve BCH vault address",
-			chainID: "bitcoincash",
+			chainID: "bitcoin-cash",
 			assetID: "bch",
 			wantErr: false,
 		},
@@ -237,7 +237,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 		{"bsc", "BSC"},
 		{"base", "BASE"},
 		{"ripple", "XRP"},
-		{"bitcoincash", "BCH"},
+		{"bitcoin-cash", "BCH"},
 		{"litecoin", "LTC"},
 		{"dogecoin", "DOGE"},
 	}

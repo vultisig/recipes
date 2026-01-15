@@ -11,7 +11,7 @@ import (
 // with a custom address extractor for CashAddr format.
 func NewBitcoinCash() *utxo.Engine {
 	return utxo.NewEngine(utxo.Config{
-		ChainID:         "bitcoincash",
+		ChainID:         "bitcoin-cash",
 		SupportedChains: []common.Chain{common.BitcoinCash},
 		NetworkParams:   nil, // Not used - we use custom ExtractAddress
 		ExtractAddress:  bchchain.ExtractCashAddress,
