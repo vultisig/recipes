@@ -28,27 +28,16 @@ const (
 	ProviderUniswap   = "Uniswap"
 )
 
-// sameChainProviderOrder defines the preferred provider order for same-chain swaps.
-// DEX aggregators (1inch, Jupiter) are preferred for single-chain swaps as they're
-// optimized for this use case with better liquidity and routing.
-var sameChainProviderOrder = []string{
-	ProviderOneInch,   // Best for EVM same-chain swaps
-	ProviderJupiter,   // Best for Solana same-chain swaps
-	ProviderUniswap,   // Fallback DEX
-	ProviderLiFi,      // Multi-chain aggregator
-	ProviderTHORChain, // Cross-chain focused, but supports same-chain
-	ProviderMayachain, // Cross-chain focused
-}
-
-// crossChainProviderOrder defines the preferred provider order for cross-chain swaps.
-// THORChain and Mayachain are preferred for cross-chain as they're designed for this.
-var crossChainProviderOrder = []string{
-	ProviderTHORChain, // Best for cross-chain
+// providerOrder defines the preferred provider order for ALL swaps.
+// THORChain/Mayachain are tried first (if they support the route),
+// then fall back to DEX aggregators for same-chain swaps.
+var providerOrder = []string{
+	ProviderTHORChain, // Try cross-chain protocol first
 	ProviderMayachain, // Alternative cross-chain
+	ProviderOneInch,   // Fallback for same-chain EVM
+	ProviderJupiter,   // Fallback for Solana
 	ProviderLiFi,      // Multi-chain aggregator
-	ProviderOneInch,   // Limited cross-chain support
-	ProviderJupiter,   // Solana-focused
-	ProviderUniswap,   // Single-chain only
+	ProviderUniswap,   // Last resort DEX
 }
 
 // Router orchestrates swap provider selection and execution
@@ -97,15 +86,14 @@ func NewDefaultRouter() *Router {
 }
 
 // FindRoute finds the first available provider that can handle the swap route.
-// For same-chain swaps, DEX aggregators (1inch, Jupiter) are preferred.
-// For cross-chain swaps, bridge protocols (THORChain, Mayachain) are preferred.
+// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
 func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, error) {
 	if len(r.providers) == 0 {
 		return nil, ErrNoProvidersConfigured
 	}
 
 	// Get providers in order based on swap type (same-chain vs cross-chain)
-	orderedProviders := r.getOrderedProviders(from, to)
+	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
 
@@ -153,15 +141,14 @@ func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, e
 }
 
 // GetQuote gets a swap quote from the first available provider.
-// For same-chain swaps, DEX aggregators (1inch, Jupiter) are preferred.
-// For cross-chain swaps, bridge protocols (THORChain, Mayachain) are preferred.
+// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
 func (r *Router) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
 	if len(r.providers) == 0 {
 		return nil, ErrNoProvidersConfigured
 	}
 
 	// Get providers in order based on swap type (same-chain vs cross-chain)
-	orderedProviders := r.getOrderedProviders(req.From, req.To)
+	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
 
@@ -249,28 +236,15 @@ func (r *Router) ListProviders() []string {
 	return names
 }
 
-// isSameChainSwap returns true if the swap is between assets on the same chain
-func isSameChainSwap(from, to Asset) bool {
-	return from.Chain == to.Chain
-}
-
-// getOrderedProviders returns providers ordered by preference for the given swap type.
-// For same-chain swaps, DEX aggregators (1inch, Jupiter) are preferred.
-// For cross-chain swaps, bridge protocols (THORChain, Mayachain) are preferred.
-func (r *Router) getOrderedProviders(from, to Asset) []SwapProvider {
-	var preferredOrder []string
-	if isSameChainSwap(from, to) {
-		preferredOrder = sameChainProviderOrder
-	} else {
-		preferredOrder = crossChainProviderOrder
-	}
-
+// getOrderedProviders returns providers ordered by preference.
+// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
+func (r *Router) getOrderedProviders() []SwapProvider {
 	// Build ordered list based on preferred order
 	ordered := make([]SwapProvider, 0, len(r.providers))
 	seen := make(map[string]bool)
 
 	// First, add providers in preferred order
-	for _, name := range preferredOrder {
+	for _, name := range providerOrder {
 		for _, p := range r.providers {
 			if p.Name() == name && !seen[name] {
 				ordered = append(ordered, p)

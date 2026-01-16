@@ -447,6 +447,392 @@ Transfer Ether to another address
 ```
 
 
+### ethereum.mayachain_router.RUNE
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.RUNE  
+
+Call the RUNE function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.RUNE",
+  "effect": "ALLOW",
+  "constraints": {
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.deposit
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.deposit  
+
+Call the deposit function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.deposit",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.depositWithExpiry
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.depositWithExpiry  
+
+Call the depositWithExpiry function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| expiration | decimal | expiration parameter of type uint256 |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.depositWithExpiry",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "expiration": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.returnVaultAssets
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.returnVaultAssets  
+
+Call the returnVaultAssets function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| router | address | router parameter of type address |
+| asgard | address | asgard parameter of type address payable |
+| coins | array | coins parameter of type struct THORChain_Router.Coin[] |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.returnVaultAssets",
+  "effect": "ALLOW",
+  "constraints": {
+    "router": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asgard": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "coins": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.transferAllowance
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.transferAllowance  
+
+Call the transferAllowance function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| router | address | router parameter of type address |
+| newVault | address | newVault parameter of type address |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.transferAllowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "router": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "newVault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.transferOut
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.transferOut  
+
+Call the transferOut function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| to | address | to parameter of type address payable |
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.transferOut",
+  "effect": "ALLOW",
+  "constraints": {
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.transferOutAndCall
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.transferOutAndCall  
+
+Call the transferOutAndCall function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| aggregator | address | aggregator parameter of type address payable |
+| finalToken | address | finalToken parameter of type address |
+| to | address | to parameter of type address |
+| amountOutMin | decimal | amountOutMin parameter of type uint256 |
+| memo | string | memo parameter of type string |
+| value | decimal | The amount of ETH to send with the transaction |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.transferOutAndCall",
+  "effect": "ALLOW",
+  "constraints": {
+    "aggregator": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "finalToken": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amountOutMin": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "memo": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "value": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.mayachain_router.vaultAllowance
+
+**Chain:** Ethereum  
+**Protocol:** mayachain_router  
+**Function:** mayachain_router.vaultAllowance  
+
+Call the vaultAllowance function on mayachain_router
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vault | address | vault parameter of type address |
+| token | address | token parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.mayachain_router.vaultAllowance",
+  "effect": "ALLOW",
+  "constraints": {
+    "vault": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "token": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.polymarket_ctf.setApprovalForAll
 
 **Chain:** Ethereum  

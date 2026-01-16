@@ -111,7 +111,9 @@ func (r *MayaChainVaultResolver) findAddressForChain(addresses []MayaInboundAddr
 }
 
 // getMayaChainSymbol maps chain IDs to MayaChain's expected symbols
-// For EVM chains, MayaChain only supports Arbitrum (ThorChain handles ETH/BASE/BSC)
+// For EVM chains, MayaChain supports:
+// - Arbitrum: all swaps to/from ARB
+// - Ethereum: swaps to Maya-only chains (ZEC, DASH) that THORChain doesn't support
 func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, error) {
 	// Normalize chainID to lowercase for comparison
 	switch strings.ToLower(chainID) {
@@ -129,8 +131,10 @@ func (r *MayaChainVaultResolver) getMayaChainSymbol(chainID string) (string, err
 		return "ARB", nil
 	case "radix":
 		return "XRD", nil
+	case "ethereum":
+		return "ETH", nil
 	default:
-		return "", fmt.Errorf("chain %s not supported by MayaChain (use ThorChain for ETH/BASE/BSC)", chainID)
+		return "", fmt.Errorf("chain %s not supported by MayaChain", chainID)
 	}
 }
 

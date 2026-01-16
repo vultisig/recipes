@@ -519,60 +519,65 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return nil, fmt.Errorf("invalid chainID: %w", err)
 		}
 
+		toChain, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse to chain: %w", err)
+		}
+
 		rules := make([]*types.Rule, 0)
 
-		var router *types.Constraint
-		if r.GetChainId() == strings.ToLower(c.toChain.GetFixedValue()) {
-			// same chain - 1inch
-			oneinchRouter, out, er := oneinchSwap(chain, c)
-			if er != nil {
-				return nil, fmt.Errorf("failed to create oneinch swap rule: %w", er)
-			}
+		isSameChain := chain == toChain
 
+		// Priority 1: Try THORChain first (always)
+		out, thorErr := thorchainSwap(chain, c)
+		if thorErr == nil {
 			rules = append(rules, out)
-			router = fixed(oneinchRouter)
-		} else {
-			// cross-chain - ThorChain
-			// here we don't care is a bridge direction supported — it's a plugin responsibility
-			// we build a safe ThorChain rule mapping to the swap request
-			out, er := thorchainSwap(chain, c)
-			if er != nil {
-				return nil, fmt.Errorf("failed to create thorchain swap rule: %w", er)
-			}
-
-			rules = append(rules, out)
-			router = &types.Constraint{
+			router := &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 				Value: &types.Constraint_MagicConstantValue{
 					MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
 				},
 			}
+
+			if c.fromAsset.GetFixedValue() != "" {
+				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+				rules = append(rules, approve)
+			}
+			return rules, nil
 		}
 
+		// Priority 2: Try Maya if THORChain failed
+		mayaOut, mayaErr := mayachainSwap(chain, c)
+		if mayaErr == nil {
+			rules = append(rules, mayaOut)
+			router := &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
+				},
+			}
+
+			if c.fromAsset.GetFixedValue() != "" {
+				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+				rules = append(rules, approve)
+			}
+			return rules, nil
+		}
+
+		// Priority 3: For same-chain only, try 1inch as last resort
+		if !isSameChain {
+			return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
+		}
+
+		routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
+		if oneinchErr != nil {
+			return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
+		}
+
+		rules = append(rules, swapRule)
 		if c.fromAsset.GetFixedValue() != "" {
-			approve := proto.Clone(in).(*types.Rule)
-			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-			approve.Target = &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: c.fromAsset.GetFixedValue(),
-				},
-			}
-			approve.ParameterConstraints = []*types.ParameterConstraint{
-				{
-					ParameterName: "amount",
-					Constraint: &types.Constraint{
-						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-						Value: &types.Constraint_MinValue{
-							MinValue: c.fromAmount.GetFixedValue(),
-						},
-					},
-				},
-				{
-					ParameterName: "spender",
-					Constraint:    router,
-				},
-			}
+			spender := fixed(routerAddr)
+			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
 			rules = append(rules, approve)
 		}
 
@@ -636,29 +641,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		// If bridging ERC20 token, add approval rule
 		if c.fromAsset.GetFixedValue() != "" {
-			approve := proto.Clone(in).(*types.Rule)
-			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-			approve.Target = &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: c.fromAsset.GetFixedValue(),
-				},
-			}
-			approve.ParameterConstraints = []*types.ParameterConstraint{
-				{
-					ParameterName: "amount",
-					Constraint: &types.Constraint{
-						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-						Value: &types.Constraint_MinValue{
-							MinValue: c.fromAmount.GetFixedValue(),
-						},
-					},
-				},
-				{
-					ParameterName: "spender",
-					Constraint:    router,
-				},
-			}
+			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
 			rules = append(rules, approve)
 		}
 
@@ -733,6 +716,84 @@ func thorchainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
 						// Validates the destination asset in ThorChain notation
 						// Validates the destination address
 						// Allows optional parameters (streaming options, min amount, affiliate, etc.)
+						RegexpValue: fmt.Sprintf(
+							"^=:%s:%s:.*",
+							assetPattern,
+							regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+						),
+					},
+				},
+			},
+			{
+				ParameterName: "expiration",
+				Constraint:    anyConstraint(),
+			},
+		},
+	}
+
+	return rule, nil
+}
+
+func mayachainSwap(chain common.Chain, c swapConstraints) (*types.Rule, error) {
+	asset := c.fromAsset.GetFixedValue()
+	amount := c.fromAmount
+	if asset == "" {
+		asset = evm.ZeroAddress.String()
+		amount = fixed("0")
+	}
+
+	chainInt, err := common.FromString(c.toChain.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse chain id: %w", err)
+	}
+
+	mayaAsset, err := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+	if err != nil {
+		return nil, fmt.Errorf("failed to make maya asset: %w", err)
+	}
+
+	shortCode := mayachain.ShortCode(mayaAsset)
+	var assetPattern string
+	if shortCode != "" {
+		assetPattern = fmt.Sprintf("(%s|%s)",
+			regexp.QuoteMeta(mayaAsset),
+			regexp.QuoteMeta(shortCode))
+	} else {
+		assetPattern = regexp.QuoteMeta(mayaAsset)
+	}
+
+	rule := &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: fmt.Sprintf("%s.mayachain_router.depositWithExpiry", strings.ToLower(chain.String())),
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+			Target: &types.Target_MagicConstant{
+				MagicConstant: types.MagicConstant_MAYACHAIN_ROUTER,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "vault",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_MAYACHAIN_VAULT,
+					},
+				},
+			},
+			{
+				ParameterName: "asset",
+				Constraint:    fixed(asset),
+			},
+			{
+				ParameterName: "amount",
+				Constraint:    amount,
+			},
+			{
+				ParameterName: "memo",
+				Constraint: &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+					Value: &types.Constraint_RegexpValue{
 						RegexpValue: fmt.Sprintf(
 							"^=:%s:%s:.*",
 							assetPattern,
@@ -867,22 +928,35 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			return nil, fmt.Errorf("failed to parse chain id: %w", err)
 		}
 
-		thorAsset, err := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
-		if err != nil {
-			return nil, fmt.Errorf("failed to make thor asset: %w", err)
-		}
-
-		// Create asset pattern that accepts both full form and shortform
-		shortCode := thorchain.ShortCode(thorAsset)
+		// Try THORChain first, fall back to Maya for unsupported destinations (like ZEC)
+		thorAsset, thorErr := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
 		var assetPattern string
-		if shortCode != "" {
-			// Accept both full form and shortform: (BTC\.BTC|b)
-			assetPattern = fmt.Sprintf("(%s|%s)",
-				regexp.QuoteMeta(thorAsset),
-				regexp.QuoteMeta(shortCode))
+		var vaultMagicConst types.MagicConstant
+
+		if thorErr == nil {
+			vaultMagicConst = types.MagicConstant_THORCHAIN_VAULT
+			shortCode := thorchain.ShortCode(thorAsset)
+			if shortCode != "" {
+				assetPattern = fmt.Sprintf("(%s|%s)",
+					regexp.QuoteMeta(thorAsset),
+					regexp.QuoteMeta(shortCode))
+			} else {
+				assetPattern = regexp.QuoteMeta(thorAsset)
+			}
 		} else {
-			// Fallback to full asset name only
-			assetPattern = regexp.QuoteMeta(thorAsset)
+			mayaAsset, mayaErr := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+			if mayaErr != nil {
+				return nil, fmt.Errorf("failed to make asset: thorchain: %v, maya: %w", thorErr, mayaErr)
+			}
+			vaultMagicConst = types.MagicConstant_MAYACHAIN_VAULT
+			shortCode := mayachain.ShortCode(mayaAsset)
+			if shortCode != "" {
+				assetPattern = fmt.Sprintf("(%s|%s)",
+					regexp.QuoteMeta(mayaAsset),
+					regexp.QuoteMeta(shortCode))
+			} else {
+				assetPattern = regexp.QuoteMeta(mayaAsset)
+			}
 		}
 
 		out.ParameterConstraints = []*types.ParameterConstraint{{
@@ -890,7 +964,7 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			Constraint: &types.Constraint{
 				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
 				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: types.MagicConstant_THORCHAIN_VAULT,
+					MagicConstantValue: vaultMagicConst,
 				},
 			},
 		}, {
@@ -2234,4 +2308,33 @@ func anyConstraint() *types.Constraint {
 	return &types.Constraint{
 		Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
 	}
+}
+
+// createApprovalRule creates an ERC20 approval rule for the given token and spender.
+// This is used for THORChain, Mayachain, 1inch, and other providers that require token approvals.
+func createApprovalRule(baseRule *types.Rule, chain common.Chain, tokenAddress string, amountValue string, spender *types.Constraint) *types.Rule {
+	approve := proto.Clone(baseRule).(*types.Rule)
+	approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+	approve.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+		Target: &types.Target_Address{
+			Address: tokenAddress,
+		},
+	}
+	approve.ParameterConstraints = []*types.ParameterConstraint{
+		{
+			ParameterName: "amount",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+				Value: &types.Constraint_MinValue{
+					MinValue: amountValue,
+				},
+			},
+		},
+		{
+			ParameterName: "spender",
+			Constraint:    spender,
+		},
+	}
+	return approve
 }
