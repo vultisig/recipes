@@ -2635,13 +2635,13 @@ func TestTryFormat_BitcoinCashSend(t *testing.T) {
 		changeAddress    = "bitcoincash:qchange123456789abcdef"
 		recipientAddress = "bitcoincash:qrecipient123456789ab"
 		amount           = "500000"
-		expectedResource = "bitcoincash.bch.transfer"
+		expectedResource = "bitcoin-cash.bch.transfer"
 	)
 
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "bitcoincash.send",
+		Resource: "bitcoin-cash.send",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "asset",
@@ -2697,13 +2697,13 @@ func TestTryFormat_BitcoinCashSwap(t *testing.T) {
 		toChain          = "ethereum"
 		toAsset          = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 		toAddress        = "0xcB9B049B9c937acFDB87EeCfAa9e7f2c51E754f5"
-		expectedResource = "bitcoincash.bch.transfer"
+		expectedResource = "bitcoin-cash.bch.transfer"
 	)
 
 	metaRule := NewMetaRule()
 
 	rule := &types.Rule{
-		Resource: "bitcoincash.swap",
+		Resource: "bitcoin-cash.swap",
 		ParameterConstraints: []*types.ParameterConstraint{
 			{
 				ParameterName: "from_asset",

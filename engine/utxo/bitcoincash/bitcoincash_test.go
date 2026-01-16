@@ -166,7 +166,7 @@ func TestBitcoinCash_Evaluate_Fixed(t *testing.T) {
 	params = append(params, newFixed(1, "qzyvaccaw8mr8c9m5f8vzg6w038wsu0pcyaz4fjwuk", "500000")...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -185,7 +185,7 @@ func TestBitcoinCash_Evaluate_MaxConstraints(t *testing.T) {
 	params = append(params, newMax(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "2000000")...) // max 2M, actual 1M
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -204,7 +204,7 @@ func TestBitcoinCash_Evaluate_MaxConstraints_ShouldFail(t *testing.T) {
 	params = append(params, newMax(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "500000")...) // max 500k, actual 1M - should fail
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -224,7 +224,7 @@ func TestBitcoinCash_Evaluate_MinConstraints(t *testing.T) {
 	params = append(params, newMin(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "500000")...) // min 500k, actual 1M
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -243,7 +243,7 @@ func TestBitcoinCash_Evaluate_MinConstraints_ShouldFail(t *testing.T) {
 	params = append(params, newMin(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "2000000")...) // min 2M, actual 1M - should fail
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -263,7 +263,7 @@ func TestBitcoinCash_Evaluate_WrongAddress_ShouldFail(t *testing.T) {
 	params = append(params, newFixed(0, "qwrongaddressxxxxxxxxxxxxxxxxxxxxxxxxx", "1000000")...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -285,7 +285,7 @@ func TestBitcoinCash_Evaluate_MismatchedOutputCounts_ShouldFail(t *testing.T) {
 	params = append(params, newFixed(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "1000000")...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -300,12 +300,12 @@ func TestBitcoinCash_Evaluate_InvalidTxBytes_ShouldFail(t *testing.T) {
 	params = append(params, newFixed(0, "qpmmlusvvrjj9ha2jyltqy3ldvllwcxskqny0z09tk", "1000000")...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, invalidTxBytes)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse bitcoincash transaction")
+	assert.Contains(t, err.Error(), "failed to parse bitcoin-cash transaction")
 }
 
 // Test OP_RETURN data constraints (for THORChain swap memos)
@@ -365,7 +365,7 @@ func TestBitcoinCash_Evaluate_DataRegexpConstraints(t *testing.T) {
 	)...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
@@ -382,7 +382,7 @@ func TestBitcoinCash_Evaluate_DataRegexpConstraints_ShouldFail(t *testing.T) {
 	)...)
 
 	err := NewBitcoinCash().Evaluate(&types.Rule{
-		Resource:             "bitcoincash.bch.transfer",
+		Resource:             "bitcoin-cash.bch.transfer",
 		Effect:               types.Effect_EFFECT_ALLOW,
 		ParameterConstraints: params,
 	}, txBytes)
