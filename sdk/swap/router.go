@@ -93,7 +93,7 @@ func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, e
 	}
 
 	// Get providers in order based on swap type (same-chain vs cross-chain)
-	orderedProviders := r.getOrderedProviders(from, to)
+	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
 
@@ -148,7 +148,7 @@ func (r *Router) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error)
 	}
 
 	// Get providers in order based on swap type (same-chain vs cross-chain)
-	orderedProviders := r.getOrderedProviders(req.From, req.To)
+	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
 
@@ -238,7 +238,7 @@ func (r *Router) ListProviders() []string {
 
 // getOrderedProviders returns providers ordered by preference.
 // THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
-func (r *Router) getOrderedProviders(from, to Asset) []SwapProvider {
+func (r *Router) getOrderedProviders() []SwapProvider {
 	// Build ordered list based on preferred order
 	ordered := make([]SwapProvider, 0, len(r.providers))
 	seen := make(map[string]bool)
