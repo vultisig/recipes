@@ -540,29 +540,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			}
 
 			if c.fromAsset.GetFixedValue() != "" {
-				approve := proto.Clone(in).(*types.Rule)
-				approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-				approve.Target = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-					Target: &types.Target_Address{
-						Address: c.fromAsset.GetFixedValue(),
-					},
-				}
-				approve.ParameterConstraints = []*types.ParameterConstraint{
-					{
-						ParameterName: "amount",
-						Constraint: &types.Constraint{
-							Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-							Value: &types.Constraint_MinValue{
-								MinValue: c.fromAmount.GetFixedValue(),
-							},
-						},
-					},
-					{
-						ParameterName: "spender",
-						Constraint:    router,
-					},
-				}
+				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
 				rules = append(rules, approve)
 			}
 			return rules, nil
@@ -580,29 +558,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			}
 
 			if c.fromAsset.GetFixedValue() != "" {
-				approve := proto.Clone(in).(*types.Rule)
-				approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-				approve.Target = &types.Target{
-					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-					Target: &types.Target_Address{
-						Address: c.fromAsset.GetFixedValue(),
-					},
-				}
-				approve.ParameterConstraints = []*types.ParameterConstraint{
-					{
-						ParameterName: "amount",
-						Constraint: &types.Constraint{
-							Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-							Value: &types.Constraint_MinValue{
-								MinValue: c.fromAmount.GetFixedValue(),
-							},
-						},
-					},
-					{
-						ParameterName: "spender",
-						Constraint:    router,
-					},
-				}
+				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
 				rules = append(rules, approve)
 			}
 			return rules, nil
@@ -620,29 +576,8 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		rules = append(rules, swapRule)
 		if c.fromAsset.GetFixedValue() != "" {
-			approve := proto.Clone(in).(*types.Rule)
-			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-			approve.Target = &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: c.fromAsset.GetFixedValue(),
-				},
-			}
-			approve.ParameterConstraints = []*types.ParameterConstraint{
-				{
-					ParameterName: "amount",
-					Constraint: &types.Constraint{
-						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-						Value: &types.Constraint_MinValue{
-							MinValue: c.fromAmount.GetFixedValue(),
-						},
-					},
-				},
-				{
-					ParameterName: "spender",
-					Constraint:    fixed(routerAddr),
-				},
-			}
+			spender := fixed(routerAddr)
+			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
 			rules = append(rules, approve)
 		}
 
@@ -706,29 +641,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		// If bridging ERC20 token, add approval rule
 		if c.fromAsset.GetFixedValue() != "" {
-			approve := proto.Clone(in).(*types.Rule)
-			approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
-			approve.Target = &types.Target{
-				TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
-				Target: &types.Target_Address{
-					Address: c.fromAsset.GetFixedValue(),
-				},
-			}
-			approve.ParameterConstraints = []*types.ParameterConstraint{
-				{
-					ParameterName: "amount",
-					Constraint: &types.Constraint{
-						Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
-						Value: &types.Constraint_MinValue{
-							MinValue: c.fromAmount.GetFixedValue(),
-						},
-					},
-				},
-				{
-					ParameterName: "spender",
-					Constraint:    router,
-				},
-			}
+			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
 			rules = append(rules, approve)
 		}
 
@@ -2395,4 +2308,33 @@ func anyConstraint() *types.Constraint {
 	return &types.Constraint{
 		Type: types.ConstraintType_CONSTRAINT_TYPE_ANY,
 	}
+}
+
+// createApprovalRule creates an ERC20 approval rule for the given token and spender.
+// This is used for THORChain, Mayachain, 1inch, and other providers that require token approvals.
+func createApprovalRule(baseRule *types.Rule, chain common.Chain, tokenAddress string, amountValue string, spender *types.Constraint) *types.Rule {
+	approve := proto.Clone(baseRule).(*types.Rule)
+	approve.Resource = fmt.Sprintf("%s.erc20.approve", strings.ToLower(chain.String()))
+	approve.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+		Target: &types.Target_Address{
+			Address: tokenAddress,
+		},
+	}
+	approve.ParameterConstraints = []*types.ParameterConstraint{
+		{
+			ParameterName: "amount",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MIN,
+				Value: &types.Constraint_MinValue{
+					MinValue: amountValue,
+				},
+			},
+		},
+		{
+			ParameterName: "spender",
+			Constraint:    spender,
+		},
+	}
+	return approve
 }
