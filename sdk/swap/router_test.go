@@ -393,11 +393,7 @@ func TestSmartProviderRouting(t *testing.T) {
 	router := NewDefaultRouter()
 
 	t.Run("All swaps prefer THORChain first", func(t *testing.T) {
-		// Same-chain swap
-		from := Asset{Chain: "Ethereum", Symbol: "ETH"}
-		to := Asset{Chain: "Ethereum", Symbol: "USDC", Address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"}
-
-		ordered := router.getOrderedProviders(from, to)
+		ordered := router.getOrderedProviders()
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
@@ -408,10 +404,7 @@ func TestSmartProviderRouting(t *testing.T) {
 	})
 
 	t.Run("Cross-chain prefers THORChain", func(t *testing.T) {
-		from := Asset{Chain: "Bitcoin", Symbol: "BTC"}
-		to := Asset{Chain: "Ethereum", Symbol: "ETH"}
-
-		ordered := router.getOrderedProviders(from, to)
+		ordered := router.getOrderedProviders()
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
