@@ -11,8 +11,12 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
+
+	// gtank/blake2 is used instead of golang.org/x/crypto/blake2b because Zcash ZIP-243 requires BLAKE2b with personalization support.
+	// See: https://github.com/golang/go/issues/32447 (open since 2019, still unimplemented)
+	// gtank/blake2 was specifically designed for Zcash Sapling by George Tankersley.
+	"github.com/gtank/blake2/blake2b"
 	"github.com/vultisig/mobile-tss-lib/tss"
-	"golang.org/x/crypto/blake2b"
 )
 
 // TxBroadcaster is the interface for broadcasting transactions to the Zcash network.
@@ -49,10 +53,10 @@ type TxOutput struct {
 
 // UnsignedTx represents an unsigned Zcash transaction with all necessary info for signing.
 type UnsignedTx struct {
-	Inputs   []TxInput
-	Outputs  []*TxOutput
-	PubKey   []byte   // 33-byte compressed public key
-	RawBytes []byte   // Serialized unsigned transaction
+	Inputs    []TxInput
+	Outputs   []*TxOutput
+	PubKey    []byte   // 33-byte compressed public key
+	RawBytes  []byte   // Serialized unsigned transaction
 	SigHashes [][]byte // Pre-computed signature hashes for each input
 }
 
@@ -146,9 +150,9 @@ func (sdk *SDK) Sign(unsignedTx *UnsignedTx, signatures map[string]tss.KeysignRe
 	writeCompactSize(&buf, uint64(len(unsignedTx.Outputs)))
 
 	// Transparent outputs
-	for i, output := range unsignedTx.Outputs {
+	for _, output := range unsignedTx.Outputs {
 		if err := binary.Write(&buf, binary.LittleEndian, uint64(output.Value)); err != nil {
-			return nil, fmt.Errorf("zcash: failed to write output value %d: %w", i, err)
+			return nil, fmt.Errorf("zcash: failed to write output value: %w", err)
 		}
 		writeCompactSize(&buf, uint64(len(output.Script)))
 		buf.Write(output.Script)
@@ -230,11 +234,17 @@ func (sdk *SDK) CalculateSigHash(inputs []TxInput, outputs []*TxOutput, inputInd
 	preimage.Write(hashPrevouts)
 
 	// 3. hashSequence - BLAKE2b-256 of all sequences
-	hashSequence := sdk.calcHashSequence(inputs)
+	hashSequence, err := sdk.calcHashSequence(inputs)
+	if err != nil {
+		return nil, fmt.Errorf("zcash: failed to calculate hashSequence: %w", err)
+	}
 	preimage.Write(hashSequence)
 
 	// 4. hashOutputs - BLAKE2b-256 of all outputs
-	hashOutputs := sdk.calcHashOutputs(outputs)
+	hashOutputs, err := sdk.calcHashOutputs(outputs)
+	if err != nil {
+		return nil, fmt.Errorf("zcash: failed to calculate hashOutputs: %w", err)
+	}
 	preimage.Write(hashOutputs)
 
 	// 5. hashJoinSplits - 32 zero bytes (no joinsplits)
@@ -418,7 +428,9 @@ func (sdk *SDK) blake2bSigHash(data []byte) ([]byte, error) {
 	copy(personalization, "ZcashSigHash")
 	binary.LittleEndian.PutUint32(personalization[12:], ConsensusBranchID)
 
-	h, err := blake2b.New256(personalization)
+	// Use gtank/blake2 which was specifically designed for Zcash Sapling
+	// and properly supports personalization (unlike golang.org/x/crypto/blake2b)
+	h, err := blake2b.NewDigest(nil, nil, personalization, 32)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create BLAKE2b hasher: %w", err)
 	}
@@ -445,13 +457,16 @@ func (sdk *SDK) calcHashPrevouts(inputs []TxInput) ([]byte, error) {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashPrevoutHash")
-	h, _ := blake2b.New256(personalization)
+	h, err := blake2b.NewDigest(nil, nil, personalization, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLAKE2b hasher for prevouts: %w", err)
+	}
 	h.Write(buf.Bytes())
 	return h.Sum(nil), nil
 }
 
 // calcHashSequence computes BLAKE2b-256 of all input sequences.
-func (sdk *SDK) calcHashSequence(inputs []TxInput) []byte {
+func (sdk *SDK) calcHashSequence(inputs []TxInput) ([]byte, error) {
 	var buf bytes.Buffer
 	for range inputs {
 		_ = binary.Write(&buf, binary.LittleEndian, uint32(0xffffffff))
@@ -459,13 +474,16 @@ func (sdk *SDK) calcHashSequence(inputs []TxInput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashSequencHash")
-	h, _ := blake2b.New256(personalization)
+	h, err := blake2b.NewDigest(nil, nil, personalization, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLAKE2b hasher for sequence: %w", err)
+	}
 	h.Write(buf.Bytes())
-	return h.Sum(nil)
+	return h.Sum(nil), nil
 }
 
 // calcHashOutputs computes BLAKE2b-256 of all outputs.
-func (sdk *SDK) calcHashOutputs(outputs []*TxOutput) []byte {
+func (sdk *SDK) calcHashOutputs(outputs []*TxOutput) ([]byte, error) {
 	var buf bytes.Buffer
 	for _, output := range outputs {
 		_ = binary.Write(&buf, binary.LittleEndian, uint64(output.Value))
@@ -475,9 +493,12 @@ func (sdk *SDK) calcHashOutputs(outputs []*TxOutput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashOutputsHash")
-	h, _ := blake2b.New256(personalization)
+	h, err := blake2b.NewDigest(nil, nil, personalization, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLAKE2b hasher for outputs: %w", err)
+	}
 	h.Write(buf.Bytes())
-	return h.Sum(nil)
+	return h.Sum(nil), nil
 }
 
 // writeCompactSize writes a variable-length integer (Bitcoin/Zcash compact size).
@@ -831,4 +852,3 @@ func parseZcashTxBasic(data []byte) (*parsedTxBasic, error) {
 
 	return tx, nil
 }
-
