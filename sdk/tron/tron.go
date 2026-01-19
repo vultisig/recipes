@@ -19,6 +19,7 @@ import (
 // RPCClient interface for TRON JSON-RPC calls
 type RPCClient interface {
 	BroadcastTransaction(ctx context.Context, signedTx *SignedTransaction) (*BroadcastResponse, error)
+	BroadcastHex(ctx context.Context, txHex string) (*BroadcastResponse, error)
 }
 
 // HTTPRPCClient implements RPCClient using HTTP
@@ -76,6 +77,7 @@ type BroadcastResponse struct {
 	Code    string `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
 	TxID    string `json:"txid,omitempty"`
+	Error   string `json:"Error,omitempty"` // TronGrid returns errors with capital E
 }
 
 // TRON mainnet endpoints
@@ -151,8 +153,92 @@ func (c *HTTPRPCClient) BroadcastTransaction(ctx context.Context, signedTx *Sign
 		}
 
 		if !broadcastResp.Result {
-			lastErr = fmt.Errorf("broadcast failed at %s: code=%s, message=%s",
-				endpoint, broadcastResp.Code, broadcastResp.Message)
+			// Check for Error field (TronGrid uses capital E)
+			if broadcastResp.Error != "" {
+				lastErr = fmt.Errorf("broadcast failed at %s: %s", endpoint, broadcastResp.Error)
+				continue
+			}
+			// Try to decode message if it's hex-encoded (TronGrid sometimes returns hex-encoded error messages)
+			decodedMsg := broadcastResp.Message
+			if len(decodedMsg) > 0 && isHexString(decodedMsg) {
+				if decoded, err := hex.DecodeString(decodedMsg); err == nil {
+					decodedMsg = string(decoded)
+				}
+			}
+			lastErr = fmt.Errorf("broadcast failed at %s: code=%s, message=%s (raw=%s)",
+				endpoint, broadcastResp.Code, decodedMsg, broadcastResp.Message)
+			continue
+		}
+
+		return &broadcastResp, nil
+	}
+
+	return nil, fmt.Errorf("all endpoints failed, last error: %w", lastErr)
+}
+
+// BroadcastHex broadcasts a signed transaction using the /wallet/broadcasthex endpoint
+// which accepts the full protobuf-serialized transaction as a hex string
+func (c *HTTPRPCClient) BroadcastHex(ctx context.Context, txHex string) (*BroadcastResponse, error) {
+	type broadcastHexRequest struct {
+		Transaction string `json:"transaction"`
+	}
+
+	requestBody, err := json.Marshal(broadcastHexRequest{Transaction: txHex})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	var lastErr error
+	for _, endpoint := range c.endpoints {
+		url := endpoint + "/wallet/broadcasthex"
+
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(requestBody))
+		if reqErr != nil {
+			lastErr = fmt.Errorf("failed to create request for %s: %w", endpoint, reqErr)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to send request to %s: %w", endpoint, err)
+			continue
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
+		if readErr != nil {
+			lastErr = fmt.Errorf("failed to read response from %s: %w", endpoint, readErr)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("HTTP error from %s: %d, body: %s", endpoint, resp.StatusCode, string(body))
+			continue
+		}
+
+		var broadcastResp BroadcastResponse
+		if err := json.Unmarshal(body, &broadcastResp); err != nil {
+			lastErr = fmt.Errorf("failed to parse response from %s: %w", endpoint, err)
+			continue
+		}
+
+		if !broadcastResp.Result {
+			// Check for Error field (TronGrid uses capital E)
+			if broadcastResp.Error != "" {
+				lastErr = fmt.Errorf("broadcasthex failed at %s: %s", endpoint, broadcastResp.Error)
+				continue
+			}
+			// Try to decode message if it's hex-encoded
+			decodedMsg := broadcastResp.Message
+			if len(decodedMsg) > 0 && isHexString(decodedMsg) {
+				if decoded, err := hex.DecodeString(decodedMsg); err == nil {
+					decodedMsg = string(decoded)
+				}
+			}
+			lastErr = fmt.Errorf("broadcasthex failed at %s: code=%s, message=%s (raw=%s)",
+				endpoint, broadcastResp.Code, decodedMsg, broadcastResp.Message)
 			continue
 		}
 
@@ -201,10 +287,6 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 		return nil, fmt.Errorf("low-S normalization failed: %w", err)
 	}
 
-	// Compute transaction ID (SHA256 of raw_data)
-	txID := sha256.Sum256(unsignedTxBytes)
-	txIDHex := hex.EncodeToString(txID[:])
-
 	// TRON signature format: r (32 bytes) || s (32 bytes) || v (1 byte)
 	// Recovery ID (v) needs to be computed based on the signature
 	sigBytes := make([]byte, 65)
@@ -227,37 +309,55 @@ func (sdk *SDK) Sign(unsignedTxBytes []byte, signatures map[string]tss.KeysignRe
 	}
 	sigBytes[64] = recoveryID + 27 // Add 27 to recovery ID
 
-	sigHex := hex.EncodeToString(sigBytes)
+	// Build protobuf-serialized signed transaction for broadcasthex
+	// TRON Transaction structure:
+	// - Field 1: raw_data (length-delimited bytes)
+	// - Field 2: signature (repeated, length-delimited bytes)
+	signedTxProto := buildSignedTransactionProtobuf(unsignedTxBytes, sigBytes)
 
-	// Create signed transaction JSON
-	// Note: TRON nodes accept either raw_data (JSON object) or raw_data_hex (serialized protobuf).
-	// Using raw_data_hex is simpler and sufficient for broadcast - the node will deserialize it.
-	signedTx := &SignedTransaction{
-		TxID:       txIDHex,
-		RawDataHex: hex.EncodeToString(unsignedTxBytes),
-		Signature:  []string{sigHex},
-	}
-
-	signedTxBytes, err := json.Marshal(signedTx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal signed transaction: %w", err)
-	}
-
-	return signedTxBytes, nil
+	return signedTxProto, nil
 }
 
-// Broadcast submits a signed transaction to the TRON network
+// buildSignedTransactionProtobuf builds a protobuf-serialized TRON Transaction
+// containing raw_data (field 1) and signature (field 2)
+func buildSignedTransactionProtobuf(rawData, signature []byte) []byte {
+	var result []byte
+
+	// Field 1: raw_data (wire type 2 = length-delimited)
+	// Tag: (1 << 3) | 2 = 0x0a
+	result = append(result, 0x0a)
+	result = append(result, encodeVarintBytes(uint64(len(rawData)))...)
+	result = append(result, rawData...)
+
+	// Field 2: signature (wire type 2 = length-delimited)
+	// Tag: (2 << 3) | 2 = 0x12
+	result = append(result, 0x12)
+	result = append(result, encodeVarintBytes(uint64(len(signature)))...)
+	result = append(result, signature...)
+
+	return result
+}
+
+// encodeVarintBytes encodes a uint64 as a protobuf varint
+func encodeVarintBytes(v uint64) []byte {
+	var buf []byte
+	for v >= 0x80 {
+		buf = append(buf, byte(v)|0x80)
+		v >>= 7
+	}
+	buf = append(buf, byte(v))
+	return buf
+}
+
+// Broadcast submits a signed transaction to the TRON network using broadcasthex
 func (sdk *SDK) Broadcast(ctx context.Context, signedTxBytes []byte) (*BroadcastResponse, error) {
 	if sdk.rpcClient == nil {
 		return nil, fmt.Errorf("rpc client not configured")
 	}
 
-	var signedTx SignedTransaction
-	if err := json.Unmarshal(signedTxBytes, &signedTx); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal signed transaction: %w", err)
-	}
-
-	return sdk.rpcClient.BroadcastTransaction(ctx, &signedTx)
+	// signedTxBytes is now protobuf-serialized, use broadcasthex endpoint
+	txHex := hex.EncodeToString(signedTxBytes)
+	return sdk.rpcClient.BroadcastHex(ctx, txHex)
 }
 
 // Send is a convenience method that signs and broadcasts the transaction
@@ -302,5 +402,18 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// isHexString checks if a string is a valid hex string
+func isHexString(s string) bool {
+	if len(s) == 0 || len(s)%2 != 0 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 

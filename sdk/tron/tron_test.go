@@ -11,7 +11,8 @@ import (
 
 // MockRPCClient implements RPCClient for testing
 type MockRPCClient struct {
-	BroadcastFunc func(ctx context.Context, signedTx *SignedTransaction) (*BroadcastResponse, error)
+	BroadcastFunc    func(ctx context.Context, signedTx *SignedTransaction) (*BroadcastResponse, error)
+	BroadcastHexFunc func(ctx context.Context, txHex string) (*BroadcastResponse, error)
 }
 
 func (m *MockRPCClient) BroadcastTransaction(ctx context.Context, signedTx *SignedTransaction) (*BroadcastResponse, error) {
@@ -21,6 +22,16 @@ func (m *MockRPCClient) BroadcastTransaction(ctx context.Context, signedTx *Sign
 	return &BroadcastResponse{
 		Result: true,
 		TxID:   "mock_txid",
+	}, nil
+}
+
+func (m *MockRPCClient) BroadcastHex(ctx context.Context, txHex string) (*BroadcastResponse, error) {
+	if m.BroadcastHexFunc != nil {
+		return m.BroadcastHexFunc(ctx, txHex)
+	}
+	return &BroadcastResponse{
+		Result: true,
+		TxID:   "mock_txid_hex",
 	}, nil
 }
 
@@ -73,7 +84,9 @@ func TestSDK_Broadcast_NoClient(t *testing.T) {
 
 func TestSDK_Broadcast_Success(t *testing.T) {
 	mockClient := &MockRPCClient{
-		BroadcastFunc: func(ctx context.Context, signedTx *SignedTransaction) (*BroadcastResponse, error) {
+		BroadcastHexFunc: func(ctx context.Context, txHex string) (*BroadcastResponse, error) {
+			// Verify we receive hex-encoded protobuf bytes
+			assert.NotEmpty(t, txHex)
 			return &BroadcastResponse{
 				Result: true,
 				TxID:   "TEST_TXID_123",
@@ -83,8 +96,9 @@ func TestSDK_Broadcast_Success(t *testing.T) {
 
 	sdk := NewSDK(mockClient)
 
-	signedTx := `{"txID":"test","raw_data_hex":"","signature":["abc123"]}`
-	resp, err := sdk.Broadcast(context.Background(), []byte(signedTx))
+	// Broadcast now expects protobuf-serialized signed transaction bytes
+	signedTxBytes := []byte{0x0a, 0x02, 0x01, 0x02, 0x12, 0x41} // minimal protobuf structure
+	resp, err := sdk.Broadcast(context.Background(), signedTxBytes)
 
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
