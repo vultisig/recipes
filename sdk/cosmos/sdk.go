@@ -26,6 +26,7 @@ import (
 type SDK struct {
 	rpcClient RPCClient
 	cdc       codec.Codec
+	ir        codectypes.InterfaceRegistry
 }
 
 // NewSDK creates a new Cosmos SDK instance
@@ -37,7 +38,18 @@ func NewSDK(rpcClient RPCClient) *SDK {
 	return &SDK{
 		rpcClient: rpcClient,
 		cdc:       codec.NewProtoCodec(ir),
+		ir:        ir,
 	}
+}
+
+// InterfaceRegistry returns the interface registry for registering additional types
+func (s *SDK) InterfaceRegistry() codectypes.InterfaceRegistry {
+	return s.ir
+}
+
+// RefreshCodec recreates the codec with any newly registered types
+func (s *SDK) RefreshCodec() {
+	s.cdc = codec.NewProtoCodec(s.ir)
 }
 
 // Sign applies TSS signatures to an unsigned Cosmos transaction

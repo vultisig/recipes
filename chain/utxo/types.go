@@ -131,4 +131,3 @@ func ExtractPubKeyFromScriptSig(scriptSig []byte) ([]byte, error) {
 
 	return pubKey, nil
 }
-

@@ -972,10 +972,10 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			Constraint:    c.fromAmount,
 		}, {
 			ParameterName: "output_address_1",
-			Constraint:    c.fromAddress, // change
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "output_value_1",
-			Constraint:    anyConstraint(), // change
+			Constraint:    anyConstraint(),
 		}, {
 			ParameterName: "output_data_2",
 			Constraint: &types.Constraint{
@@ -1281,10 +1281,10 @@ func (m *MetaRule) handleZcash(in *types.Rule, r *types.ResourcePath) ([]*types.
 			Constraint:    c.fromAmount,
 		}, {
 			ParameterName: "output_address_1",
-			Constraint:    c.fromAddress, // change
+			Constraint:    c.fromAddress,
 		}, {
 			ParameterName: "output_value_1",
-			Constraint:    anyConstraint(), // change
+			Constraint:    anyConstraint(),
 		}, {
 			ParameterName: "output_data_2",
 			Constraint: &types.Constraint{
