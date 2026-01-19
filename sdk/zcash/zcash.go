@@ -11,7 +11,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/minio/blake2b-simd"
+	"github.com/gtank/blake2/blake2b"
 	"github.com/vultisig/mobile-tss-lib/tss"
 )
 
@@ -418,14 +418,9 @@ func (sdk *SDK) blake2bSigHash(data []byte) ([]byte, error) {
 	copy(personalization, "ZcashSigHash")
 	binary.LittleEndian.PutUint32(personalization[12:], ConsensusBranchID)
 
-	// Use blake2b.Config with Person field for proper personalization
-	// NOTE: golang.org/x/crypto/blake2b.New256 takes a KEY, not personalization!
-	// We must use minio/blake2b-simd which supports the Person field.
-	config := &blake2b.Config{
-		Size:   32,
-		Person: personalization,
-	}
-	h, err := blake2b.New(config)
+	// Use gtank/blake2 which was specifically designed for Zcash Sapling
+	// and properly supports personalization (unlike golang.org/x/crypto/blake2b)
+	h, err := blake2b.NewDigest(nil, nil, personalization, 32)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create BLAKE2b hasher: %w", err)
 	}
@@ -452,11 +447,7 @@ func (sdk *SDK) calcHashPrevouts(inputs []TxInput) ([]byte, error) {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashPrevoutHash")
-	config := &blake2b.Config{
-		Size:   32,
-		Person: personalization,
-	}
-	h, _ := blake2b.New(config)
+	h, _ := blake2b.NewDigest(nil, nil, personalization, 32)
 	h.Write(buf.Bytes())
 	return h.Sum(nil), nil
 }
@@ -470,11 +461,7 @@ func (sdk *SDK) calcHashSequence(inputs []TxInput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashSequencHash")
-	config := &blake2b.Config{
-		Size:   32,
-		Person: personalization,
-	}
-	h, _ := blake2b.New(config)
+	h, _ := blake2b.NewDigest(nil, nil, personalization, 32)
 	h.Write(buf.Bytes())
 	return h.Sum(nil)
 }
@@ -490,11 +477,7 @@ func (sdk *SDK) calcHashOutputs(outputs []*TxOutput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashOutputsHash")
-	config := &blake2b.Config{
-		Size:   32,
-		Person: personalization,
-	}
-	h, _ := blake2b.New(config)
+	h, _ := blake2b.NewDigest(nil, nil, personalization, 32)
 	h.Write(buf.Bytes())
 	return h.Sum(nil)
 }

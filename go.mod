@@ -15,8 +15,8 @@ require (
 	github.com/gagliardetto/solana-go v1.13.0
 	github.com/gcash/bchd v0.21.1
 	github.com/gcash/bchutil v0.0.0-20250514010653-ef9bffba99e1
+	github.com/gtank/blake2 v0.1.1
 	github.com/kaptinlin/jsonschema v0.4.6
-	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/stretchr/testify v1.10.0
 	github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74
 	github.com/vultisig/vultisig-go v0.0.0-20260114092710-6c38516a0c85
