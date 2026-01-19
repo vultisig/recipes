@@ -92,7 +92,7 @@ func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, e
 		return nil, ErrNoProvidersConfigured
 	}
 
-	// Get providers in order based on swap type (same-chain vs cross-chain)
+	// Get providers in order based on preferred routing priority
 	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
@@ -147,7 +147,7 @@ func (r *Router) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error)
 		return nil, ErrNoProvidersConfigured
 	}
 
-	// Get providers in order based on swap type (same-chain vs cross-chain)
+	// Get providers in order based on preferred routing priority
 	orderedProviders := r.getOrderedProviders()
 
 	var lastErr error
