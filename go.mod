@@ -16,11 +16,11 @@ require (
 	github.com/gcash/bchd v0.21.1
 	github.com/gcash/bchutil v0.0.0-20250514010653-ef9bffba99e1
 	github.com/kaptinlin/jsonschema v0.4.6
+	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/stretchr/testify v1.10.0
 	github.com/vultisig/mobile-tss-lib v0.0.0-20250316003201-2e7e570a4a74
 	github.com/vultisig/vultisig-go v0.0.0-20260114092710-6c38516a0c85
 	github.com/xyield/xrpl-go v0.0.0-20230914223425-9abe75c05830
-	golang.org/x/crypto v0.38.0
 	golang.org/x/sync v0.14.0
 	google.golang.org/protobuf v1.36.6
 )
@@ -211,6 +211,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/arch v0.15.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect

@@ -11,8 +11,8 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/minio/blake2b-simd"
 	"github.com/vultisig/mobile-tss-lib/tss"
-	"golang.org/x/crypto/blake2b"
 )
 
 // TxBroadcaster is the interface for broadcasting transactions to the Zcash network.
@@ -146,9 +146,9 @@ func (sdk *SDK) Sign(unsignedTx *UnsignedTx, signatures map[string]tss.KeysignRe
 	writeCompactSize(&buf, uint64(len(unsignedTx.Outputs)))
 
 	// Transparent outputs
-	for i, output := range unsignedTx.Outputs {
+	for _, output := range unsignedTx.Outputs {
 		if err := binary.Write(&buf, binary.LittleEndian, uint64(output.Value)); err != nil {
-			return nil, fmt.Errorf("zcash: failed to write output value %d: %w", i, err)
+			return nil, fmt.Errorf("zcash: failed to write output value: %w", err)
 		}
 		writeCompactSize(&buf, uint64(len(output.Script)))
 		buf.Write(output.Script)
@@ -418,7 +418,14 @@ func (sdk *SDK) blake2bSigHash(data []byte) ([]byte, error) {
 	copy(personalization, "ZcashSigHash")
 	binary.LittleEndian.PutUint32(personalization[12:], ConsensusBranchID)
 
-	h, err := blake2b.New256(personalization)
+	// Use blake2b.Config with Person field for proper personalization
+	// NOTE: golang.org/x/crypto/blake2b.New256 takes a KEY, not personalization!
+	// We must use minio/blake2b-simd which supports the Person field.
+	config := &blake2b.Config{
+		Size:   32,
+		Person: personalization,
+	}
+	h, err := blake2b.New(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create BLAKE2b hasher: %w", err)
 	}
@@ -445,7 +452,11 @@ func (sdk *SDK) calcHashPrevouts(inputs []TxInput) ([]byte, error) {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashPrevoutHash")
-	h, _ := blake2b.New256(personalization)
+	config := &blake2b.Config{
+		Size:   32,
+		Person: personalization,
+	}
+	h, _ := blake2b.New(config)
 	h.Write(buf.Bytes())
 	return h.Sum(nil), nil
 }
@@ -459,7 +470,11 @@ func (sdk *SDK) calcHashSequence(inputs []TxInput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashSequencHash")
-	h, _ := blake2b.New256(personalization)
+	config := &blake2b.Config{
+		Size:   32,
+		Person: personalization,
+	}
+	h, _ := blake2b.New(config)
 	h.Write(buf.Bytes())
 	return h.Sum(nil)
 }
@@ -475,7 +490,11 @@ func (sdk *SDK) calcHashOutputs(outputs []*TxOutput) []byte {
 
 	personalization := make([]byte, 16)
 	copy(personalization, "ZcashOutputsHash")
-	h, _ := blake2b.New256(personalization)
+	config := &blake2b.Config{
+		Size:   32,
+		Person: personalization,
+	}
+	h, _ := blake2b.New(config)
 	h.Write(buf.Bytes())
 	return h.Sum(nil)
 }
