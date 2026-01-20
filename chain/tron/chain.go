@@ -488,7 +488,29 @@ func parseParameter(data []byte) (TronParameter, error) {
 		}
 	}
 
-	// Second pass: parse value based on type_url
+// Second pass: parse value based on type_url
+if valueBytes == nil {
+    return param, nil
+}
+
+// Currently only TransferContract is supported (native TRX transfers)
+// Both send and swap operations use TransferContract
+if strings.HasSuffix(param.TypeUrl, "TransferContract") {
+    value, err := parseTransferContractValue(valueBytes)
+    if err != nil {
+        return param, fmt.Errorf("failed to parse TransferContract value: %w", err)
+    }
+    param.Value = value
+    return param, nil
+}
+
+// For unsupported contract types, try to extract basic fields
+value, err := parseGenericContractValue(valueBytes)
+if err != nil {
+    return param, fmt.Errorf("failed to parse value for %s: %w", param.TypeUrl, err)
+}
+param.Value = value
+return param, nil
 	if valueBytes != nil {
 		// Currently only TransferContract is supported (native TRX transfers)
 		// Both send and swap operations use TransferContract
@@ -594,7 +616,29 @@ func parseGenericContractValue(data []byte) (TronValue, error) {
 		fieldNum := tagVal >> 3
 		wireType := tagVal & 0x7
 
-		var err error
+ 		// owner_address is typically field 1 in most contracts (length-delimited)
+		if fieldNum == 1 && wireType == 2 {
+			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read owner_address length at position %d", pos)
+			}
+			pos += n
+
+			end := pos + int(length)
+			if end > len(data) {
+				return value, fmt.Errorf("owner_address length exceeds data (pos=%d len=%d data=%d)", pos, length, len(data))
+			}
+
+			value.OwnerAddress = encodeAddress(data[pos:end])
+			pos = end
+			continue
+		}
+
+		newPos, err := skipField(data, pos, wireType)
+		if err != nil {
+			return value, fmt.Errorf("failed to skip field %d (wire=%d) at pos=%d: %w", fieldNum, wireType, pos, err)
+		}
+		pos = newPos
 		switch fieldNum {
 		case 1: // owner_address is typically field 1 in most contracts
 			if wireType == 2 {
