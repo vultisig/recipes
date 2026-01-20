@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/vultisig/mobile-tss-lib/tss"
 	"github.com/vultisig/recipes/types"
 )
@@ -435,7 +436,9 @@ func parseContract(data []byte) (TronContract, error) {
 func parseParameter(data []byte) (TronParameter, error) {
 	param := TronParameter{}
 	pos := 0
+	var valueBytes []byte
 
+	// First pass: extract type_url and raw value bytes
 	for pos < len(data) {
 		tagVal, n := readVarint(data[pos:])
 		if n == 0 {
@@ -462,7 +465,7 @@ func parseParameter(data []byte) (TronParameter, error) {
 			param.TypeUrl = string(data[pos : pos+int(length)])
 			pos += int(length)
 
-		case 2: // value (bytes)
+		case 2: // value (bytes) - store raw bytes for later parsing
 			if wireType != 2 {
 				return param, fmt.Errorf("unexpected wire type for value")
 			}
@@ -474,11 +477,7 @@ func parseParameter(data []byte) (TronParameter, error) {
 			if pos+int(length) > len(data) {
 				return param, fmt.Errorf("value length exceeds data")
 			}
-			value, err := parseTransferContractValue(data[pos : pos+int(length)])
-			if err != nil {
-				return param, fmt.Errorf("failed to parse value: %w", err)
-			}
-			param.Value = value
+			valueBytes = data[pos : pos+int(length)]
 			pos += int(length)
 
 		default:
@@ -489,6 +488,28 @@ func parseParameter(data []byte) (TronParameter, error) {
 		}
 	}
 
+	// Second pass: parse value based on type_url
+	if valueBytes == nil {
+		return param, nil
+	}
+
+	// Currently only TransferContract is supported (native TRX transfers)
+	// Both send and swap operations use TransferContract
+	if strings.HasSuffix(param.TypeUrl, "TransferContract") {
+		value, err := parseTransferContractValue(valueBytes)
+		if err != nil {
+			return param, fmt.Errorf("failed to parse TransferContract value: %w", err)
+		}
+		param.Value = value
+		return param, nil
+	}
+
+	// For unsupported contract types, try to extract basic fields
+	value, err := parseGenericContractValue(valueBytes)
+	if err != nil {
+		return param, fmt.Errorf("failed to parse value for %s: %w", param.TypeUrl, err)
+	}
+	param.Value = value
 	return param, nil
 }
 
@@ -560,8 +581,55 @@ func parseTransferContractValue(data []byte) (TronValue, error) {
 	return value, nil
 }
 
-// readVarint reads a varint from the byte slice and returns the value and bytes consumed
+// parseGenericContractValue attempts to parse a generic contract value
+// extracting common fields like owner_address
+func parseGenericContractValue(data []byte) (TronValue, error) {
+	value := TronValue{}
+	pos := 0
+
+	for pos < len(data) {
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return value, fmt.Errorf("failed to read tag at position %d", pos)
+		}
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		// owner_address is typically field 1 in most contracts (length-delimited)
+		if fieldNum == 1 && wireType == 2 {
+			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read owner_address length at position %d", pos)
+			}
+			pos += n
+
+			end := pos + int(length)
+			if end > len(data) {
+				return value, fmt.Errorf("owner_address length exceeds data (pos=%d len=%d data=%d)", pos, length, len(data))
+			}
+
+			value.OwnerAddress = encodeAddress(data[pos:end])
+			pos = end
+			continue
+		}
+
+		newPos, err := skipField(data, pos, wireType)
+		if err != nil {
+			return value, fmt.Errorf("failed to skip field %d (wire=%d) at pos=%d: %w", fieldNum, wireType, pos, err)
+		}
+		pos = newPos
+	}
+
+	return value, nil
+}
+
+// readVarint reads a varint from the byte slice and returns the value and bytes consumed.
+// Returns (0, 0) if the data is empty or the varint is incomplete/invalid.
 func readVarint(data []byte) (uint64, int) {
+	if len(data) == 0 {
+		return 0, 0
+	}
 	var result uint64
 	var shift uint
 	for i, b := range data {
@@ -571,17 +639,42 @@ func readVarint(data []byte) (uint64, int) {
 		}
 		shift += 7
 		if shift >= 64 {
-			return 0, i + 1
+			// Overflow - varint is too large
+			return 0, 0
 		}
 	}
-	return result, len(data)
+	// Incomplete varint - didn't find terminating byte
+	return 0, 0
 }
 
-// encodeAddress converts raw address bytes to TRON base58 address
+// encodeAddress converts raw address bytes to TRON base58check address.
+// TRON addresses are 21 bytes: 1 byte version (0x41 for mainnet) + 20 bytes address.
+// The output is base58check encoded (input + 4-byte checksum from double SHA256).
 func encodeAddress(data []byte) string {
-	// For simplicity, return hex-encoded address
-	// A full implementation would use base58check encoding
-	return hex.EncodeToString(data)
+	if len(data) != 21 {
+		// Invalid address length, return hex as fallback
+		return hex.EncodeToString(data)
+	}
+	// TRON uses the same base58check format as Bitcoin, but with version byte 0x41
+	// The input already includes the version byte, so we use CheckEncode without adding another
+	// Actually, btcsuite's CheckEncode adds version byte, so we need to use base58.Encode with checksum
+	return tronBase58CheckEncode(data)
+}
+
+// tronBase58CheckEncode encodes bytes to TRON base58check format.
+// Unlike Bitcoin's base58check, TRON expects the version byte to already be in the input.
+func tronBase58CheckEncode(input []byte) string {
+	// Double SHA256 for checksum (same as Bitcoin)
+	firstHash := sha256.Sum256(input)
+	secondHash := sha256.Sum256(firstHash[:])
+	checksum := secondHash[:4]
+
+	// Make a copy to avoid modifying the original slice's underlying array
+	// when input is a sub-slice of a larger buffer
+	result := make([]byte, len(input)+4)
+	copy(result, input)
+	copy(result[len(input):], checksum)
+	return base58.Encode(result)
 }
 
 // contractTypeToString converts contract type enum to string
