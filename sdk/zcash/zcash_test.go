@@ -902,10 +902,11 @@ func TestDeriveKeyFromMessage_Standalone(t *testing.T) {
 }
 
 func TestConsensusBranchID(t *testing.T) {
-	// Verify NU6 branch ID is exported and correct
-	expectedNU6BranchID := uint32(0xC8E71055)
-	if ConsensusBranchID != expectedNU6BranchID {
-		t.Errorf("ConsensusBranchID should be NU6 (0x%X), got 0x%X", expectedNU6BranchID, ConsensusBranchID)
+	// Verify NU6.1 branch ID is exported and correct
+	// NU6.1 activated on November 24, 2025 at block height 3146400
+	expectedNU61BranchID := uint32(0x4dec4df0)
+	if ConsensusBranchID != expectedNU61BranchID {
+		t.Errorf("ConsensusBranchID should be NU6.1 (0x%X), got 0x%X", expectedNU61BranchID, ConsensusBranchID)
 	}
 }
 
