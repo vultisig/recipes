@@ -392,25 +392,47 @@ func TestUnitConversions(t *testing.T) {
 func TestSmartProviderRouting(t *testing.T) {
 	router := NewDefaultRouter()
 
-	t.Run("All swaps prefer THORChain first", func(t *testing.T) {
-		ordered := router.getOrderedProviders()
+	t.Run("Same-chain EVM swaps prefer 1inch", func(t *testing.T) {
+		// Same-chain swap: ETH on Ethereum -> USDC on Ethereum
+		from := Asset{Chain: "Ethereum", Address: ""}
+		to := Asset{Chain: "Ethereum", Address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"}
+		ordered := router.getOrderedProvidersForRoute(from, to)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
 		}
-		if ordered[0].Name() != "THORChain" {
-			t.Errorf("expected first provider to be THORChain, got %s", ordered[0].Name())
+		if ordered[0].Name() != "1inch" {
+			t.Errorf("expected first provider to be 1inch for same-chain EVM, got %s", ordered[0].Name())
 		}
 	})
 
-	t.Run("Cross-chain prefers THORChain", func(t *testing.T) {
-		ordered := router.getOrderedProviders()
+	t.Run("Cross-chain swaps prefer THORChain", func(t *testing.T) {
+		// Cross-chain swap: ETH on Ethereum -> BTC on Bitcoin
+		from := Asset{Chain: "Ethereum", Address: ""}
+		to := Asset{Chain: "Bitcoin", Address: ""}
+		ordered := router.getOrderedProvidersForRoute(from, to)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
 		}
 		if ordered[0].Name() != "THORChain" {
 			t.Errorf("expected first provider to be THORChain for cross-chain, got %s", ordered[0].Name())
+		}
+	})
+
+	t.Run("Same-chain Solana swaps prefer Jupiter", func(t *testing.T) {
+		// Same-chain swap: SOL -> USDC on Solana
+		from := Asset{Chain: "Solana", Address: ""}
+		to := Asset{Chain: "Solana", Address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
+		ordered := router.getOrderedProvidersForRoute(from, to)
+
+		if len(ordered) == 0 {
+			t.Fatal("expected at least one provider")
+		}
+		// For Solana same-chain, Jupiter should be early in the list (1inch won't support Solana)
+		// but 1inch is still first in the order - Jupiter will be chosen when SupportsRoute is checked
+		if ordered[0].Name() != "1inch" {
+			t.Errorf("expected first provider in order to be 1inch (Jupiter selected via SupportsRoute), got %s", ordered[0].Name())
 		}
 	})
 

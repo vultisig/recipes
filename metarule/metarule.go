@@ -528,7 +528,26 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		isSameChain := chain == toChain
 
-		// Priority 1: Try THORChain first (always)
+		// For same-chain EVM swaps, prefer 1inch (better token coverage, better rates)
+		// For cross-chain swaps, use THORChain/Maya (only options for cross-chain)
+		var oneinchErr error
+		if isSameChain {
+			// Priority 1 (same-chain): Try 1inch first
+			routerAddr, swapRule, err := oneinchSwap(chain, c)
+			if err == nil {
+				rules = append(rules, swapRule)
+				if c.fromAsset.GetFixedValue() != "" {
+					spender := fixed(routerAddr)
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
+					rules = append(rules, approve)
+				}
+				return rules, nil
+			}
+			oneinchErr = err
+			// 1inch failed for same-chain, fall through to try THORChain/Maya as fallback
+		}
+
+		// Priority 2: Try THORChain (primary for cross-chain, fallback for same-chain)
 		out, thorErr := thorchainSwap(chain, c)
 		if thorErr == nil {
 			rules = append(rules, out)
@@ -546,7 +565,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return rules, nil
 		}
 
-		// Priority 2: Try Maya if THORChain failed
+		// Priority 3: Try Maya if THORChain failed
 		mayaOut, mayaErr := mayachainSwap(chain, c)
 		if mayaErr == nil {
 			rules = append(rules, mayaOut)
@@ -564,24 +583,11 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 			return rules, nil
 		}
 
-		// Priority 3: For same-chain only, try 1inch as last resort
-		if !isSameChain {
-			return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
+		// All providers failed
+		if isSameChain {
+			return nil, fmt.Errorf("same-chain swap failed: 1inch: %v, thorchain: %v, maya: %v", oneinchErr, thorErr, mayaErr)
 		}
-
-		routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
-		if oneinchErr != nil {
-			return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
-		}
-
-		rules = append(rules, swapRule)
-		if c.fromAsset.GetFixedValue() != "" {
-			spender := fixed(routerAddr)
-			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
-			rules = append(rules, approve)
-		}
-
-		return rules, nil
+		return nil, fmt.Errorf("cross-chain swap failed: thorchain: %v, maya: %v", thorErr, mayaErr)
 	case bridge:
 		c, err := getBridgeConstraints(in)
 		if err != nil {
