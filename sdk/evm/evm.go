@@ -2,6 +2,7 @@ package evm
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	reth "github.com/vultisig/recipes/chain/evm/ethereum"
+	sdk "github.com/vultisig/recipes/sdk"
 	"github.com/vultisig/recipes/sdk/evm/codegen/erc20"
 	"golang.org/x/sync/errgroup"
 )
@@ -334,4 +336,30 @@ func (sdk *SDK) encodeDynamicFeeTx(
 // addGas : in + in/v
 func addGas(in *big.Int, v uint64) *big.Int {
 	return new(big.Int).Add(in, new(big.Int).Div(in, new(big.Int).SetUint64(v)))
+}
+
+// DeriveSigningHashes derives the signing hash from unsigned EVM transaction bytes.
+// For EVM, this computes the EIP-155 signing hash and then SHA256 for the lookup key.
+// Returns a single DerivedHash since EVM transactions have one signature.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	// Decode the unsigned transaction
+	txData, err := reth.DecodeUnsignedPayload(txBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode unsigned payload: %w", err)
+	}
+
+	// Compute the signing hash using the chain-specific signer
+	tx := types.NewTx(txData)
+	signer := types.LatestSignerForChainID(s.chainID)
+	txHashToSign := signer.Hash(tx)
+
+	// SHA256 of the signing hash for the lookup key
+	msgHash := sha256.Sum256(txHashToSign.Bytes())
+
+	return []sdk.DerivedHash{
+		{
+			Message: txHashToSign.Bytes(),
+			Hash:    msgHash[:],
+		},
+	}, nil
 }

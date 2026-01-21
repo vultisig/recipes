@@ -16,6 +16,7 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	ecdsa2 "github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 	xrpgo "github.com/xyield/xrpl-go/binary-codec"
 )
 
@@ -382,4 +383,50 @@ func cleanHex(s string) string {
 		return s[2:]
 	}
 	return s
+}
+
+// DeriveSigningHashes derives the signing hash from unsigned XRP transaction bytes.
+// For XRP, this computes the STX-prefixed SHA512-half digest.
+// Returns a single DerivedHash since XRP transactions have one signature.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	// Convert bytes to hex string for binary codec
+	baseHex := hex.EncodeToString(txBytes)
+
+	// Decode the unsigned transaction using the codec
+	m, err := xrpgo.Decode(strings.ToUpper(baseHex))
+	if err != nil {
+		return nil, fmt.Errorf("binary-codec decode failed: %w", err)
+	}
+
+	// Ensure transaction doesn't already contain TxnSignature
+	if _, has := m["TxnSignature"]; has {
+		return nil, fmt.Errorf("transaction already contains TxnSignature; expected unsigned transaction")
+	}
+
+	// Ensure SigningPubKey is present (required for hash computation)
+	if _, has := m["SigningPubKey"]; !has {
+		return nil, fmt.Errorf("transaction missing SigningPubKey; cannot derive signing hash")
+	}
+
+	// Re-encode with SigningPubKey (but without TxnSignature) to get canonical bytes
+	withPubHex, err := xrpgo.Encode(m)
+	if err != nil {
+		return nil, fmt.Errorf("encode failed: %w", err)
+	}
+	withPubBytes, err := hex.DecodeString(withPubHex)
+	if err != nil {
+		return nil, fmt.Errorf("decode withPubHex failed: %w", err)
+	}
+
+	// Compute XRPL single-sign digest: SHA512-half of (STX prefix + canonical bytes)
+	preimage := append(append([]byte{}, stxPrefix...), withPubBytes...)
+	digest := sha512Half(preimage)
+
+	// For XRP, Message and Hash are the same (the digest is what gets signed)
+	return []sdk.DerivedHash{
+		{
+			Message: digest,
+			Hash:    digest,
+		},
+	}, nil
 }
