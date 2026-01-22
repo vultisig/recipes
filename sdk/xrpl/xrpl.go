@@ -422,11 +422,17 @@ func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.De
 	preimage := append(append([]byte{}, stxPrefix...), withPubBytes...)
 	digest := sha512Half(preimage)
 
+	// Create independent copies to avoid shared backing array issues
+	msg := make([]byte, len(digest))
+	copy(msg, digest)
+	hash := make([]byte, len(digest))
+	copy(hash, digest)
+
 	// For XRP, Message and Hash are the same (the digest is what gets signed)
 	return []sdk.DerivedHash{
 		{
-			Message: digest,
-			Hash:    digest,
+			Message: msg,
+			Hash:    hash,
 		},
 	}, nil
 }

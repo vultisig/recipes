@@ -244,11 +244,17 @@ func (s *SDK) DeriveSigningHashes(txBytes []byte, opts sdk.DeriveOptions) ([]sdk
 	// Derive hash from validated signBytes
 	hashToSign := sha256.Sum256(opts.SignBytes)
 
+	// Create independent copies to avoid shared backing array issues
+	msg := make([]byte, len(hashToSign))
+	copy(msg, hashToSign[:])
+	hash := make([]byte, len(hashToSign))
+	copy(hash, hashToSign[:])
+
 	// For Cosmos, Message and Hash are the same (the SHA256 of signBytes)
 	return []sdk.DerivedHash{
 		{
-			Message: hashToSign[:],
-			Hash:    hashToSign[:],
+			Message: msg,
+			Hash:    hash,
 		},
 	}, nil
 }

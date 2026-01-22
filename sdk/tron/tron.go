@@ -431,10 +431,16 @@ func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.De
 	// The txBytes IS the raw_data (protobuf-serialized transaction body)
 	msgHash := sha256.Sum256(txBytes)
 
+	// Create independent copies to avoid shared backing array issues
+	msg := make([]byte, len(msgHash))
+	copy(msg, msgHash[:])
+	hash := make([]byte, len(msgHash))
+	copy(hash, msgHash[:])
+
 	return []sdk.DerivedHash{
 		{
-			Message: msgHash[:], // For TRON, the message to sign is the hash itself
-			Hash:    msgHash[:], // Lookup key is the same hash
+			Message: msg,  // For TRON, the message to sign is the hash itself
+			Hash:    hash, // Lookup key is the same hash
 		},
 	}, nil
 }
