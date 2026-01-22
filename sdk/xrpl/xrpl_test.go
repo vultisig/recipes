@@ -1,13 +1,17 @@
 package xrpl
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	rsdk "github.com/vultisig/recipes/sdk"
 	xrpgo "github.com/xyield/xrpl-go/binary-codec"
 )
 
@@ -380,4 +384,156 @@ func TestXRPLWorkflow_Structure(t *testing.T) {
 	}
 
 	t.Log("✓ XRPL SDK workflow structure test completed")
+}
+
+// createTestUnsignedTransactionWithSigningPubKey creates an XRP transaction with SigningPubKey
+func createTestUnsignedTransactionWithSigningPubKey(t *testing.T) []byte {
+	jsonMap := map[string]any{
+		"Account":            testFromAddress,
+		"TransactionType":    "Payment",
+		"Amount":             "1000000",
+		"Destination":        testToAddress,
+		"Fee":                "12",
+		"Sequence":           int(testSequence),
+		"LastLedgerSequence": int(testLastLedgerSequence),
+		"SigningPubKey":      testPubKeyHex,
+	}
+
+	hexStr, err := xrpgo.Encode(jsonMap)
+	require.NoError(t, err)
+
+	txBytes, err := hex.DecodeString(hexStr)
+	require.NoError(t, err)
+
+	return txBytes
+}
+
+func TestDeriveSigningHashes_ValidTransactionWithSigningPubKey(t *testing.T) {
+	sdk := &SDK{}
+	unsignedTx := createTestUnsignedTransactionWithSigningPubKey(t)
+
+	hashes, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Should return exactly 1 hash
+	require.Len(t, hashes, 1)
+
+	// Hash should be 32 bytes (SHA512-half = first 32 bytes of SHA512)
+	assert.Len(t, hashes[0].Hash, 32)
+
+	// Message should be 32 bytes (same as hash for XRP)
+	assert.Len(t, hashes[0].Message, 32)
+
+	// For XRP, Message and Hash should be identical
+	assert.True(t, bytes.Equal(hashes[0].Hash, hashes[0].Message))
+}
+
+func TestDeriveSigningHashes_MissingSigningPubKey(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create transaction without SigningPubKey
+	unsignedTx := createTestUnsignedTransaction(t)
+
+	_, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "SigningPubKey")
+}
+
+func TestDeriveSigningHashes_AlreadySigned(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create transaction with both SigningPubKey and TxnSignature
+	jsonMap := map[string]any{
+		"Account":            testFromAddress,
+		"TransactionType":    "Payment",
+		"Amount":             "1000000",
+		"Destination":        testToAddress,
+		"Fee":                "12",
+		"Sequence":           int(testSequence),
+		"LastLedgerSequence": int(testLastLedgerSequence),
+		"SigningPubKey":      testPubKeyHex,
+		"TxnSignature":       "3045022100ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789022100FEDCBA9876543210FEDCBA9876543210FEDCBA9876543210FEDCBA9876543210",
+	}
+
+	hexStr, err := xrpgo.Encode(jsonMap)
+	require.NoError(t, err)
+
+	signedTx, err := hex.DecodeString(hexStr)
+	require.NoError(t, err)
+
+	_, err = sdk.DeriveSigningHashes(signedTx, rsdk.DeriveOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TxnSignature")
+}
+
+func TestDeriveSigningHashes_InvalidBinaryCodec(t *testing.T) {
+	sdk := &SDK{}
+
+	testCases := []struct {
+		name  string
+		input []byte
+	}{
+		{"random_bytes", []byte{0x01, 0x02, 0x03, 0x04}},
+		{"empty_bytes", []byte{}},
+		{"invalid_encoding", []byte{0xFF, 0xFF, 0xFF}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := sdk.DeriveSigningHashes(tc.input, rsdk.DeriveOptions{})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestDeriveSigningHashes_ConsistentResults(t *testing.T) {
+	sdk := &SDK{}
+	unsignedTx := createTestUnsignedTransactionWithSigningPubKey(t)
+
+	// Call multiple times
+	hashes1, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Results should be identical
+	require.Len(t, hashes1, 1)
+	require.Len(t, hashes2, 1)
+	assert.True(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
+	assert.True(t, bytes.Equal(hashes1[0].Message, hashes2[0].Message))
+}
+
+func TestDeriveSigningHashes_DifferentTransactions_DifferentHashes(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create first transaction
+	tx1 := createTestUnsignedTransactionWithSigningPubKey(t)
+
+	// Create second transaction with different amount
+	jsonMap := map[string]any{
+		"Account":            testFromAddress,
+		"TransactionType":    "Payment",
+		"Amount":             "2000000", // Different amount
+		"Destination":        testToAddress,
+		"Fee":                "12",
+		"Sequence":           int(testSequence),
+		"LastLedgerSequence": int(testLastLedgerSequence),
+		"SigningPubKey":      testPubKeyHex,
+	}
+
+	hexStr, err := xrpgo.Encode(jsonMap)
+	require.NoError(t, err)
+	tx2, err := hex.DecodeString(hexStr)
+	require.NoError(t, err)
+
+	// Derive hashes
+	hashes1, err := sdk.DeriveSigningHashes(tx1, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(tx2, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Hashes should be different
+	assert.False(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
 }
