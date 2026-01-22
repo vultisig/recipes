@@ -1,12 +1,15 @@
 package tron
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	rsdk "github.com/vultisig/recipes/sdk"
 )
 
 // MockRPCClient implements RPCClient for testing
@@ -181,5 +184,74 @@ func TestTestnetEndpoints(t *testing.T) {
 	for _, endpoint := range TestnetEndpoints {
 		assert.Contains(t, endpoint, "http")
 	}
+}
+
+func TestDeriveSigningHashes_ValidTransaction(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	// Sample raw_data bytes (protobuf-serialized transaction body)
+	txBytes := []byte{0x0a, 0x02, 0x01, 0x02, 0x12, 0x41, 0x00, 0x01, 0x02, 0x03}
+
+	hashes, err := sdk.DeriveSigningHashes(txBytes, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Should return exactly 1 hash for TRON transaction
+	require.Len(t, hashes, 1)
+
+	// Hash should be 32 bytes (SHA256)
+	assert.Len(t, hashes[0].Hash, 32)
+
+	// Message should be 32 bytes (same as hash for TRON)
+	assert.Len(t, hashes[0].Message, 32)
+
+	// For TRON, Message and Hash should be identical (both are SHA256 of raw_data)
+	assert.True(t, bytes.Equal(hashes[0].Hash, hashes[0].Message))
+
+	// Verify hash is correct SHA256
+	expectedHash := sha256.Sum256(txBytes)
+	assert.True(t, bytes.Equal(hashes[0].Hash, expectedHash[:]))
+}
+
+func TestDeriveSigningHashes_EmptyTransaction(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	_, err := sdk.DeriveSigningHashes([]byte{}, rsdk.DeriveOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "empty transaction bytes")
+}
+
+func TestDeriveSigningHashes_ConsistentResults(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	txBytes := []byte{0x0a, 0x10, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+
+	// Call multiple times
+	hashes1, err := sdk.DeriveSigningHashes(txBytes, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(txBytes, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Results should be identical
+	require.Len(t, hashes1, 1)
+	require.Len(t, hashes2, 1)
+	assert.True(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
+	assert.True(t, bytes.Equal(hashes1[0].Message, hashes2[0].Message))
+}
+
+func TestDeriveSigningHashes_DifferentTransactions_DifferentHashes(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	txBytes1 := []byte{0x0a, 0x02, 0x01, 0x02}
+	txBytes2 := []byte{0x0a, 0x02, 0x03, 0x04} // Different payload
+
+	hashes1, err := sdk.DeriveSigningHashes(txBytes1, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(txBytes2, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Hashes should be different
+	assert.False(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
 }
 
