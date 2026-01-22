@@ -235,6 +235,12 @@ func (s *SDK) DeriveSigningHashes(txBytes []byte, opts sdk.DeriveOptions) ([]sdk
 		return nil, fmt.Errorf("signBytes body does not match transaction body")
 	}
 
+	// SECURITY: Verify auth_info_bytes match between txBytes and signBytes
+	// This prevents signing with different fees, gas limit, or sequence number
+	if !bytes.Equal(txRaw.AuthInfoBytes, signDoc.AuthInfoBytes) {
+		return nil, fmt.Errorf("signBytes auth_info does not match transaction auth_info")
+	}
+
 	// Derive hash from validated signBytes
 	hashToSign := sha256.Sum256(opts.SignBytes)
 

@@ -127,6 +127,60 @@ func createMismatchedTxRawAndSignDoc(t *testing.T) ([]byte, []byte) {
 	return txBytes, signBytes
 }
 
+// createMismatchedAuthInfoTxRawAndSignDoc creates TxRaw and SignDoc with different auth info bytes
+func createMismatchedAuthInfoTxRawAndSignDoc(t *testing.T) ([]byte, []byte) {
+	cdc, _ := createTestCodec()
+
+	// Create body
+	body := &tx.TxBody{
+		Messages: []*codectypes.Any{},
+		Memo:     "test transaction",
+	}
+	bodyBytes, err := cdc.Marshal(body)
+	require.NoError(t, err)
+
+	// Create auth info for TxRaw
+	authInfo1 := &tx.AuthInfo{
+		Fee: &tx.Fee{
+			Amount:   cosmostypes.NewCoins(),
+			GasLimit: 200000,
+		},
+	}
+	authInfoBytes1, err := cdc.Marshal(authInfo1)
+	require.NoError(t, err)
+
+	// Create different auth info for SignDoc (different gas limit)
+	authInfo2 := &tx.AuthInfo{
+		Fee: &tx.Fee{
+			Amount:   cosmostypes.NewCoins(),
+			GasLimit: 500000, // Different gas limit
+		},
+	}
+	authInfoBytes2, err := cdc.Marshal(authInfo2)
+	require.NoError(t, err)
+
+	// Create TxRaw with first auth info
+	txRaw := &tx.TxRaw{
+		BodyBytes:     bodyBytes,
+		AuthInfoBytes: authInfoBytes1,
+		Signatures:    [][]byte{},
+	}
+	txBytes, err := cdc.Marshal(txRaw)
+	require.NoError(t, err)
+
+	// Create SignDoc with different auth info
+	signDoc := &tx.SignDoc{
+		BodyBytes:     bodyBytes,
+		AuthInfoBytes: authInfoBytes2, // Different from txRaw
+		ChainId:       testChainID,
+		AccountNumber: testAccountNumber,
+	}
+	signBytes, err := cdc.Marshal(signDoc)
+	require.NoError(t, err)
+
+	return txBytes, signBytes
+}
+
 func TestDeriveSigningHashes_ValidTransactionWithMatchingSignBytes(t *testing.T) {
 	sdk := NewSDK(nil)
 	txBytes, signBytes := createTestTxRawAndSignDoc(t)
@@ -184,6 +238,17 @@ func TestDeriveSigningHashes_BodyMismatch(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "body does not match")
+}
+
+func TestDeriveSigningHashes_AuthInfoMismatch(t *testing.T) {
+	sdk := NewSDK(nil)
+	txBytes, signBytes := createMismatchedAuthInfoTxRawAndSignDoc(t)
+
+	_, err := sdk.DeriveSigningHashes(txBytes, rsdk.DeriveOptions{
+		SignBytes: signBytes,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "auth_info does not match")
 }
 
 func TestDeriveSigningHashes_InvalidTxBytes(t *testing.T) {
