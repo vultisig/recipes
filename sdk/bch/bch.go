@@ -15,6 +15,7 @@ import (
 	bchtxscript "github.com/gcash/bchd/txscript"
 	bchwire "github.com/gcash/bchd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 const (
@@ -176,6 +177,38 @@ func (sdk *SDK) CalculateInputSignatureHash(pkt *psbt.Packet, inputIndex int) ([
 	}
 
 	return sigHash, nil
+}
+
+// DeriveSigningHashes derives the signing hashes from PSBT transaction bytes.
+// For Bitcoin Cash, this returns one hash per input using BIP143-style hashing
+// with SIGHASH_FORKID, which is required for all BCH transactions post-fork.
+func (s *SDK) DeriveSigningHashes(psbtBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	pkt, err := psbt.NewFromRawBytes(bytes.NewReader(psbtBytes), false)
+	if err != nil {
+		return nil, fmt.Errorf("parse psbt: %w", err)
+	}
+
+	if pkt.UnsignedTx == nil {
+		return nil, fmt.Errorf("PSBT missing unsigned transaction")
+	}
+
+	hashes := make([]sdk.DerivedHash, 0, len(pkt.Inputs))
+	for i := range pkt.Inputs {
+		sigHash, err := s.CalculateInputSignatureHash(pkt, i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate signature hash for input %d: %w", i, err)
+		}
+
+		// The Hash field is sha256 of the sighash for lookup purposes
+		hash := sha256.Sum256(sigHash)
+
+		hashes = append(hashes, sdk.DerivedHash{
+			Message: sigHash,
+			Hash:    hash[:],
+		})
+	}
+
+	return hashes, nil
 }
 
 // Broadcast submits signed transaction to Bitcoin Cash network.

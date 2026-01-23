@@ -11,6 +11,7 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 type RPCClient interface {
@@ -206,4 +207,25 @@ func (sdk *SDK) GetTokenProgram(ctx context.Context, mint string) (string, error
 	}
 
 	return "", fmt.Errorf("mint account is not owned by a token program: %s", owner)
+}
+
+// DeriveSigningHashes derives the signing hash from unsigned transaction bytes.
+// For Solana, this extracts the message bytes which are signed directly.
+// Returns a single DerivedHash since Solana transactions have one signature per signer.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	messageBytes, err := s.MessageHash(txBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive message hash: %w", err)
+	}
+
+	// For Solana, the message bytes are signed directly (Ed25519)
+	// The Hash field is sha256 of the message for lookup purposes
+	hash := sha256.Sum256(messageBytes)
+
+	return []sdk.DerivedHash{
+		{
+			Message: messageBytes,
+			Hash:    hash[:],
+		},
+	}, nil
 }

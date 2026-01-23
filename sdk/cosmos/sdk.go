@@ -1,6 +1,7 @@
 package cosmos
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -20,6 +21,7 @@ import (
 	"github.com/vultisig/mobile-tss-lib/tss"
 
 	chainCosmos "github.com/vultisig/recipes/chain/cosmos"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 // SDK represents the Cosmos SDK for transaction signing and broadcasting
@@ -205,6 +207,56 @@ func GetPubKeyFromBytes(pubKeyBytes []byte) (cryptotypes.PubKey, error) {
 		return nil, fmt.Errorf("invalid pubkey length: expected 33, got %d", len(pubKeyBytes))
 	}
 	return &secp256k1.PubKey{Key: pubKeyBytes}, nil
+}
+
+// DeriveSigningHashes derives the signing hash from Cosmos transaction bytes.
+// For Cosmos, signBytes must be provided in opts since it cannot be derived from txBytes alone.
+// This method validates that signBytes corresponds to txBytes by comparing body bytes.
+// Returns a single DerivedHash since Cosmos transactions have one signature per signer.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, opts sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	if len(opts.SignBytes) == 0 {
+		return nil, fmt.Errorf("signBytes required for Cosmos chains; cannot derive from txBytes alone")
+	}
+
+	// Parse txBytes to extract body bytes
+	var txRaw tx.TxRaw
+	if err := s.cdc.Unmarshal(txBytes, &txRaw); err != nil {
+		return nil, fmt.Errorf("failed to parse txBytes as TxRaw: %w", err)
+	}
+
+	// Parse signBytes (SignDoc) to extract body bytes
+	var signDoc tx.SignDoc
+	if err := s.cdc.Unmarshal(opts.SignBytes, &signDoc); err != nil {
+		return nil, fmt.Errorf("failed to parse signBytes as SignDoc: %w", err)
+	}
+
+	// SECURITY: Verify body_bytes match between txBytes and signBytes
+	if !bytes.Equal(txRaw.BodyBytes, signDoc.BodyBytes) {
+		return nil, fmt.Errorf("signBytes body does not match transaction body")
+	}
+
+	// SECURITY: Verify auth_info_bytes match between txBytes and signBytes
+	// This prevents signing with different fees, gas limit, or sequence number
+	if !bytes.Equal(txRaw.AuthInfoBytes, signDoc.AuthInfoBytes) {
+		return nil, fmt.Errorf("signBytes auth_info does not match transaction auth_info")
+	}
+
+	// Derive hash from validated signBytes
+	hashToSign := sha256.Sum256(opts.SignBytes)
+
+	// Create independent copies to avoid shared backing array issues
+	msg := make([]byte, len(hashToSign))
+	copy(msg, hashToSign[:])
+	hash := make([]byte, len(hashToSign))
+	copy(hash, hashToSign[:])
+
+	// For Cosmos, Message and Hash are the same (the SHA256 of signBytes)
+	return []sdk.DerivedHash{
+		{
+			Message: msg,
+			Hash:    hash,
+		},
+	}, nil
 }
 
 

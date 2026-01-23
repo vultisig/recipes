@@ -5,12 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	rsdk "github.com/vultisig/recipes/sdk"
 )
 
 // Test public key (compressed)
@@ -389,5 +391,230 @@ func TestSignatureApplication(t *testing.T) {
 
 	if !bytes.Equal(psbtPacket.Inputs[0].PartialSigs[0].Signature, fullSig) {
 		t.Error("Signature mismatch in partial signature")
+	}
+}
+
+// createTestPSBTWithMultipleInputs creates a PSBT with multiple inputs for testing
+func createTestPSBTWithMultipleInputs(t *testing.T, numInputs int) (*psbt.Packet, error) {
+	tx := wire.NewMsgTx(2)
+
+	// Add multiple inputs
+	for i := 0; i < numInputs; i++ {
+		prevHash, _ := chainhash.NewHashFromStr(testPrevTxHash)
+		prevOut := wire.NewOutPoint(prevHash, uint32(i))
+		txIn := wire.NewTxIn(prevOut, nil, nil)
+		tx.AddTxIn(txIn)
+	}
+
+	// Add output
+	scriptHash, _ := hex.DecodeString(testOutputScript)
+	txOut := wire.NewTxOut(testOutputValue, scriptHash)
+	tx.AddTxOut(txOut)
+
+	// Create PSBT packet
+	psbtPacket, err := psbt.NewFromUnsignedTx(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add witness UTXO and BIP32 derivation for each input
+	for i := 0; i < numInputs; i++ {
+		witnessScript, _ := hex.DecodeString(testWitnessScript)
+		witnessUtxo := &wire.TxOut{
+			Value:    testInputValue,
+			PkScript: witnessScript,
+		}
+		psbtPacket.Inputs[i].WitnessUtxo = witnessUtxo
+
+		pubKeyBytes, _ := hex.DecodeString(testPubKeyHex)
+		derivation := &psbt.Bip32Derivation{
+			PubKey:               pubKeyBytes,
+			MasterKeyFingerprint: 0x12345678,
+			Bip32Path:            []uint32{0x80000000, 1, uint32(i)},
+		}
+		psbtPacket.Inputs[i].Bip32Derivation = append(psbtPacket.Inputs[i].Bip32Derivation, derivation)
+	}
+
+	return psbtPacket, nil
+}
+
+func TestDeriveSigningHashes_ValidPSBT_SingleInput(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create test PSBT with single input
+	psbtPacket, err := createTestPSBT()
+	if err != nil {
+		t.Fatalf("Failed to create test PSBT: %v", err)
+	}
+
+	// Serialize PSBT to bytes
+	var buf bytes.Buffer
+	err = psbtPacket.Serialize(&buf)
+	if err != nil {
+		t.Fatalf("Failed to serialize PSBT: %v", err)
+	}
+
+	// Derive signing hashes
+	hashes, err := sdk.DeriveSigningHashes(buf.Bytes(), rsdk.DeriveOptions{})
+	if err != nil {
+		t.Fatalf("DeriveSigningHashes failed: %v", err)
+	}
+
+	// Should return 1 hash for 1 input
+	if len(hashes) != 1 {
+		t.Fatalf("Expected 1 hash, got %d", len(hashes))
+	}
+
+	// Hash should be 32 bytes (SHA256 output)
+	if len(hashes[0].Hash) != 32 {
+		t.Errorf("Expected hash length 32, got %d", len(hashes[0].Hash))
+	}
+
+	// Message should be 32 bytes (signature hash)
+	if len(hashes[0].Message) != 32 {
+		t.Errorf("Expected message length 32, got %d", len(hashes[0].Message))
+	}
+
+	// Hash should be SHA256 of Message
+	expectedHash := sha256.Sum256(hashes[0].Message)
+	if !bytes.Equal(hashes[0].Hash, expectedHash[:]) {
+		t.Error("Hash should be SHA256 of Message")
+	}
+}
+
+func TestDeriveSigningHashes_ValidPSBT_MultipleInputs(t *testing.T) {
+	sdk := &SDK{}
+
+	testCases := []int{2, 3, 5}
+
+	for _, numInputs := range testCases {
+		t.Run(fmt.Sprintf("%d_inputs", numInputs), func(t *testing.T) {
+			psbtPacket, err := createTestPSBTWithMultipleInputs(t, numInputs)
+			if err != nil {
+				t.Fatalf("Failed to create test PSBT: %v", err)
+			}
+
+			var buf bytes.Buffer
+			err = psbtPacket.Serialize(&buf)
+			if err != nil {
+				t.Fatalf("Failed to serialize PSBT: %v", err)
+			}
+
+			hashes, err := sdk.DeriveSigningHashes(buf.Bytes(), rsdk.DeriveOptions{})
+			if err != nil {
+				t.Fatalf("DeriveSigningHashes failed: %v", err)
+			}
+
+			// Should return one hash per input
+			if len(hashes) != numInputs {
+				t.Fatalf("Expected %d hashes, got %d", numInputs, len(hashes))
+			}
+
+			// Each hash should be unique and properly formatted
+			seen := make(map[string]bool)
+			for i, h := range hashes {
+				if len(h.Hash) != 32 {
+					t.Errorf("Input %d: expected hash length 32, got %d", i, len(h.Hash))
+				}
+				if len(h.Message) != 32 {
+					t.Errorf("Input %d: expected message length 32, got %d", i, len(h.Message))
+				}
+
+				hashKey := base64.StdEncoding.EncodeToString(h.Hash)
+				if seen[hashKey] {
+					t.Errorf("Input %d: duplicate hash detected", i)
+				}
+				seen[hashKey] = true
+			}
+		})
+	}
+}
+
+func TestDeriveSigningHashes_InvalidPSBT(t *testing.T) {
+	sdk := &SDK{}
+
+	testCases := []struct {
+		name        string
+		input       []byte
+		errContains string
+	}{
+		{
+			name:        "random_bytes",
+			input:       []byte{0x01, 0x02, 0x03, 0x04},
+			errContains: "psbt",
+		},
+		{
+			name:        "empty_bytes",
+			input:       []byte{},
+			errContains: "psbt",
+		},
+		{
+			name:        "truncated_psbt_magic",
+			input:       []byte{0x70, 0x73, 0x62, 0x74}, // "psbt" without 0xff
+			errContains: "psbt",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := sdk.DeriveSigningHashes(tc.input, rsdk.DeriveOptions{})
+			if err == nil {
+				t.Error("Expected error for invalid PSBT")
+			}
+		})
+	}
+}
+
+func TestDeriveSigningHashes_PSBTWithoutUnsignedTx(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create a minimal PSBT with just the magic bytes but no content
+	// PSBT magic: 0x70736274ff followed by minimal global section
+	invalidPSBT := []byte{0x70, 0x73, 0x62, 0x74, 0xff, 0x00}
+
+	_, err := sdk.DeriveSigningHashes(invalidPSBT, rsdk.DeriveOptions{})
+	if err == nil {
+		t.Error("Expected error for PSBT without unsigned transaction")
+	}
+}
+
+func TestDeriveSigningHashes_ConsistentResults(t *testing.T) {
+	sdk := &SDK{}
+
+	psbtPacket, err := createTestPSBT()
+	if err != nil {
+		t.Fatalf("Failed to create test PSBT: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err = psbtPacket.Serialize(&buf)
+	if err != nil {
+		t.Fatalf("Failed to serialize PSBT: %v", err)
+	}
+	psbtBytes := buf.Bytes()
+
+	// Call DeriveSigningHashes multiple times
+	hashes1, err := sdk.DeriveSigningHashes(psbtBytes, rsdk.DeriveOptions{})
+	if err != nil {
+		t.Fatalf("First call failed: %v", err)
+	}
+
+	hashes2, err := sdk.DeriveSigningHashes(psbtBytes, rsdk.DeriveOptions{})
+	if err != nil {
+		t.Fatalf("Second call failed: %v", err)
+	}
+
+	// Results should be identical
+	if len(hashes1) != len(hashes2) {
+		t.Fatalf("Inconsistent hash counts: %d vs %d", len(hashes1), len(hashes2))
+	}
+
+	for i := range hashes1 {
+		if !bytes.Equal(hashes1[i].Hash, hashes2[i].Hash) {
+			t.Errorf("Hash %d is not consistent across calls", i)
+		}
+		if !bytes.Equal(hashes1[i].Message, hashes2[i].Message) {
+			t.Errorf("Message %d is not consistent across calls", i)
+		}
 	}
 }

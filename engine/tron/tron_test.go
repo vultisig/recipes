@@ -1,14 +1,32 @@
 package tron
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/vultisig-go/common"
 )
+
+// hexToBase58 converts a hex-encoded TRON address to base58check format.
+// TRON addresses are 21 bytes: 1 byte version (0x41) + 20 bytes address.
+func hexToBase58(hexAddr string) string {
+	data, err := hex.DecodeString(hexAddr)
+	if err != nil || len(data) != 21 {
+		return hexAddr // Return as-is if invalid
+	}
+	firstHash := sha256.Sum256(data)
+	secondHash := sha256.Sum256(firstHash[:])
+	checksum := secondHash[:4]
+	result := make([]byte, len(data)+4)
+	copy(result, data)
+	copy(result[len(data):], checksum)
+	return base58.Encode(result)
+}
 
 func TestNewTron(t *testing.T) {
 	tron := NewTron()
@@ -219,7 +237,7 @@ func TestTron_Evaluate_Success_WithTargetAddress(t *testing.T) {
 		Target: &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
 			Target: &types.Target_Address{
-				Address: hex.EncodeToString(toAddr),
+				Address: hexToBase58(hex.EncodeToString(toAddr)),
 			},
 		},
 	}
@@ -233,7 +251,7 @@ func TestTron_Evaluate_Failure_TargetMismatch(t *testing.T) {
 
 	ownerAddr, _ := hex.DecodeString("41a614f803b6fd780986a42c78ec9c7f77e6ded13c")
 	toAddr, _ := hex.DecodeString("41b614f803b6fd780986a42c78ec9c7f77e6ded13d")
-	differentAddr := "41c614f803b6fd780986a42c78ec9c7f77e6ded13e"
+	differentAddr := hexToBase58("41c614f803b6fd780986a42c78ec9c7f77e6ded13e")
 	amount := int64(5000000)
 
 	txBytes := buildTronTransferTx(ownerAddr, toAddr, amount)
@@ -391,7 +409,7 @@ func TestTron_Evaluate_Success_WithRecipientConstraint(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: hex.EncodeToString(toAddr),
+						FixedValue: hexToBase58(hex.EncodeToString(toAddr)),
 					},
 				},
 			},
@@ -407,7 +425,7 @@ func TestTron_Evaluate_Failure_RecipientConstraintViolation(t *testing.T) {
 
 	ownerAddr, _ := hex.DecodeString("41a614f803b6fd780986a42c78ec9c7f77e6ded13c")
 	toAddr, _ := hex.DecodeString("41b614f803b6fd780986a42c78ec9c7f77e6ded13d")
-	differentRecipient := "41c614f803b6fd780986a42c78ec9c7f77e6ded13e"
+	differentRecipient := hexToBase58("41c614f803b6fd780986a42c78ec9c7f77e6ded13e")
 	amount := int64(1000000)
 
 	txBytes := buildTronTransferTx(ownerAddr, toAddr, amount)

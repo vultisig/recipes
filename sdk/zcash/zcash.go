@@ -17,6 +17,7 @@ import (
 	// gtank/blake2 was specifically designed for Zcash Sapling by George Tankersley.
 	"github.com/gtank/blake2/blake2b"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 // TxBroadcaster is the interface for broadcasting transactions to the Zcash network.
@@ -419,6 +420,44 @@ func (sdk *SDK) DeriveKeyFromMessage(messageHash []byte) string {
 func DeriveKeyFromMessage(messageHash []byte) string {
 	hash := sha256.Sum256(messageHash)
 	return base64.StdEncoding.EncodeToString(hash[:])
+}
+
+// DeriveSigningHashes derives the signing hashes from Zcash transaction bytes.
+// For Zcash, the transaction data must include embedded metadata (sighashes and pubkey)
+// created using SerializeWithMetadata. Returns one DerivedHash per input since each
+// input requires a separate signature.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	if len(txBytes) == 0 {
+		return nil, fmt.Errorf("empty transaction bytes")
+	}
+
+	// Parse embedded metadata to extract pre-computed sighashes
+	_, _, sigHashes, err := ParseWithMetadata(txBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse transaction metadata: %w", err)
+	}
+
+	if len(sigHashes) == 0 {
+		return nil, fmt.Errorf("no sighashes found in transaction data; use SerializeWithMetadata to embed sighashes")
+	}
+
+	// Build DerivedHash for each input's sighash
+	hashes := make([]sdk.DerivedHash, len(sigHashes))
+	for i, sigHash := range sigHashes {
+		if len(sigHash) != 32 {
+			return nil, fmt.Errorf("invalid sighash length for input %d: expected 32, got %d", i, len(sigHash))
+		}
+
+		// The Hash field is SHA256 of the sighash for lookup purposes
+		hashKey := sha256.Sum256(sigHash)
+
+		hashes[i] = sdk.DerivedHash{
+			Message: sigHash,     // The actual bytes to sign (BLAKE2b sighash)
+			Hash:    hashKey[:],  // SHA256 lookup key
+		}
+	}
+
+	return hashes, nil
 }
 
 // blake2bSigHash computes BLAKE2b-256 with Zcash signature hash personalization.

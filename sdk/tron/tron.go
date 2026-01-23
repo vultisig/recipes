@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 // RPCClient interface for TRON JSON-RPC calls
@@ -415,5 +416,32 @@ func isHexString(s string) bool {
 		}
 	}
 	return true
+}
+
+// DeriveSigningHashes derives the signing hash from unsigned TRON transaction bytes.
+// For TRON, the transaction bytes are the protobuf-serialized raw_data, and the
+// signing hash is SHA256(raw_data). Returns a single DerivedHash since TRON
+// transactions have one signature.
+func (s *SDK) DeriveSigningHashes(txBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	if len(txBytes) == 0 {
+		return nil, fmt.Errorf("empty transaction bytes")
+	}
+
+	// TRON signing: hash = SHA256(raw_data)
+	// The txBytes IS the raw_data (protobuf-serialized transaction body)
+	msgHash := sha256.Sum256(txBytes)
+
+	// Create independent copies to avoid shared backing array issues
+	msg := make([]byte, len(msgHash))
+	copy(msg, msgHash[:])
+	hash := make([]byte, len(msgHash))
+	copy(hash, msgHash[:])
+
+	return []sdk.DerivedHash{
+		{
+			Message: msg,  // For TRON, the message to sign is the hash itself
+			Hash:    hash, // Lookup key is the same hash
+		},
+	}, nil
 }
 

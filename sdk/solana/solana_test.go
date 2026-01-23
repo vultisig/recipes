@@ -1,6 +1,8 @@
 package solana
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	rsdk "github.com/vultisig/recipes/sdk"
 )
 
 // createTestUnsignedTransaction
@@ -90,4 +93,129 @@ func TestSDK_Sign_WithValidSignature(t *testing.T) {
 	copy(expectedSig[32:64], sBytes)
 
 	assert.Equal(t, expectedSig, signedTx.Signatures[0][:])
+}
+
+func TestDeriveSigningHashes_ValidTransaction(t *testing.T) {
+	sdk := &SDK{}
+	unsignedTx := createTestUnsignedTransaction(t)
+
+	hashes, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Should return exactly 1 hash
+	require.Len(t, hashes, 1)
+
+	// Hash should be 32 bytes (SHA256 of message bytes)
+	assert.Len(t, hashes[0].Hash, 32)
+
+	// Message should contain the serialized message bytes
+	assert.NotEmpty(t, hashes[0].Message)
+
+	// Hash should be SHA256 of Message
+	expectedHash := sha256.Sum256(hashes[0].Message)
+	assert.True(t, bytes.Equal(hashes[0].Hash, expectedHash[:]))
+}
+
+func TestDeriveSigningHashes_MessageMatchesManualExtraction(t *testing.T) {
+	sdk := &SDK{}
+	unsignedTx := createTestUnsignedTransaction(t)
+
+	// Get hashes using DeriveSigningHashes
+	hashes, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Manually extract message bytes for comparison
+	tx, err := solana.TransactionFromBytes(unsignedTx)
+	require.NoError(t, err)
+	messageBytes, err := tx.Message.MarshalBinary()
+	require.NoError(t, err)
+
+	// The Message field should match the serialized message
+	assert.True(t, bytes.Equal(hashes[0].Message, messageBytes))
+}
+
+func TestDeriveSigningHashes_InvalidTransaction(t *testing.T) {
+	sdk := &SDK{}
+
+	testCases := []struct {
+		name  string
+		input []byte
+	}{
+		{"random_bytes", []byte{0x01, 0x02, 0x03, 0x04}},
+		{"empty_bytes", []byte{}},
+		{"truncated_tx", []byte{0x01, 0x00, 0x00}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := sdk.DeriveSigningHashes(tc.input, rsdk.DeriveOptions{})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestDeriveSigningHashes_ConsistentResults(t *testing.T) {
+	sdk := &SDK{}
+	unsignedTx := createTestUnsignedTransaction(t)
+
+	// Call multiple times
+	hashes1, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(unsignedTx, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Results should be identical
+	require.Len(t, hashes1, 1)
+	require.Len(t, hashes2, 1)
+	assert.True(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
+	assert.True(t, bytes.Equal(hashes1[0].Message, hashes2[0].Message))
+}
+
+func TestDeriveSigningHashes_DifferentTransactions_DifferentHashes(t *testing.T) {
+	sdk := &SDK{}
+
+	// Create first transaction
+	tx1Bytes := createTestUnsignedTransaction(t)
+
+	// Create second transaction with different parameters
+	fromPubKey := solana.MustPublicKeyFromBase58("GJvewfRjqTUPtx6WsBSUnaFbdgXwgXnWfpDyLm65T4YA")
+	toPubKey := solana.MustPublicKeyFromBase58("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL")
+
+	// Use a different blockhash
+	differentBlockhash := solana.MustHashFromBase58("4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi")
+
+	tx2, err := solana.NewTransaction(
+		[]solana.Instruction{
+			solana.NewInstruction(
+				solana.SystemProgramID,
+				solana.AccountMetaSlice{
+					{PublicKey: fromPubKey, IsSigner: true, IsWritable: true},
+					{PublicKey: toPubKey, IsSigner: false, IsWritable: true},
+				},
+				[]byte{0x02, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Different amount
+			),
+		},
+		differentBlockhash,
+		solana.TransactionPayer(fromPubKey),
+	)
+	require.NoError(t, err)
+
+	fullTx2 := solana.Transaction{
+		Signatures: make([]solana.Signature, tx2.Message.Header.NumRequiredSignatures),
+		Message:    tx2.Message,
+	}
+	tx2Bytes, err := fullTx2.MarshalBinary()
+	require.NoError(t, err)
+
+	// Derive hashes for both
+	hashes1, err := sdk.DeriveSigningHashes(tx1Bytes, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(tx2Bytes, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Hashes should be different
+	assert.False(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
+	assert.False(t, bytes.Equal(hashes1[0].Message, hashes2[0].Message))
 }

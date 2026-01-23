@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	sdk "github.com/vultisig/recipes/sdk"
 )
 
 // btcd rpcclient interface - methods we use from the client
@@ -293,7 +294,7 @@ func createP2PKHScriptFromWitnessProgram(witnessProgram []byte) ([]byte, error) 
 }
 
 // extractPubkeyForInput extracts the public key for a PSBT input
-func (sdk *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
+func (s *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
 	if len(input.Bip32Derivation) > 0 {
 		for _, derivation := range input.Bip32Derivation {
 			if len(derivation.PubKey) == 33 {
@@ -303,4 +304,35 @@ func (sdk *SDK) extractPubkeyForInput(input *psbt.PInput) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("no public key found in PSBT input")
+}
+
+// DeriveSigningHashes derives the signing hashes from PSBT transaction bytes.
+// For Bitcoin, this returns one hash per input since each input requires a separate signature.
+func (s *SDK) DeriveSigningHashes(psbtBytes []byte, _ sdk.DeriveOptions) ([]sdk.DerivedHash, error) {
+	pkt, err := psbt.NewFromRawBytes(bytes.NewReader(psbtBytes), false)
+	if err != nil {
+		return nil, fmt.Errorf("parse psbt: %w", err)
+	}
+
+	if pkt.UnsignedTx == nil {
+		return nil, fmt.Errorf("PSBT missing unsigned transaction")
+	}
+
+	hashes := make([]sdk.DerivedHash, 0, len(pkt.Inputs))
+	for i := range pkt.Inputs {
+		sigHash, err := s.CalculateInputSignatureHash(pkt, i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate signature hash for input %d: %w", i, err)
+		}
+
+		// The Hash field is sha256 of the sighash for lookup purposes
+		hash := sha256.Sum256(sigHash)
+
+		hashes = append(hashes, sdk.DerivedHash{
+			Message: sigHash,
+			Hash:    hash[:],
+		})
+	}
+
+	return hashes, nil
 }

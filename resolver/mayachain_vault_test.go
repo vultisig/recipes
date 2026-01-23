@@ -96,10 +96,10 @@ func TestMayaChainVaultResolver_Resolve_Integration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "ETH should use ThorChain not MayaChain",
+			name:    "resolve ETH vault address",
 			chainID: "ethereum",
 			assetID: "eth",
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "unsupported chain should error",

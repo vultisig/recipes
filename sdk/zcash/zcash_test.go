@@ -7,7 +7,10 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vultisig/mobile-tss-lib/tss"
+	rsdk "github.com/vultisig/recipes/sdk"
 )
 
 // Test public key (compressed)
@@ -943,5 +946,174 @@ func TestReadCompactSize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeriveSigningHashes_ValidTransaction_SingleInput(t *testing.T) {
+	sdk := NewSDK(nil)
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Create test inputs and outputs
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    testInputValue,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  testOutputValue,
+			Script: testP2PKHScript,
+		},
+	}
+
+	// Serialize unsigned tx
+	rawBytes, err := sdk.SerializeUnsignedTx(inputs, outputs)
+	require.NoError(t, err)
+
+	// Calculate sig hash
+	sigHash, err := sdk.CalculateSigHash(inputs, outputs, 0)
+	require.NoError(t, err)
+
+	// Serialize with metadata
+	dataWithMetadata := SerializeWithMetadata(rawBytes, [][]byte{sigHash}, pubKey)
+
+	// Derive signing hashes
+	hashes, err := sdk.DeriveSigningHashes(dataWithMetadata, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Should return exactly 1 hash for single input
+	require.Len(t, hashes, 1)
+
+	// Message should be the sighash (32 bytes)
+	assert.Len(t, hashes[0].Message, 32)
+	assert.True(t, bytes.Equal(hashes[0].Message, sigHash))
+
+	// Hash should be SHA256 of the sighash (32 bytes)
+	assert.Len(t, hashes[0].Hash, 32)
+	expectedHashKey := sha256.Sum256(sigHash)
+	assert.True(t, bytes.Equal(hashes[0].Hash, expectedHashKey[:]))
+}
+
+func TestDeriveSigningHashes_ValidTransaction_MultipleInputs(t *testing.T) {
+	sdk := NewSDK(nil)
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	// Create transaction with multiple inputs
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    50000000,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+		{
+			TxHash:   testPrevTxHash,
+			Index:    1,
+			Value:    50000000,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  99990000,
+			Script: testP2PKHScript,
+		},
+	}
+
+	// Serialize unsigned tx
+	rawBytes, err := sdk.SerializeUnsignedTx(inputs, outputs)
+	require.NoError(t, err)
+
+	// Calculate sig hashes for both inputs
+	sigHashes := make([][]byte, len(inputs))
+	for i := range inputs {
+		sigHash, err := sdk.CalculateSigHash(inputs, outputs, i)
+		require.NoError(t, err)
+		sigHashes[i] = sigHash
+	}
+
+	// Serialize with metadata
+	dataWithMetadata := SerializeWithMetadata(rawBytes, sigHashes, pubKey)
+
+	// Derive signing hashes
+	hashes, err := sdk.DeriveSigningHashes(dataWithMetadata, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Should return 2 hashes for 2 inputs
+	require.Len(t, hashes, 2)
+
+	// Each hash should correspond to the correct sighash
+	for i, hash := range hashes {
+		assert.Len(t, hash.Message, 32)
+		assert.True(t, bytes.Equal(hash.Message, sigHashes[i]))
+
+		expectedHashKey := sha256.Sum256(sigHashes[i])
+		assert.True(t, bytes.Equal(hash.Hash, expectedHashKey[:]))
+	}
+
+	// Hashes should be different for different inputs
+	assert.False(t, bytes.Equal(hashes[0].Hash, hashes[1].Hash))
+}
+
+func TestDeriveSigningHashes_EmptyTransaction(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	_, err := sdk.DeriveSigningHashes([]byte{}, rsdk.DeriveOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "empty transaction bytes")
+}
+
+func TestDeriveSigningHashes_NoMetadata(t *testing.T) {
+	sdk := NewSDK(nil)
+
+	// Plain tx bytes without metadata
+	plainTxBytes := []byte{0x04, 0x00, 0x00, 0x80, 0x85, 0x20, 0x2f, 0x89}
+
+	_, err := sdk.DeriveSigningHashes(plainTxBytes, rsdk.DeriveOptions{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no sighashes found")
+}
+
+func TestDeriveSigningHashes_ConsistentResults(t *testing.T) {
+	sdk := NewSDK(nil)
+	pubKey, _ := hex.DecodeString(testPubKeyHex)
+
+	inputs := []TxInput{
+		{
+			TxHash:   testPrevTxHash,
+			Index:    0,
+			Value:    testInputValue,
+			Script:   testP2PKHScript,
+			Sequence: 0xffffffff,
+		},
+	}
+	outputs := []*TxOutput{
+		{
+			Value:  testOutputValue,
+			Script: testP2PKHScript,
+		},
+	}
+
+	rawBytes, _ := sdk.SerializeUnsignedTx(inputs, outputs)
+	sigHash, _ := sdk.CalculateSigHash(inputs, outputs, 0)
+	dataWithMetadata := SerializeWithMetadata(rawBytes, [][]byte{sigHash}, pubKey)
+
+	// Call multiple times
+	hashes1, err := sdk.DeriveSigningHashes(dataWithMetadata, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	hashes2, err := sdk.DeriveSigningHashes(dataWithMetadata, rsdk.DeriveOptions{})
+	require.NoError(t, err)
+
+	// Results should be identical
+	require.Len(t, hashes1, 1)
+	require.Len(t, hashes2, 1)
+	assert.True(t, bytes.Equal(hashes1[0].Hash, hashes2[0].Hash))
+	assert.True(t, bytes.Equal(hashes1[0].Message, hashes2[0].Message))
 }
 
