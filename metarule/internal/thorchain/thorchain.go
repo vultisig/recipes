@@ -60,6 +60,7 @@ var pools = []metadata{
 	{asset: "THOR.TCY"},
 	{asset: "XRP.XRP"},
 	{asset: "TRON.TRX"},
+	{asset: "TRON.USDT-TR7NHQJEKQXGTCI8Q8ZY4PL8OTSZGJLJ6T"},
 }
 
 type network string

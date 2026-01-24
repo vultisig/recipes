@@ -37,7 +37,7 @@ func (c *Chain) Description() string {
 
 // SupportedProtocols returns the list of protocol IDs supported by TRON.
 func (c *Chain) SupportedProtocols() []string {
-	return []string{"trx"}
+	return []string{"trx", "trc20"}
 }
 
 // ParsedTronTransaction implements the types.DecodedTransaction interface for TRON.
@@ -72,10 +72,11 @@ type TronParameter struct {
 
 // TronValue represents the value of a contract parameter
 type TronValue struct {
-	Amount       int64  `json:"amount,omitempty"`
-	OwnerAddress string `json:"owner_address"`
-	ToAddress    string `json:"to_address,omitempty"`
-	Data         string `json:"data,omitempty"` // For smart contract calls
+	Amount          int64  `json:"amount,omitempty"`
+	OwnerAddress    string `json:"owner_address"`
+	ToAddress       string `json:"to_address,omitempty"`
+	ContractAddress string `json:"contract_address,omitempty"` // For TriggerSmartContract
+	Data            string `json:"data,omitempty"`             // For smart contract calls
 }
 
 // ChainIdentifier returns "tron".
@@ -165,6 +166,30 @@ func (p *ParsedTronTransaction) GetAmount() *big.Int {
 		return big.NewInt(0)
 	}
 	return big.NewInt(p.rawData.Contract[0].Parameter.Value.Amount)
+}
+
+// GetContractType returns the contract type string.
+func (p *ParsedTronTransaction) GetContractType() string {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return ""
+	}
+	return p.rawData.Contract[0].Type
+}
+
+// GetContractAddress returns the smart contract address for TriggerSmartContract.
+func (p *ParsedTronTransaction) GetContractAddress() string {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return ""
+	}
+	return p.rawData.Contract[0].Parameter.Value.ContractAddress
+}
+
+// GetCallData returns the ABI-encoded function call data for TriggerSmartContract.
+func (p *ParsedTronTransaction) GetCallData() string {
+	if p.rawData == nil || len(p.rawData.Contract) == 0 {
+		return ""
+	}
+	return p.rawData.Contract[0].Parameter.Value.Data
 }
 
 // ParseTransaction decodes a TRON transaction's raw_data from hex string.
@@ -493,12 +518,20 @@ func parseParameter(data []byte) (TronParameter, error) {
 		return param, nil
 	}
 
-	// Currently only TransferContract is supported (native TRX transfers)
-	// Both send and swap operations use TransferContract
+	// Currently TransferContract and TriggerSmartContract are supported
 	if strings.HasSuffix(param.TypeUrl, "TransferContract") {
 		value, err := parseTransferContractValue(valueBytes)
 		if err != nil {
 			return param, fmt.Errorf("failed to parse TransferContract value: %w", err)
+		}
+		param.Value = value
+		return param, nil
+	}
+
+	if strings.HasSuffix(param.TypeUrl, "TriggerSmartContract") {
+		value, err := parseTriggerSmartContractValue(valueBytes)
+		if err != nil {
+			return param, fmt.Errorf("failed to parse TriggerSmartContract value: %w", err)
 		}
 		param.Value = value
 		return param, nil
@@ -569,6 +602,90 @@ func parseTransferContractValue(data []byte) (TronValue, error) {
 			}
 			pos += n
 			value.Amount = int64(val)
+
+		default:
+			pos, err = skipField(data, pos, wireType)
+			if err != nil {
+				return value, fmt.Errorf("failed to skip field %d: %w", fieldNum, err)
+			}
+		}
+	}
+
+	return value, nil
+}
+
+// parseTriggerSmartContractValue parses the value of a TriggerSmartContract
+// TriggerSmartContract is used for TRC-20 token transfers
+func parseTriggerSmartContractValue(data []byte) (TronValue, error) {
+	value := TronValue{}
+	pos := 0
+
+	for pos < len(data) {
+		tagVal, n := readVarint(data[pos:])
+		if n == 0 {
+			return value, fmt.Errorf("failed to read tag at position %d", pos)
+		}
+		pos += n
+		fieldNum := tagVal >> 3
+		wireType := tagVal & 0x7
+
+		var err error
+		switch fieldNum {
+		case 1: // owner_address (bytes)
+			if wireType != 2 {
+				return value, fmt.Errorf("unexpected wire type for owner_address")
+			}
+			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read owner_address length")
+			}
+			pos += n
+			if pos+int(length) > len(data) {
+				return value, fmt.Errorf("owner_address length exceeds data")
+			}
+			value.OwnerAddress = encodeAddress(data[pos : pos+int(length)])
+			pos += int(length)
+
+		case 2: // contract_address (bytes)
+			if wireType != 2 {
+				return value, fmt.Errorf("unexpected wire type for contract_address")
+			}
+			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read contract_address length")
+			}
+			pos += n
+			if pos+int(length) > len(data) {
+				return value, fmt.Errorf("contract_address length exceeds data")
+			}
+			value.ContractAddress = encodeAddress(data[pos : pos+int(length)])
+			pos += int(length)
+
+		case 3: // call_value (int64) - amount of TRX sent with call
+			if wireType != 0 {
+				return value, fmt.Errorf("unexpected wire type for call_value")
+			}
+			val, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read call_value")
+			}
+			pos += n
+			value.Amount = int64(val)
+
+		case 4: // data (bytes) - the ABI-encoded function call
+			if wireType != 2 {
+				return value, fmt.Errorf("unexpected wire type for data")
+			}
+			length, n := readVarint(data[pos:])
+			if n == 0 {
+				return value, fmt.Errorf("failed to read data length")
+			}
+			pos += n
+			if pos+int(length) > len(data) {
+				return value, fmt.Errorf("data length exceeds data")
+			}
+			value.Data = hex.EncodeToString(data[pos : pos+int(length)])
+			pos += int(length)
 
 		default:
 			pos, err = skipField(data, pos, wireType)
@@ -706,4 +823,3 @@ func (c *Chain) GetProtocol(id string) (types.Protocol, error) {
 	}
 	return nil, fmt.Errorf("protocol %q not found on TRON", id)
 }
-
