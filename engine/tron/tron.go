@@ -329,8 +329,8 @@ func (t *Tron) hexToTronAddress(hexAddr string) (string, error) {
 
 // tronBase58CheckEncode encodes bytes to TRON base58check format
 func tronBase58CheckEncode(input []byte) string {
-	firstHash := sha256(input)
-	secondHash := sha256(firstHash)
+	firstHash := computeSha256(input)
+	secondHash := computeSha256(firstHash)
 	checksum := secondHash[:4]
 
 	result := make([]byte, len(input)+4)
@@ -340,8 +340,8 @@ func tronBase58CheckEncode(input []byte) string {
 	return base58Encode(result)
 }
 
-// sha256 computes SHA256 hash
-func sha256(data []byte) []byte {
+// computeSha256 computes SHA256 hash
+func computeSha256(data []byte) []byte {
 	h := cryptoSha256.Sum256(data)
 	return h[:]
 }
