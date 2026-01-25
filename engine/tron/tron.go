@@ -35,8 +35,6 @@ func (t *Tron) Supports(chain common.Chain) bool {
 
 // Evaluate validates a TRON transaction against policy rules
 func (t *Tron) Evaluate(rule *types.Rule, txBytes []byte) error {
-	fmt.Printf("[TRON DEBUG] Evaluate called with %d bytes: %s\n", len(txBytes), hex.EncodeToString(txBytes[:min(len(txBytes), 100)]))
-
 	if rule.GetEffect().String() != types.Effect_EFFECT_ALLOW.String() {
 		return fmt.Errorf("only allow rules supported, got: %s", rule.GetEffect().String())
 	}
@@ -48,7 +46,6 @@ func (t *Tron) Evaluate(rule *types.Rule, txBytes []byte) error {
 
 	decodedTx, err := t.chain.ParseTransactionBytes(txBytes)
 	if err != nil {
-		fmt.Printf("[TRON DEBUG] ParseTransactionBytes failed: %v\n", err)
 		return fmt.Errorf("failed to parse TRON transaction: %w", err)
 	}
 
@@ -244,7 +241,9 @@ func (t *Tron) validateTRC20Transfer(resource *types.ResourcePath, rule *types.R
 
 	amountHex := callData[72:136]
 	amount := new(big.Int)
-	amount.SetString(amountHex, 16)
+	if _, ok := amount.SetString(amountHex, 16); !ok {
+		return fmt.Errorf("invalid amount hex: %s", amountHex)
+	}
 
 	contractAddr := tx.GetContractAddress()
 
