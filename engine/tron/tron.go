@@ -1,9 +1,12 @@
 package tron
 
 import (
+	cryptoSha256 "crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	chaintron "github.com/vultisig/recipes/chain/tron"
 	stdcompare "github.com/vultisig/recipes/engine/compare"
@@ -65,16 +68,26 @@ func (t *Tron) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	contract := rawData.Contract[0]
-	if contract.Type != "TransferContract" {
-		return fmt.Errorf("only TransferContract is supported, got: %s", contract.Type)
-	}
-
-	if err := t.validateTarget(r, rule.GetTarget(), parsedTx); err != nil {
-		return fmt.Errorf("failed to validate target: %w", err)
-	}
-
-	if err := t.validateParameterConstraints(r, rule.GetParameterConstraints(), parsedTx); err != nil {
-		return fmt.Errorf("failed to validate parameter constraints: %w", err)
+	switch contract.Type {
+	case "TransferContract":
+		if r.GetProtocolId() != "trx" {
+			return fmt.Errorf("unexpected protocol for TransferContract: %s", r.GetProtocolId())
+		}
+		if err := t.validateTarget(r, rule.GetTarget(), parsedTx); err != nil {
+			return fmt.Errorf("failed to validate target: %w", err)
+		}
+		if err := t.validateParameterConstraints(r, rule.GetParameterConstraints(), parsedTx); err != nil {
+			return fmt.Errorf("failed to validate parameter constraints: %w", err)
+		}
+	case "TriggerSmartContract":
+		if r.GetProtocolId() != "trc20" {
+			return fmt.Errorf("unexpected protocol for TriggerSmartContract: %s", r.GetProtocolId())
+		}
+		if err := t.validateTRC20Transfer(r, rule, parsedTx); err != nil {
+			return fmt.Errorf("failed to validate TRC-20 transfer: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported contract type: %s", contract.Type)
 	}
 
 	return nil
@@ -200,8 +213,164 @@ func (t *Tron) assertArgsByType(chainId, inputName string, arg interface{}, cons
 	return nil
 }
 
+// validateTRC20Transfer validates a TRC-20 token transfer (TriggerSmartContract)
+func (t *Tron) validateTRC20Transfer(resource *types.ResourcePath, rule *types.Rule, tx *chaintron.ParsedTronTransaction) error {
+	callData := tx.GetCallData()
+	if callData == "" {
+		return fmt.Errorf("TRC-20 transfer missing call data")
+	}
+
+	if len(callData) < 8 {
+		return fmt.Errorf("call data too short: %s", callData)
+	}
+
+	funcSelector := callData[:8]
+	if funcSelector != "a9059cbb" {
+		return fmt.Errorf("invalid function selector, expected transfer(address,uint256), got: %s", funcSelector)
+	}
+
+	if len(callData) < 136 {
+		return fmt.Errorf("call data incomplete for transfer: need 136 chars (4+32+32 bytes as hex), got %d", len(callData))
+	}
+
+	recipientHex := callData[8:72]
+	recipientAddr, err := t.hexToTronAddress(recipientHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode recipient address: %w", err)
+	}
+
+	amountHex := callData[72:136]
+	amount := new(big.Int)
+	if _, ok := amount.SetString(amountHex, 16); !ok {
+		return fmt.Errorf("invalid amount hex: %s", amountHex)
+	}
+
+	contractAddr := tx.GetContractAddress()
+
+	for _, constraint := range rule.GetParameterConstraints() {
+		switch constraint.GetParameterName() {
+		case "recipient":
+			expectedRecipient := constraint.GetConstraint().GetFixedValue()
+			if expectedRecipient != "" && !strings.EqualFold(recipientAddr, expectedRecipient) {
+				return fmt.Errorf("recipient mismatch: expected %s, got %s", expectedRecipient, recipientAddr)
+			}
+			magicConst := constraint.GetConstraint().GetMagicConstantValue()
+			if magicConst != types.MagicConstant_UNSPECIFIED {
+				resolve, err := resolver.NewMagicConstantRegistry().GetResolver(magicConst)
+				if err != nil {
+					return fmt.Errorf("failed to get resolver: %w", err)
+				}
+				resolvedAddr, _, err := resolve.Resolve(
+					magicConst,
+					resource.ChainId,
+					"default",
+				)
+				if err != nil {
+					return fmt.Errorf("failed to resolve magic constant: %w", err)
+				}
+				if !strings.EqualFold(recipientAddr, resolvedAddr) {
+					return fmt.Errorf("recipient mismatch: expected %s (resolved), got %s", resolvedAddr, recipientAddr)
+				}
+			}
+
+		case "amount":
+			err := stdcompare.AssertArg(
+				resource.ChainId,
+				rule.GetParameterConstraints(),
+				"amount",
+				amount,
+				stdcompare.NewBigInt,
+			)
+			if err != nil {
+				return fmt.Errorf("amount constraint failed: %w", err)
+			}
+
+		case "from_asset":
+			expectedContract := constraint.GetConstraint().GetFixedValue()
+			if expectedContract != "" && !strings.EqualFold(contractAddr, expectedContract) {
+				return fmt.Errorf("contract address mismatch: expected %s, got %s", expectedContract, contractAddr)
+			}
+
+		case "memo":
+			memo := tx.GetMemo()
+			err := stdcompare.AssertArg(
+				resource.ChainId,
+				rule.GetParameterConstraints(),
+				"memo",
+				memo,
+				stdcompare.NewString,
+			)
+			if err != nil {
+				return fmt.Errorf("memo constraint failed: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// hexToTronAddress converts a hex-encoded address (with leading zeros) to TRON base58 address
+func (t *Tron) hexToTronAddress(hexAddr string) (string, error) {
+	hexAddr = strings.TrimPrefix(hexAddr, "0x")
+	hexAddr = strings.TrimLeft(hexAddr, "0")
+	if len(hexAddr) < 40 {
+		hexAddr = strings.Repeat("0", 40-len(hexAddr)) + hexAddr
+	}
+	hexAddr = "41" + hexAddr
+
+	addrBytes, err := hex.DecodeString(hexAddr)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode hex address: %w", err)
+	}
+
+	return tronBase58CheckEncode(addrBytes), nil
+}
+
+// tronBase58CheckEncode encodes bytes to TRON base58check format
+func tronBase58CheckEncode(input []byte) string {
+	firstHash := computeSha256(input)
+	secondHash := computeSha256(firstHash)
+	checksum := secondHash[:4]
+
+	result := make([]byte, len(input)+4)
+	copy(result, input)
+	copy(result[len(input):], checksum)
+
+	return base58Encode(result)
+}
+
+// computeSha256 computes SHA256 hash
+func computeSha256(data []byte) []byte {
+	h := cryptoSha256.Sum256(data)
+	return h[:]
+}
+
+// base58Encode encodes bytes to base58
+func base58Encode(input []byte) string {
+	const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+	x := new(big.Int).SetBytes(input)
+	base := big.NewInt(58)
+	zero := big.NewInt(0)
+	mod := new(big.Int)
+
+	var result []byte
+	for x.Cmp(zero) > 0 {
+		x.DivMod(x, base, mod)
+		result = append([]byte{alphabet[mod.Int64()]}, result...)
+	}
+
+	for _, b := range input {
+		if b != 0 {
+			break
+		}
+		result = append([]byte{alphabet[0]}, result...)
+	}
+
+	return string(result)
+}
+
 // ExtractTxBytes extracts transaction bytes from a base64-encoded Tron transaction.
 func (t *Tron) ExtractTxBytes(txData string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(txData)
 }
-

@@ -127,6 +127,12 @@ func (m *MetaRule) TryFormat(in *types.Rule) ([]*types.Rule, error) {
 			return nil, fmt.Errorf("failed to handle zcash: %w", er)
 		}
 		return out, nil
+	case chain == common.Dash:
+		out, er := m.handleDash(in, r)
+		if er != nil {
+			return nil, fmt.Errorf("failed to handle dash: %w", er)
+		}
+		return out, nil
 	case chain == common.GaiaChain:
 		out, er := m.handleGaia(in, r)
 		if er != nil {
@@ -203,6 +209,15 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 	}
 
 	return res, nil
+}
+
+func extractRoutePreference(constraints []*types.ParameterConstraint) string {
+	for _, pc := range constraints {
+		if pc.GetParameterName() == "route_preference" {
+			return pc.GetConstraint().GetFixedValue()
+		}
+	}
+	return ""
 }
 
 type sendConstraints struct {
@@ -525,63 +540,111 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		}
 
 		rules := make([]*types.Rule, 0)
-
 		isSameChain := chain == toChain
+		routePreference := extractRoutePreference(in.GetParameterConstraints())
 
-		// Priority 1: Try THORChain first (always)
-		out, thorErr := thorchainSwap(chain, c)
-		if thorErr == nil {
-			rules = append(rules, out)
-			router := &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
-				},
+		switch routePreference {
+		case "mayachain":
+			mayaOut, mayaErr := mayachainSwap(chain, c)
+			if mayaErr == nil {
+				rules = append(rules, mayaOut)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
+					},
+				}
+				if c.fromAsset.GetFixedValue() != "" {
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+					rules = append(rules, approve)
+				}
+				return rules, nil
+			}
+			out, thorErr := thorchainSwap(chain, c)
+			if thorErr == nil {
+				rules = append(rules, out)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+					},
+				}
+				if c.fromAsset.GetFixedValue() != "" {
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+					rules = append(rules, approve)
+				}
+				return rules, nil
+			}
+			return nil, fmt.Errorf("mayachain preferred but failed: %v, thorchain fallback: %v", mayaErr, thorErr)
+
+		case "thorchain":
+			out, thorErr := thorchainSwap(chain, c)
+			if thorErr == nil {
+				rules = append(rules, out)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+					},
+				}
+				if c.fromAsset.GetFixedValue() != "" {
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+					rules = append(rules, approve)
+				}
+				return rules, nil
+			}
+			return nil, fmt.Errorf("thorchain required but failed: %v", thorErr)
+
+		default:
+			out, thorErr := thorchainSwap(chain, c)
+			if thorErr == nil {
+				rules = append(rules, out)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+					},
+				}
+				if c.fromAsset.GetFixedValue() != "" {
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+					rules = append(rules, approve)
+				}
+				return rules, nil
 			}
 
+			mayaOut, mayaErr := mayachainSwap(chain, c)
+			if mayaErr == nil {
+				rules = append(rules, mayaOut)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
+					},
+				}
+				if c.fromAsset.GetFixedValue() != "" {
+					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+					rules = append(rules, approve)
+				}
+				return rules, nil
+			}
+
+			if !isSameChain {
+				return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
+			}
+
+			routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
+			if oneinchErr != nil {
+				return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
+			}
+
+			rules = append(rules, swapRule)
 			if c.fromAsset.GetFixedValue() != "" {
-				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
+				spender := fixed(routerAddr)
+				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
 				rules = append(rules, approve)
 			}
 			return rules, nil
 		}
-
-		// Priority 2: Try Maya if THORChain failed
-		mayaOut, mayaErr := mayachainSwap(chain, c)
-		if mayaErr == nil {
-			rules = append(rules, mayaOut)
-			router := &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
-				},
-			}
-
-			if c.fromAsset.GetFixedValue() != "" {
-				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-				rules = append(rules, approve)
-			}
-			return rules, nil
-		}
-
-		// Priority 3: For same-chain only, try 1inch as last resort
-		if !isSameChain {
-			return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
-		}
-
-		routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
-		if oneinchErr != nil {
-			return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
-		}
-
-		rules = append(rules, swapRule)
-		if c.fromAsset.GetFixedValue() != "" {
-			spender := fixed(routerAddr)
-			approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
-			rules = append(rules, approve)
-		}
-
-		return rules, nil
 	case bridge:
 		c, err := getBridgeConstraints(in)
 		if err != nil {
@@ -1304,6 +1367,102 @@ func (m *MetaRule) handleZcash(in *types.Rule, r *types.ResourcePath) ([]*types.
 	}
 }
 
+func (m *MetaRule) handleDash(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
+	switch metaProtocol(r.GetProtocolId()) {
+	case send:
+		c, err := getSendConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `send` constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "dash.dash.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint:    c.toAddress,
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.amount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}}
+		return []*types.Rule{out}, nil
+	case swap:
+		c, err := getSwapConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
+		}
+
+		out := proto.Clone(in).(*types.Rule)
+		out.Resource = "dash.dash.transfer"
+		out.Target = &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+		}
+
+		chainInt, err := common.FromString(c.toChain.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse chain id: %w", err)
+		}
+
+		mayaAsset, err := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
+		if err != nil {
+			return nil, fmt.Errorf("failed to make maya asset: %w", err)
+		}
+
+		shortCode := mayachain.ShortCode(mayaAsset)
+		var assetPattern string
+		if shortCode != "" {
+			assetPattern = fmt.Sprintf("(%s|%s)",
+				regexp.QuoteMeta(mayaAsset),
+				regexp.QuoteMeta(shortCode))
+		} else {
+			assetPattern = regexp.QuoteMeta(mayaAsset)
+		}
+
+		out.ParameterConstraints = []*types.ParameterConstraint{{
+			ParameterName: "output_address_0",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+				Value: &types.Constraint_MagicConstantValue{
+					MagicConstantValue: types.MagicConstant_MAYACHAIN_VAULT,
+				},
+			},
+		}, {
+			ParameterName: "output_value_0",
+			Constraint:    c.fromAmount,
+		}, {
+			ParameterName: "output_address_1",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "output_value_1",
+			Constraint:    anyConstraint(),
+		}, {
+			ParameterName: "output_data_2",
+			Constraint: &types.Constraint{
+				Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+				Value: &types.Constraint_RegexpValue{
+					RegexpValue: fmt.Sprintf(
+						"^=:%s:%s:.*",
+						assetPattern,
+						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+					),
+				},
+			},
+		}}
+		return []*types.Rule{out}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol id for Dash: %s", r.GetProtocolId())
+	}
+}
+
 func getFixed(c *types.Constraint) (string, error) {
 	if c.GetType() != types.ConstraintType_CONSTRAINT_TYPE_FIXED {
 		return "", fmt.Errorf("invalid constraint type: %s", c.GetType())
@@ -1721,8 +1880,14 @@ func (m *MetaRule) handleTron(in *types.Rule, r *types.ResourcePath) ([]*types.R
 			return nil, fmt.Errorf("failed to parse send constraints: %w", err)
 		}
 
+		assetFixed := c.asset.GetFixedValue()
+
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "tron.trx.transfer"
+		if assetFixed != "" {
+			out.Resource = "tron.trc20.transfer"
+		} else {
+			out.Resource = "tron.trx.transfer"
+		}
 		out.Target = &types.Target{
 			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
 		}
@@ -1737,6 +1902,18 @@ func (m *MetaRule) handleTron(in *types.Rule, r *types.ResourcePath) ([]*types.R
 				Constraint:    c.amount,
 			},
 		}
+		if assetFixed != "" {
+			out.ParameterConstraints = append(out.ParameterConstraints, &types.ParameterConstraint{
+				ParameterName: "from_asset",
+				Constraint:    c.asset,
+			})
+			if c.memo != nil {
+				out.ParameterConstraints = append(out.ParameterConstraints, &types.ParameterConstraint{
+					ParameterName: "memo",
+					Constraint:    c.memo,
+				})
+			}
+		}
 
 		return []*types.Rule{out}, nil
 	case swap:
@@ -1746,12 +1923,20 @@ func (m *MetaRule) handleTron(in *types.Rule, r *types.ResourcePath) ([]*types.R
 		}
 
 		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "tron.swap"
-		out.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
-			Target: &types.Target_MagicConstant{
-				MagicConstant: types.MagicConstant_THORCHAIN_VAULT,
-			},
+		assetFixed := c.fromAsset.GetFixedValue()
+		if assetFixed != "" {
+			out.Resource = "tron.trc20.transfer"
+			out.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+			}
+		} else {
+			out.Resource = "tron.swap"
+			out.Target = &types.Target{
+				TargetType: types.TargetType_TARGET_TYPE_MAGIC_CONSTANT,
+				Target: &types.Target_MagicConstant{
+					MagicConstant: types.MagicConstant_THORCHAIN_VAULT,
+				},
+			}
 		}
 
 		chainInt, err := common.FromString(c.toChain.GetFixedValue())
@@ -1802,6 +1987,12 @@ func (m *MetaRule) handleTron(in *types.Rule, r *types.ResourcePath) ([]*types.R
 					},
 				},
 			},
+		}
+		if assetFixed != "" {
+			out.ParameterConstraints = append(out.ParameterConstraints, &types.ParameterConstraint{
+				ParameterName: "from_asset",
+				Constraint:    c.fromAsset,
+			})
 		}
 
 		return []*types.Rule{out}, nil
