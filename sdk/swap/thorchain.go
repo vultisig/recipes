@@ -332,9 +332,12 @@ func (p *THORChainProvider) encodeRouterDeposit(req SwapRequest) ([]byte, *big.I
 	memo := req.Quote.Memo
 	expiry := req.Quote.Expiry
 
-	// For native ETH, asset is the zero address
+	// For native ETH, asset is the zero address and amount param is 0
+	// (the actual ETH amount is sent via msg.value)
+	calldataAmount := amount
 	if asset == "" {
 		asset = "0x0000000000000000000000000000000000000000"
+		calldataAmount = big.NewInt(0)
 	}
 
 	// Default expiry to 15 minutes from now if not set
@@ -343,7 +346,7 @@ func (p *THORChainProvider) encodeRouterDeposit(req SwapRequest) ([]byte, *big.I
 	}
 
 	// Encode calldata
-	calldata, err := encodeDepositWithExpiry(vault, asset, amount, memo, big.NewInt(expiry))
+	calldata, err := encodeDepositWithExpiry(vault, asset, calldataAmount, memo, big.NewInt(expiry))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -521,4 +524,3 @@ type thorChainQuoteResponse struct {
 type thorChainErrorResponse struct {
 	Error string `json:"error"`
 }
-
