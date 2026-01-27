@@ -57,7 +57,7 @@ func TestRouterFindRoute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := router.FindRoute(ctx, tt.from, tt.to)
+			result, err := router.FindRoute(ctx, tt.from, tt.to, nil)
 			if tt.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -393,7 +393,7 @@ func TestSmartProviderRouting(t *testing.T) {
 	router := NewDefaultRouter()
 
 	t.Run("All swaps prefer THORChain first", func(t *testing.T) {
-		ordered := router.getOrderedProviders()
+		ordered := router.getOrderedProviders(nil)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
@@ -404,13 +404,50 @@ func TestSmartProviderRouting(t *testing.T) {
 	})
 
 	t.Run("Cross-chain prefers THORChain", func(t *testing.T) {
-		ordered := router.getOrderedProviders()
+		ordered := router.getOrderedProviders(nil)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
 		}
 		if ordered[0].Name() != "THORChain" {
 			t.Errorf("expected first provider to be THORChain for cross-chain, got %s", ordered[0].Name())
+		}
+	})
+
+	t.Run("Custom preference reorders providers", func(t *testing.T) {
+		pref := &ProviderPreference{
+			Providers: []string{ProviderOneInch, ProviderTHORChain},
+		}
+		ordered := router.getOrderedProviders(pref)
+
+		if len(ordered) == 0 {
+			t.Fatal("expected at least one provider")
+		}
+		if ordered[0].Name() != "1inch" {
+			t.Errorf("expected first provider to be 1inch with custom preference, got %s", ordered[0].Name())
+		}
+		if ordered[1].Name() != "THORChain" {
+			t.Errorf("expected second provider to be THORChain, got %s", ordered[1].Name())
+		}
+	})
+
+	t.Run("OnlyPreferred limits providers", func(t *testing.T) {
+		pref := &ProviderPreference{
+			Providers:     []string{ProviderOneInch, ProviderJupiter},
+			OnlyPreferred: true,
+		}
+		ordered := router.getOrderedProviders(pref)
+
+		if len(ordered) != 2 {
+			t.Errorf("expected 2 providers with OnlyPreferred, got %d", len(ordered))
+		}
+		// Verify only the preferred providers are included
+		names := make(map[string]bool)
+		for _, p := range ordered {
+			names[p.Name()] = true
+		}
+		if !names["1inch"] || !names["Jupiter"] {
+			t.Errorf("expected only 1inch and Jupiter, got %v", names)
 		}
 	})
 

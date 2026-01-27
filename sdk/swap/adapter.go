@@ -45,6 +45,10 @@ type SwapInput struct {
 	ToSymbol   string // Token symbol
 	ToDecimals int    // Token decimals
 	ToAddress  string // Destination address
+
+	// Preference specifies which providers to use and in what order.
+	// If nil, uses default provider order.
+	Preference *ProviderPreference
 }
 
 // SwapOutput contains the result of preparing a swap.
@@ -95,6 +99,7 @@ func (a *ChainAdapter) MakeTx(ctx context.Context, input SwapInput) (*big.Int, [
 		Amount:      input.FromAmount,
 		Sender:      input.FromAddress,
 		Destination: input.ToAddress,
+		Preference:  input.Preference,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get quote: %w", err)
@@ -140,6 +145,7 @@ func (a *ChainAdapter) GetSwap(ctx context.Context, input SwapInput) (*SwapOutpu
 		Amount:      input.FromAmount,
 		Sender:      input.FromAddress,
 		Destination: input.ToAddress,
+		Preference:  input.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -168,7 +174,7 @@ func (a *ChainAdapter) GetSwap(ctx context.Context, input SwapInput) (*SwapOutpu
 
 // IsAvailable checks if swap functionality is available for this chain.
 func (a *ChainAdapter) IsAvailable(ctx context.Context) (bool, error) {
-	route, err := a.router.FindRoute(ctx, Asset{Chain: a.chain}, Asset{Chain: a.chain})
+	route, err := a.router.FindRoute(ctx, Asset{Chain: a.chain}, Asset{Chain: a.chain}, nil)
 	if err != nil {
 		// Propagate errors so callers can distinguish failures from unavailability
 		return false, err
@@ -246,7 +252,7 @@ func (m *MultiChainAdapter) ValidateRoute(ctx context.Context, fromChain, toChai
 	from := Asset{Chain: fromChain}
 	to := Asset{Chain: toChain}
 
-	route, err := m.router.FindRoute(ctx, from, to)
+	route, err := m.router.FindRoute(ctx, from, to, nil)
 	if err != nil {
 		return err
 	}
