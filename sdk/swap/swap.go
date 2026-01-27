@@ -104,7 +104,7 @@ func BuildTx(ctx context.Context, req SwapRequest) (*SwapResult, error) {
 //	    // Swap is possible via route.Provider
 //	}
 func FindRoute(ctx context.Context, from, to Asset) (*RouteResult, error) {
-	return getDefaultRouter().FindRoute(ctx, from, to)
+	return getDefaultRouter().FindRoute(ctx, from, to, nil)
 }
 
 // CanSwap is a convenience function that returns true if a swap is possible

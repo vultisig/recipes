@@ -23,6 +23,19 @@ const (
 	PriorityUniswap   = 6
 )
 
+// ProviderPreference configures which swap providers to use and in what order.
+// When specified, the router will try providers in the order listed.
+type ProviderPreference struct {
+	// Providers lists preferred providers in order of preference.
+	// Use provider name constants: ProviderTHORChain, ProviderMayachain, etc.
+	// If empty, uses default order.
+	Providers []string
+
+	// OnlyPreferred, if true, only tries providers in the Providers list.
+	// If false (default), falls back to other providers if preferred ones fail.
+	OnlyPreferred bool
+}
+
 // SwapProvider defines the interface for swap providers
 type SwapProvider interface {
 	// Name returns the provider's name
@@ -100,6 +113,10 @@ type QuoteRequest struct {
 	Amount      *big.Int // Amount in smallest unit (e.g., satoshis, wei)
 	Destination string   // Destination address for the swap output
 	Sender      string   // Sender address
+
+	// Preference specifies which providers to use and in what order.
+	// If nil, uses default provider order.
+	Preference *ProviderPreference
 }
 
 // Quote represents a swap quote from a provider

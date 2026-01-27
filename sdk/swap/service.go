@@ -45,6 +45,10 @@ type SwapParams struct {
 	Amount      *big.Int // Amount in base units
 	Sender      string   // Sender wallet address
 	Destination string   // Destination wallet address
+
+	// Preference specifies which providers to use and in what order.
+	// If nil, uses default provider order.
+	Preference *ProviderPreference
 }
 
 // SwapTx contains the transaction data ready for signing.
@@ -93,6 +97,7 @@ func (s *Service) GetSwapTx(ctx context.Context, params SwapParams) (*SwapTx, er
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		Preference:  params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -136,7 +141,7 @@ func (s *Service) ValidateRoute(ctx context.Context, params SwapParams) error {
 		Decimals: params.ToDecimals,
 	}
 
-	route, err := s.router.FindRoute(ctx, from, to)
+	route, err := s.router.FindRoute(ctx, from, to, params.Preference)
 	if err != nil {
 		return fmt.Errorf("no route available: %w", err)
 	}
@@ -164,7 +169,7 @@ func (s *Service) GetProviderForRoute(ctx context.Context, params SwapParams) (s
 		Decimals: params.ToDecimals,
 	}
 
-	route, err := s.router.FindRoute(ctx, from, to)
+	route, err := s.router.FindRoute(ctx, from, to, params.Preference)
 	if err != nil {
 		return "", err
 	}
@@ -302,6 +307,7 @@ func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*Swap
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		Preference:  params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -353,6 +359,7 @@ func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, erro
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		Preference:  params.Preference,
 	})
 }
 

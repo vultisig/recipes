@@ -951,35 +951,56 @@ func TestTryFormat_BitcoinSwap(t *testing.T) {
 
 	result, err := metaRule.TryFormat(rule)
 	require.NoError(t, err)
-	require.Len(t, result, 1)
+	// Multi-provider: should generate rules for both THORChain and MayaChain
+	require.Len(t, result, 2)
 
+	// Both rules should have the same resource
 	assert.Equal(t, expectedResource, result[0].Resource)
-	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, result[0].Target.TargetType)
-	require.Len(t, result[0].ParameterConstraints, 5)
+	assert.Equal(t, expectedResource, result[1].Resource)
 
-	paramByName := make(map[string]*types.ParameterConstraint)
-	for _, param := range result[0].ParameterConstraints {
-		paramByName[param.ParameterName] = param
+	// Verify THORChain rule (first)
+	thorRule := result[0]
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, thorRule.Target.TargetType)
+	require.Len(t, thorRule.ParameterConstraints, 5)
+
+	thorParams := make(map[string]*types.ParameterConstraint)
+	for _, param := range thorRule.ParameterConstraints {
+		thorParams[param.ParameterName] = param
 	}
 
-	assert.Contains(t, paramByName, "output_address_0")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, paramByName["output_address_0"].Constraint.Type)
-	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, paramByName["output_address_0"].Constraint.GetMagicConstantValue())
+	assert.Contains(t, thorParams, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, thorParams["output_address_0"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_THORCHAIN_VAULT, thorParams["output_address_0"].Constraint.GetMagicConstantValue())
 
-	assert.Contains(t, paramByName, "output_value_0")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_value_0"].Constraint.Type)
-	assert.Equal(t, fromAmount, paramByName["output_value_0"].Constraint.GetFixedValue())
+	assert.Contains(t, thorParams, "output_value_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, thorParams["output_value_0"].Constraint.Type)
+	assert.Equal(t, fromAmount, thorParams["output_value_0"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "output_address_1")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, paramByName["output_address_1"].Constraint.Type)
-	assert.Equal(t, fromAddress, paramByName["output_address_1"].Constraint.GetFixedValue())
+	assert.Contains(t, thorParams, "output_address_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_FIXED, thorParams["output_address_1"].Constraint.Type)
+	assert.Equal(t, fromAddress, thorParams["output_address_1"].Constraint.GetFixedValue())
 
-	assert.Contains(t, paramByName, "output_value_1")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, paramByName["output_value_1"].Constraint.Type)
+	assert.Contains(t, thorParams, "output_value_1")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_ANY, thorParams["output_value_1"].Constraint.Type)
 
-	assert.Contains(t, paramByName, "output_data_2")
-	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, paramByName["output_data_2"].Constraint.Type)
-	regexpValue := paramByName["output_data_2"].Constraint.GetRegexpValue()
+	// Verify MayaChain rule (second)
+	mayaRule := result[1]
+	assert.Equal(t, types.TargetType_TARGET_TYPE_UNSPECIFIED, mayaRule.Target.TargetType)
+	require.Len(t, mayaRule.ParameterConstraints, 5)
+
+	mayaParams := make(map[string]*types.ParameterConstraint)
+	for _, param := range mayaRule.ParameterConstraints {
+		mayaParams[param.ParameterName] = param
+	}
+
+	assert.Contains(t, mayaParams, "output_address_0")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT, mayaParams["output_address_0"].Constraint.Type)
+	assert.Equal(t, types.MagicConstant_MAYACHAIN_VAULT, mayaParams["output_address_0"].Constraint.GetMagicConstantValue())
+
+	// Verify memo format in THORChain rule
+	assert.Contains(t, thorParams, "output_data_2")
+	assert.Equal(t, types.ConstraintType_CONSTRAINT_TYPE_REGEXP, thorParams["output_data_2"].Constraint.Type)
+	regexpValue := thorParams["output_data_2"].Constraint.GetRegexpValue()
 	assert.Equal(t, regexpValue, fmt.Sprintf(
 		`^=:ETH\.USDC:%s:.*`,
 		toAddress,

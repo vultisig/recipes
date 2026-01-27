@@ -86,14 +86,15 @@ func NewDefaultRouter() *Router {
 }
 
 // FindRoute finds the first available provider that can handle the swap route.
-// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
-func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, error) {
+// If preference is specified, uses that provider order. Otherwise uses default order
+// (THORChain/Mayachain first, then DEX aggregators).
+func (r *Router) FindRoute(ctx context.Context, from, to Asset, preference *ProviderPreference) (*RouteResult, error) {
 	if len(r.providers) == 0 {
 		return nil, ErrNoProvidersConfigured
 	}
 
-	// Get providers in order based on preferred routing priority
-	orderedProviders := r.getOrderedProviders()
+	// Get providers in order based on preference or default routing priority
+	orderedProviders := r.getOrderedProviders(preference)
 
 	var lastErr error
 
@@ -141,14 +142,15 @@ func (r *Router) FindRoute(ctx context.Context, from, to Asset) (*RouteResult, e
 }
 
 // GetQuote gets a swap quote from the first available provider.
-// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
+// If req.Preference is specified, uses that provider order. Otherwise uses default order
+// (THORChain/Mayachain first, then DEX aggregators).
 func (r *Router) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
 	if len(r.providers) == 0 {
 		return nil, ErrNoProvidersConfigured
 	}
 
-	// Get providers in order based on preferred routing priority
-	orderedProviders := r.getOrderedProviders()
+	// Get providers in order based on preference or default routing priority
+	orderedProviders := r.getOrderedProviders(req.Preference)
 
 	var lastErr error
 
@@ -237,14 +239,24 @@ func (r *Router) ListProviders() []string {
 }
 
 // getOrderedProviders returns providers ordered by preference.
-// THORChain/Mayachain are tried first for all swaps, then DEX aggregators.
-func (r *Router) getOrderedProviders() []SwapProvider {
+// If preference is specified, uses that order. Otherwise uses default order
+// (THORChain/Mayachain first, then DEX aggregators).
+func (r *Router) getOrderedProviders(preference *ProviderPreference) []SwapProvider {
+	// Determine which provider order to use
+	preferredOrder := providerOrder
+	onlyPreferred := false
+
+	if preference != nil && len(preference.Providers) > 0 {
+		preferredOrder = preference.Providers
+		onlyPreferred = preference.OnlyPreferred
+	}
+
 	// Build ordered list based on preferred order
 	ordered := make([]SwapProvider, 0, len(r.providers))
 	seen := make(map[string]bool)
 
 	// First, add providers in preferred order
-	for _, name := range providerOrder {
+	for _, name := range preferredOrder {
 		for _, p := range r.providers {
 			if p.Name() == name && !seen[name] {
 				ordered = append(ordered, p)
@@ -254,11 +266,27 @@ func (r *Router) getOrderedProviders() []SwapProvider {
 		}
 	}
 
-	// Then, add any remaining providers not in the preferred list
-	for _, p := range r.providers {
-		if !seen[p.Name()] {
-			ordered = append(ordered, p)
-			seen[p.Name()] = true
+	// If not OnlyPreferred, add remaining providers as fallback
+	if !onlyPreferred {
+		// Add any remaining providers from default order
+		for _, name := range providerOrder {
+			if !seen[name] {
+				for _, p := range r.providers {
+					if p.Name() == name {
+						ordered = append(ordered, p)
+						seen[name] = true
+						break
+					}
+				}
+			}
+		}
+
+		// Then, add any other providers not in either list
+		for _, p := range r.providers {
+			if !seen[p.Name()] {
+				ordered = append(ordered, p)
+				seen[p.Name()] = true
+			}
 		}
 	}
 
