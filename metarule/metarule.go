@@ -1,6 +1,7 @@
 package metarule
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -577,7 +578,7 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 		}
 
 		if len(rules) == 0 {
-			return nil, fmt.Errorf("no swap providers available for this swap configuration")
+			return nil, errors.New("no swap providers available for this swap configuration")
 		}
 		return rules, nil
 	case bridge:
