@@ -211,15 +211,6 @@ func getSwapConstraints(rule *types.Rule) (swapConstraints, error) {
 	return res, nil
 }
 
-func extractRoutePreference(constraints []*types.ParameterConstraint) string {
-	for _, pc := range constraints {
-		if pc.GetParameterName() == "route_preference" {
-			return pc.GetConstraint().GetFixedValue()
-		}
-	}
-	return ""
-}
-
 type sendConstraints struct {
 	asset        *types.Constraint
 	fromAddress  *types.Constraint
@@ -541,110 +532,54 @@ func (m *MetaRule) handleEVM(in *types.Rule, r *types.ResourcePath) ([]*types.Ru
 
 		rules := make([]*types.Rule, 0)
 		isSameChain := chain == toChain
-		routePreference := extractRoutePreference(in.GetParameterConstraints())
 
-		switch routePreference {
-		case "mayachain":
-			mayaOut, mayaErr := mayachainSwap(chain, c)
-			if mayaErr == nil {
-				rules = append(rules, mayaOut)
-				router := &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-					Value: &types.Constraint_MagicConstantValue{
-						MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
-					},
-				}
-				if c.fromAsset.GetFixedValue() != "" {
-					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-					rules = append(rules, approve)
-				}
-				return rules, nil
-			}
-			out, thorErr := thorchainSwap(chain, c)
-			if thorErr == nil {
-				rules = append(rules, out)
-				router := &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-					Value: &types.Constraint_MagicConstantValue{
-						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
-					},
-				}
-				if c.fromAsset.GetFixedValue() != "" {
-					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-					rules = append(rules, approve)
-				}
-				return rules, nil
-			}
-			return nil, fmt.Errorf("mayachain preferred but failed: %v, thorchain fallback: %v", mayaErr, thorErr)
+		// Generate rules for ALL applicable providers.
+		// This allows the plugin to choose the optimal provider at runtime
+		// while ensuring the policy permits any valid provider's transaction.
 
-		case "thorchain":
-			out, thorErr := thorchainSwap(chain, c)
-			if thorErr == nil {
-				rules = append(rules, out)
-				router := &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-					Value: &types.Constraint_MagicConstantValue{
-						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
-					},
-				}
-				if c.fromAsset.GetFixedValue() != "" {
-					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-					rules = append(rules, approve)
-				}
-				return rules, nil
-			}
-			return nil, fmt.Errorf("thorchain required but failed: %v", thorErr)
-
-		default:
-			out, thorErr := thorchainSwap(chain, c)
-			if thorErr == nil {
-				rules = append(rules, out)
-				router := &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-					Value: &types.Constraint_MagicConstantValue{
-						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
-					},
-				}
-				if c.fromAsset.GetFixedValue() != "" {
-					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-					rules = append(rules, approve)
-				}
-				return rules, nil
-			}
-
-			mayaOut, mayaErr := mayachainSwap(chain, c)
-			if mayaErr == nil {
-				rules = append(rules, mayaOut)
-				router := &types.Constraint{
-					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-					Value: &types.Constraint_MagicConstantValue{
-						MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
-					},
-				}
-				if c.fromAsset.GetFixedValue() != "" {
-					approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router)
-					rules = append(rules, approve)
-				}
-				return rules, nil
-			}
-
-			if !isSameChain {
-				return nil, fmt.Errorf("cross-chain swap failed: thorchain error: %w, maya error: %v", thorErr, mayaErr)
-			}
-
-			routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c)
-			if oneinchErr != nil {
-				return nil, fmt.Errorf("all swap providers failed: thorchain: %v, maya: %v, 1inch: %w", thorErr, mayaErr, oneinchErr)
-			}
-
-			rules = append(rules, swapRule)
+		// THORChain (cross-chain and same-chain)
+		if thorRule, thorErr := thorchainSwap(chain, c); thorErr == nil {
+			rules = append(rules, thorRule)
 			if c.fromAsset.GetFixedValue() != "" {
-				spender := fixed(routerAddr)
-				approve := createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender)
-				rules = append(rules, approve)
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_THORCHAIN_ROUTER,
+					},
+				}
+				rules = append(rules, createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router))
 			}
-			return rules, nil
 		}
+
+		// MayaChain (cross-chain and same-chain)
+		if mayaRule, mayaErr := mayachainSwap(chain, c); mayaErr == nil {
+			rules = append(rules, mayaRule)
+			if c.fromAsset.GetFixedValue() != "" {
+				router := &types.Constraint{
+					Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+					Value: &types.Constraint_MagicConstantValue{
+						MagicConstantValue: types.MagicConstant_MAYACHAIN_ROUTER,
+					},
+				}
+				rules = append(rules, createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), router))
+			}
+		}
+
+		// 1inch (same-chain only)
+		if isSameChain {
+			if routerAddr, swapRule, oneinchErr := oneinchSwap(chain, c); oneinchErr == nil {
+				rules = append(rules, swapRule)
+				if c.fromAsset.GetFixedValue() != "" {
+					spender := fixed(routerAddr)
+					rules = append(rules, createApprovalRule(in, chain, c.fromAsset.GetFixedValue(), c.fromAmount.GetFixedValue(), spender))
+				}
+			}
+		}
+
+		if len(rules) == 0 {
+			return nil, fmt.Errorf("no swap providers available for this swap configuration")
+		}
+		return rules, nil
 	case bridge:
 		c, err := getBridgeConstraints(in)
 		if err != nil {
@@ -980,82 +915,83 @@ func (m *MetaRule) handleBitcoin(in *types.Rule, r *types.ResourcePath) ([]*type
 			return nil, fmt.Errorf("failed to parse swap constraints: %w", err)
 		}
 
-		out := proto.Clone(in).(*types.Rule)
-		out.Resource = "bitcoin.btc.transfer"
-		out.Target = &types.Target{
-			TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
-		}
-
 		chainInt, err := common.FromString(c.toChain.GetFixedValue())
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse chain id: %w", err)
 		}
 
-		// Try THORChain first, fall back to Maya for unsupported destinations (like ZEC)
-		thorAsset, thorErr := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
-		var assetPattern string
-		var vaultMagicConst types.MagicConstant
+		rules := make([]*types.Rule, 0)
 
-		if thorErr == nil {
-			vaultMagicConst = types.MagicConstant_THORCHAIN_VAULT
-			shortCode := thorchain.ShortCode(thorAsset)
-			if shortCode != "" {
-				assetPattern = fmt.Sprintf("(%s|%s)",
-					regexp.QuoteMeta(thorAsset),
-					regexp.QuoteMeta(shortCode))
-			} else {
-				assetPattern = regexp.QuoteMeta(thorAsset)
-			}
-		} else {
-			mayaAsset, mayaErr := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue())
-			if mayaErr != nil {
-				return nil, fmt.Errorf("failed to make asset: thorchain: %v, maya: %w", thorErr, mayaErr)
-			}
-			vaultMagicConst = types.MagicConstant_MAYACHAIN_VAULT
-			shortCode := mayachain.ShortCode(mayaAsset)
-			if shortCode != "" {
-				assetPattern = fmt.Sprintf("(%s|%s)",
-					regexp.QuoteMeta(mayaAsset),
-					regexp.QuoteMeta(shortCode))
-			} else {
-				assetPattern = regexp.QuoteMeta(mayaAsset)
-			}
+		// Try THORChain
+		if thorAsset, thorErr := thorchain.MakeAsset(chainInt, c.toAsset.GetFixedValue()); thorErr == nil {
+			thorRule := createBitcoinSwapRule(in, c, types.MagicConstant_THORCHAIN_VAULT, thorAsset, thorchain.ShortCode)
+			rules = append(rules, thorRule)
 		}
 
-		out.ParameterConstraints = []*types.ParameterConstraint{{
-			ParameterName: "output_address_0",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
-				Value: &types.Constraint_MagicConstantValue{
-					MagicConstantValue: vaultMagicConst,
-				},
-			},
-		}, {
-			ParameterName: "output_value_0",
-			Constraint:    c.fromAmount,
-		}, {
-			ParameterName: "output_address_1",
-			Constraint:    c.fromAddress,
-		}, {
-			ParameterName: "output_value_1",
-			Constraint:    anyConstraint(),
-		}, {
-			ParameterName: "output_data_2",
-			Constraint: &types.Constraint{
-				Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
-				Value: &types.Constraint_RegexpValue{
-					RegexpValue: fmt.Sprintf(
-						"^=:%s:%s:.*", // swap_command:asset:address:any(streaming options, min amount out, etc.)
-						assetPattern,
-						regexp.QuoteMeta(c.toAddress.GetFixedValue()),
-					),
-				},
-			},
-		}}
-		return []*types.Rule{out}, nil
+		// Try MayaChain
+		if mayaAsset, mayaErr := mayachain.MakeAsset(chainInt, c.toAsset.GetFixedValue()); mayaErr == nil {
+			mayaRule := createBitcoinSwapRule(in, c, types.MagicConstant_MAYACHAIN_VAULT, mayaAsset, mayachain.ShortCode)
+			rules = append(rules, mayaRule)
+		}
+
+		if len(rules) == 0 {
+			return nil, fmt.Errorf("no swap providers support this route")
+		}
+		return rules, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol id: %s", r.GetProtocolId())
 	}
+}
+
+// createBitcoinSwapRule creates a Bitcoin swap rule for a given provider (THORChain or MayaChain).
+func createBitcoinSwapRule(in *types.Rule, c swapConstraints, vaultMagicConst types.MagicConstant, asset string, shortCodeFn func(string) string) *types.Rule {
+	out := proto.Clone(in).(*types.Rule)
+	out.Resource = "bitcoin.btc.transfer"
+	out.Target = &types.Target{
+		TargetType: types.TargetType_TARGET_TYPE_UNSPECIFIED,
+	}
+
+	var assetPattern string
+	shortCode := shortCodeFn(asset)
+	if shortCode != "" {
+		assetPattern = fmt.Sprintf("(%s|%s)",
+			regexp.QuoteMeta(asset),
+			regexp.QuoteMeta(shortCode))
+	} else {
+		assetPattern = regexp.QuoteMeta(asset)
+	}
+
+	out.ParameterConstraints = []*types.ParameterConstraint{{
+		ParameterName: "output_address_0",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_MAGIC_CONSTANT,
+			Value: &types.Constraint_MagicConstantValue{
+				MagicConstantValue: vaultMagicConst,
+			},
+		},
+	}, {
+		ParameterName: "output_value_0",
+		Constraint:    c.fromAmount,
+	}, {
+		ParameterName: "output_address_1",
+		Constraint:    c.fromAddress,
+	}, {
+		ParameterName: "output_value_1",
+		Constraint:    anyConstraint(),
+	}, {
+		ParameterName: "output_data_2",
+		Constraint: &types.Constraint{
+			Type: types.ConstraintType_CONSTRAINT_TYPE_REGEXP,
+			Value: &types.Constraint_RegexpValue{
+				RegexpValue: fmt.Sprintf(
+					"^=:%s:%s:.*", // swap_command:asset:address:any(streaming options, min amount out, etc.)
+					assetPattern,
+					regexp.QuoteMeta(c.toAddress.GetFixedValue()),
+				),
+			},
+		},
+	}}
+	return out
 }
 
 func (m *MetaRule) handleXRP(in *types.Rule, r *types.ResourcePath) ([]*types.Rule, error) {
