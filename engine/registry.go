@@ -11,6 +11,7 @@ import (
 	"github.com/vultisig/recipes/engine/tron"
 	"github.com/vultisig/recipes/engine/utxo/bitcoin"
 	"github.com/vultisig/recipes/engine/utxo/bitcoincash"
+	"github.com/vultisig/recipes/engine/utxo/dash"
 	"github.com/vultisig/recipes/engine/utxo/dogecoin"
 	"github.com/vultisig/recipes/engine/utxo/litecoin"
 	"github.com/vultisig/recipes/engine/utxo/zcash"
@@ -81,6 +82,9 @@ func NewChainEngineRegistry() (*ChainEngineRegistry, error) {
 
 	// Register Zcash engine
 	registry.Register(zcash.NewZcash())
+
+	// Register Dash engine
+	registry.Register(dash.NewDash())
 
 	// Register Solana engine
 	solEng, err := solana.NewSolana()
