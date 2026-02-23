@@ -243,6 +243,14 @@ var (
 		EVMChainID:     324,
 		NativeProtocol: "eth",
 	}
+
+	MantleConfig = ChainConfig{
+		ID:             "mantle",
+		Name:           "Mantle",
+		Description:    "Mantle is a high-performance Ethereum L2 built with modular architecture.",
+		EVMChainID:     5000,
+		NativeProtocol: "mnt",
+	}
 )
 
 // AllEVMChainConfigs returns all predefined EVM chain configurations.
@@ -255,6 +263,7 @@ func AllEVMChainConfigs() []ChainConfig {
 		BSCConfig,
 		BlastConfig,
 		CronosConfig,
+		MantleConfig,
 		OptimismConfig,
 		PolygonConfig,
 		ZksyncConfig,

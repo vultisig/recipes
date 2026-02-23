@@ -123,7 +123,36 @@ func (sdk *SDK) MakeTx(
 	data []byte,
 	nonceOffset uint64,
 ) (UnsignedTx, error) {
-	nonce, gasLimit, gasTipCap, maxFeePerGas, accessList, err := sdk.estimateTx(ctx, from, to, value, data, nonceOffset)
+	nonce, gasLimit, gasTipCap, maxFeePerGas, accessList, err := sdk.estimateTx(ctx, from, to, value, data, nonceOffset, 0)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.estimateTx: %w", err)
+	}
+
+	tx, err := sdk.encodeDynamicFeeTx(
+		nonce,
+		to,
+		gasTipCap,
+		maxFeePerGas,
+		gasLimit,
+		value,
+		data,
+		accessList,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.encodeDynamicFeeTx: %w", err)
+	}
+	return tx, nil
+}
+
+func (sdk *SDK) MakeTxWithGasLimit(
+	ctx context.Context,
+	from, to common.Address,
+	value *big.Int,
+	data []byte,
+	nonceOffset uint64,
+	gasLimit uint64,
+) (UnsignedTx, error) {
+	nonce, _, gasTipCap, maxFeePerGas, accessList, err := sdk.estimateTx(ctx, from, to, value, data, nonceOffset, gasLimit)
 	if err != nil {
 		return nil, fmt.Errorf("sdk.estimateTx: %w", err)
 	}
@@ -208,22 +237,27 @@ func (sdk *SDK) estimateTx(
 	value *big.Int,
 	data []byte,
 	nonceOffset uint64,
+	fixedGasLimit uint64,
 ) (uint64, uint64, *big.Int, *big.Int, types.AccessList, error) {
 	var eg errgroup.Group
 	var gasLimit uint64
-	eg.Go(func() error {
-		r, e := sdk.rpcClient.EstimateGas(ctx, ethereum.CallMsg{
-			From:  from,
-			To:    &to,
-			Data:  data,
-			Value: value,
+	if fixedGasLimit > 0 {
+		gasLimit = fixedGasLimit
+	} else {
+		eg.Go(func() error {
+			r, e := sdk.rpcClient.EstimateGas(ctx, ethereum.CallMsg{
+				From:  from,
+				To:    &to,
+				Data:  data,
+				Value: value,
+			})
+			if e != nil {
+				return fmt.Errorf("sdk.rpcClient.EstimateGas: %v", e)
+			}
+			gasLimit = r + r/2
+			return nil
 		})
-		if e != nil {
-			return fmt.Errorf("sdk.rpcClient.EstimateGas: %v", e)
-		}
-		gasLimit = r + r/2
-		return nil
-	})
+	}
 
 	var gasTipCap *big.Int
 	eg.Go(func() error {
