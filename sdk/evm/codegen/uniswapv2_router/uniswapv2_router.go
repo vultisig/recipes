@@ -63,7 +63,8 @@ func (uniswapv2Router *Uniswapv2Router) PackConstructor(_factory common.Address,
 }
 
 // PackWETH is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xad5c4648.
+// the contract method with ID 0xad5c4648.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function WETH() view returns(address)
 func (uniswapv2Router *Uniswapv2Router) PackWETH() []byte {
@@ -72,6 +73,15 @@ func (uniswapv2Router *Uniswapv2Router) PackWETH() []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackWETH is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xad5c4648.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function WETH() view returns(address)
+func (uniswapv2Router *Uniswapv2Router) TryPackWETH() ([]byte, error) {
+	return uniswapv2Router.abi.Pack("WETH")
 }
 
 // UnpackWETH is the Go binding that unpacks the parameters returned
@@ -84,11 +94,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackWETH(data []byte) (common.Address,
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackAddLiquidity is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xe8e33700.
+// the contract method with ID 0xe8e33700.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function addLiquidity(address tokenA, address tokenB, uint256 amountADesired, uint256 amountBDesired, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline) returns(uint256 amountA, uint256 amountB, uint256 liquidity)
 func (uniswapv2Router *Uniswapv2Router) PackAddLiquidity(tokenA common.Address, tokenB common.Address, amountADesired *big.Int, amountBDesired *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int) []byte {
@@ -97,6 +108,15 @@ func (uniswapv2Router *Uniswapv2Router) PackAddLiquidity(tokenA common.Address, 
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackAddLiquidity is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xe8e33700.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function addLiquidity(address tokenA, address tokenB, uint256 amountADesired, uint256 amountBDesired, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline) returns(uint256 amountA, uint256 amountB, uint256 liquidity)
+func (uniswapv2Router *Uniswapv2Router) TryPackAddLiquidity(tokenA common.Address, tokenB common.Address, amountADesired *big.Int, amountBDesired *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("addLiquidity", tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, to, deadline)
 }
 
 // AddLiquidityOutput serves as a container for the return parameters of contract
@@ -120,12 +140,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackAddLiquidity(data []byte) (AddLiqu
 	outstruct.AmountA = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountB = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
 	outstruct.Liquidity = abi.ConvertType(out[2], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackAddLiquidityETH is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xf305d719.
+// the contract method with ID 0xf305d719.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function addLiquidityETH(address token, uint256 amountTokenDesired, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) payable returns(uint256 amountToken, uint256 amountETH, uint256 liquidity)
 func (uniswapv2Router *Uniswapv2Router) PackAddLiquidityETH(token common.Address, amountTokenDesired *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) []byte {
@@ -134,6 +154,15 @@ func (uniswapv2Router *Uniswapv2Router) PackAddLiquidityETH(token common.Address
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackAddLiquidityETH is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xf305d719.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function addLiquidityETH(address token, uint256 amountTokenDesired, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) payable returns(uint256 amountToken, uint256 amountETH, uint256 liquidity)
+func (uniswapv2Router *Uniswapv2Router) TryPackAddLiquidityETH(token common.Address, amountTokenDesired *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("addLiquidityETH", token, amountTokenDesired, amountTokenMin, amountETHMin, to, deadline)
 }
 
 // AddLiquidityETHOutput serves as a container for the return parameters of contract
@@ -157,12 +186,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackAddLiquidityETH(data []byte) (AddL
 	outstruct.AmountToken = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountETH = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
 	outstruct.Liquidity = abi.ConvertType(out[2], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackFactory is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xc45a0155.
+// the contract method with ID 0xc45a0155.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function factory() view returns(address)
 func (uniswapv2Router *Uniswapv2Router) PackFactory() []byte {
@@ -171,6 +200,15 @@ func (uniswapv2Router *Uniswapv2Router) PackFactory() []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackFactory is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xc45a0155.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function factory() view returns(address)
+func (uniswapv2Router *Uniswapv2Router) TryPackFactory() ([]byte, error) {
+	return uniswapv2Router.abi.Pack("factory")
 }
 
 // UnpackFactory is the Go binding that unpacks the parameters returned
@@ -183,11 +221,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackFactory(data []byte) (common.Addre
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackGetAmountIn is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x85f8c259.
+// the contract method with ID 0x85f8c259.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut) pure returns(uint256 amountIn)
 func (uniswapv2Router *Uniswapv2Router) PackGetAmountIn(amountOut *big.Int, reserveIn *big.Int, reserveOut *big.Int) []byte {
@@ -196,6 +235,15 @@ func (uniswapv2Router *Uniswapv2Router) PackGetAmountIn(amountOut *big.Int, rese
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackGetAmountIn is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x85f8c259.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut) pure returns(uint256 amountIn)
+func (uniswapv2Router *Uniswapv2Router) TryPackGetAmountIn(amountOut *big.Int, reserveIn *big.Int, reserveOut *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("getAmountIn", amountOut, reserveIn, reserveOut)
 }
 
 // UnpackGetAmountIn is the Go binding that unpacks the parameters returned
@@ -208,11 +256,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackGetAmountIn(data []byte) (*big.Int
 		return new(big.Int), err
 	}
 	out0 := abi.ConvertType(out[0], new(big.Int)).(*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackGetAmountOut is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x054d50d4.
+// the contract method with ID 0x054d50d4.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) pure returns(uint256 amountOut)
 func (uniswapv2Router *Uniswapv2Router) PackGetAmountOut(amountIn *big.Int, reserveIn *big.Int, reserveOut *big.Int) []byte {
@@ -221,6 +270,15 @@ func (uniswapv2Router *Uniswapv2Router) PackGetAmountOut(amountIn *big.Int, rese
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackGetAmountOut is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x054d50d4.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) pure returns(uint256 amountOut)
+func (uniswapv2Router *Uniswapv2Router) TryPackGetAmountOut(amountIn *big.Int, reserveIn *big.Int, reserveOut *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("getAmountOut", amountIn, reserveIn, reserveOut)
 }
 
 // UnpackGetAmountOut is the Go binding that unpacks the parameters returned
@@ -233,11 +291,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackGetAmountOut(data []byte) (*big.In
 		return new(big.Int), err
 	}
 	out0 := abi.ConvertType(out[0], new(big.Int)).(*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackGetAmountsIn is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x1f00ca74.
+// the contract method with ID 0x1f00ca74.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function getAmountsIn(uint256 amountOut, address[] path) view returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackGetAmountsIn(amountOut *big.Int, path []common.Address) []byte {
@@ -246,6 +305,15 @@ func (uniswapv2Router *Uniswapv2Router) PackGetAmountsIn(amountOut *big.Int, pat
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackGetAmountsIn is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x1f00ca74.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function getAmountsIn(uint256 amountOut, address[] path) view returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackGetAmountsIn(amountOut *big.Int, path []common.Address) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("getAmountsIn", amountOut, path)
 }
 
 // UnpackGetAmountsIn is the Go binding that unpacks the parameters returned
@@ -258,11 +326,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackGetAmountsIn(data []byte) ([]*big.
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackGetAmountsOut is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xd06ca61f.
+// the contract method with ID 0xd06ca61f.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function getAmountsOut(uint256 amountIn, address[] path) view returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackGetAmountsOut(amountIn *big.Int, path []common.Address) []byte {
@@ -271,6 +340,15 @@ func (uniswapv2Router *Uniswapv2Router) PackGetAmountsOut(amountIn *big.Int, pat
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackGetAmountsOut is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xd06ca61f.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function getAmountsOut(uint256 amountIn, address[] path) view returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackGetAmountsOut(amountIn *big.Int, path []common.Address) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("getAmountsOut", amountIn, path)
 }
 
 // UnpackGetAmountsOut is the Go binding that unpacks the parameters returned
@@ -283,11 +361,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackGetAmountsOut(data []byte) ([]*big
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackQuote is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xad615dec.
+// the contract method with ID 0xad615dec.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function quote(uint256 amountA, uint256 reserveA, uint256 reserveB) pure returns(uint256 amountB)
 func (uniswapv2Router *Uniswapv2Router) PackQuote(amountA *big.Int, reserveA *big.Int, reserveB *big.Int) []byte {
@@ -296,6 +375,15 @@ func (uniswapv2Router *Uniswapv2Router) PackQuote(amountA *big.Int, reserveA *bi
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackQuote is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xad615dec.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function quote(uint256 amountA, uint256 reserveA, uint256 reserveB) pure returns(uint256 amountB)
+func (uniswapv2Router *Uniswapv2Router) TryPackQuote(amountA *big.Int, reserveA *big.Int, reserveB *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("quote", amountA, reserveA, reserveB)
 }
 
 // UnpackQuote is the Go binding that unpacks the parameters returned
@@ -308,11 +396,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackQuote(data []byte) (*big.Int, erro
 		return new(big.Int), err
 	}
 	out0 := abi.ConvertType(out[0], new(big.Int)).(*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackRemoveLiquidity is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xbaa2abde.
+// the contract method with ID 0xbaa2abde.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidity(address tokenA, address tokenB, uint256 liquidity, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline) returns(uint256 amountA, uint256 amountB)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidity(tokenA common.Address, tokenB common.Address, liquidity *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int) []byte {
@@ -321,6 +410,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidity(tokenA common.Addres
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidity is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xbaa2abde.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidity(address tokenA, address tokenB, uint256 liquidity, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline) returns(uint256 amountA, uint256 amountB)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidity(tokenA common.Address, tokenB common.Address, liquidity *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidity", tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline)
 }
 
 // RemoveLiquidityOutput serves as a container for the return parameters of contract
@@ -342,12 +440,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidity(data []byte) (Remo
 	}
 	outstruct.AmountA = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountB = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackRemoveLiquidityETH is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x02751cec.
+// the contract method with ID 0x02751cec.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidityETH(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) returns(uint256 amountToken, uint256 amountETH)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETH(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) []byte {
@@ -356,6 +454,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETH(token common.Addr
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidityETH is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x02751cec.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidityETH(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) returns(uint256 amountToken, uint256 amountETH)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidityETH(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidityETH", token, liquidity, amountTokenMin, amountETHMin, to, deadline)
 }
 
 // RemoveLiquidityETHOutput serves as a container for the return parameters of contract
@@ -377,12 +484,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidityETH(data []byte) (R
 	}
 	outstruct.AmountToken = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountETH = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackRemoveLiquidityETHSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xaf2979eb.
+// the contract method with ID 0xaf2979eb.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidityETHSupportingFeeOnTransferTokens(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) returns(uint256 amountETH)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHSupportingFeeOnTransferTokens(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) []byte {
@@ -391,6 +498,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHSupportingFeeOnTra
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidityETHSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xaf2979eb.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidityETHSupportingFeeOnTransferTokens(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline) returns(uint256 amountETH)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidityETHSupportingFeeOnTransferTokens(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidityETHSupportingFeeOnTransferTokens", token, liquidity, amountTokenMin, amountETHMin, to, deadline)
 }
 
 // UnpackRemoveLiquidityETHSupportingFeeOnTransferTokens is the Go binding that unpacks the parameters returned
@@ -403,11 +519,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidityETHSupportingFeeOnT
 		return new(big.Int), err
 	}
 	out0 := abi.ConvertType(out[0], new(big.Int)).(*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackRemoveLiquidityETHWithPermit is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xded9382a.
+// the contract method with ID 0xded9382a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidityETHWithPermit(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountToken, uint256 amountETH)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHWithPermit(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) []byte {
@@ -416,6 +533,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHWithPermit(token c
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidityETHWithPermit is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xded9382a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidityETHWithPermit(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountToken, uint256 amountETH)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidityETHWithPermit(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidityETHWithPermit", token, liquidity, amountTokenMin, amountETHMin, to, deadline, approveMax, v, r, s)
 }
 
 // RemoveLiquidityETHWithPermitOutput serves as a container for the return parameters of contract
@@ -437,12 +563,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidityETHWithPermit(data 
 	}
 	outstruct.AmountToken = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountETH = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x5b0d5984.
+// the contract method with ID 0x5b0d5984.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountETH)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) []byte {
@@ -451,6 +577,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityETHWithPermitSupporti
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x5b0d5984.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(address token, uint256 liquidity, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountETH)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens(token common.Address, liquidity *big.Int, amountTokenMin *big.Int, amountETHMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidityETHWithPermitSupportingFeeOnTransferTokens", token, liquidity, amountTokenMin, amountETHMin, to, deadline, approveMax, v, r, s)
 }
 
 // UnpackRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens is the Go binding that unpacks the parameters returned
@@ -463,11 +598,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidityETHWithPermitSuppor
 		return new(big.Int), err
 	}
 	out0 := abi.ConvertType(out[0], new(big.Int)).(*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackRemoveLiquidityWithPermit is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x2195995c.
+// the contract method with ID 0x2195995c.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function removeLiquidityWithPermit(address tokenA, address tokenB, uint256 liquidity, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountA, uint256 amountB)
 func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityWithPermit(tokenA common.Address, tokenB common.Address, liquidity *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) []byte {
@@ -476,6 +612,15 @@ func (uniswapv2Router *Uniswapv2Router) PackRemoveLiquidityWithPermit(tokenA com
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackRemoveLiquidityWithPermit is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x2195995c.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function removeLiquidityWithPermit(address tokenA, address tokenB, uint256 liquidity, uint256 amountAMin, uint256 amountBMin, address to, uint256 deadline, bool approveMax, uint8 v, bytes32 r, bytes32 s) returns(uint256 amountA, uint256 amountB)
+func (uniswapv2Router *Uniswapv2Router) TryPackRemoveLiquidityWithPermit(tokenA common.Address, tokenB common.Address, liquidity *big.Int, amountAMin *big.Int, amountBMin *big.Int, to common.Address, deadline *big.Int, approveMax bool, v uint8, r [32]byte, s [32]byte) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("removeLiquidityWithPermit", tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline, approveMax, v, r, s)
 }
 
 // RemoveLiquidityWithPermitOutput serves as a container for the return parameters of contract
@@ -497,12 +642,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackRemoveLiquidityWithPermit(data []b
 	}
 	outstruct.AmountA = abi.ConvertType(out[0], new(big.Int)).(*big.Int)
 	outstruct.AmountB = abi.ConvertType(out[1], new(big.Int)).(*big.Int)
-	return *outstruct, err
-
+	return *outstruct, nil
 }
 
 // PackSwapETHForExactTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xfb3bdb41.
+// the contract method with ID 0xfb3bdb41.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapETHForExactTokens(uint256 amountOut, address[] path, address to, uint256 deadline) payable returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapETHForExactTokens(amountOut *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -511,6 +656,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapETHForExactTokens(amountOut *big
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapETHForExactTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xfb3bdb41.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapETHForExactTokens(uint256 amountOut, address[] path, address to, uint256 deadline) payable returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapETHForExactTokens(amountOut *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapETHForExactTokens", amountOut, path, to, deadline)
 }
 
 // UnpackSwapETHForExactTokens is the Go binding that unpacks the parameters returned
@@ -523,11 +677,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapETHForExactTokens(data []byte)
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackSwapExactETHForTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x7ff36ab5.
+// the contract method with ID 0x7ff36ab5.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactETHForTokens(amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -536,6 +691,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactETHForTokens(amountOutMin *
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapExactETHForTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x7ff36ab5.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactETHForTokens(amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactETHForTokens", amountOutMin, path, to, deadline)
 }
 
 // UnpackSwapExactETHForTokens is the Go binding that unpacks the parameters returned
@@ -548,11 +712,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapExactETHForTokens(data []byte)
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackSwapExactETHForTokensSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xb6f9de95.
+// the contract method with ID 0xb6f9de95.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns()
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactETHForTokensSupportingFeeOnTransferTokens(amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -563,8 +728,18 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactETHForTokensSupportingFeeOn
 	return enc
 }
 
+// TryPackSwapExactETHForTokensSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xb6f9de95.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns()
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactETHForTokensSupportingFeeOnTransferTokens(amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactETHForTokensSupportingFeeOnTransferTokens", amountOutMin, path, to, deadline)
+}
+
 // PackSwapExactTokensForETH is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x18cbafe5.
+// the contract method with ID 0x18cbafe5.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForETH(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -573,6 +748,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForETH(amountIn *big.
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapExactTokensForETH is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x18cbafe5.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactTokensForETH(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactTokensForETH", amountIn, amountOutMin, path, to, deadline)
 }
 
 // UnpackSwapExactTokensForETH is the Go binding that unpacks the parameters returned
@@ -585,11 +769,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapExactTokensForETH(data []byte)
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackSwapExactTokensForETHSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x791ac947.
+// the contract method with ID 0x791ac947.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns()
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForETHSupportingFeeOnTransferTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -600,8 +785,18 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForETHSupportingFeeOn
 	return enc
 }
 
+// TryPackSwapExactTokensForETHSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x791ac947.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns()
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactTokensForETHSupportingFeeOnTransferTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactTokensForETHSupportingFeeOnTransferTokens", amountIn, amountOutMin, path, to, deadline)
+}
+
 // PackSwapExactTokensForTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x38ed1739.
+// the contract method with ID 0x38ed1739.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -610,6 +805,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForTokens(amountIn *b
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapExactTokensForTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x38ed1739.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactTokensForTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactTokensForTokens", amountIn, amountOutMin, path, to, deadline)
 }
 
 // UnpackSwapExactTokensForTokens is the Go binding that unpacks the parameters returned
@@ -622,11 +826,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapExactTokensForTokens(data []by
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackSwapExactTokensForTokensSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x5c11d795.
+// the contract method with ID 0x5c11d795.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns()
 func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -637,8 +842,18 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapExactTokensForTokensSupportingFe
 	return enc
 }
 
+// TryPackSwapExactTokensForTokensSupportingFeeOnTransferTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x5c11d795.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns()
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn *big.Int, amountOutMin *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapExactTokensForTokensSupportingFeeOnTransferTokens", amountIn, amountOutMin, path, to, deadline)
+}
+
 // PackSwapTokensForExactETH is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x4a25d94a.
+// the contract method with ID 0x4a25d94a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapTokensForExactETH(amountOut *big.Int, amountInMax *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -647,6 +862,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapTokensForExactETH(amountOut *big
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapTokensForExactETH is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x4a25d94a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapTokensForExactETH(amountOut *big.Int, amountInMax *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapTokensForExactETH", amountOut, amountInMax, path, to, deadline)
 }
 
 // UnpackSwapTokensForExactETH is the Go binding that unpacks the parameters returned
@@ -659,11 +883,12 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapTokensForExactETH(data []byte)
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
 
 // PackSwapTokensForExactTokens is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x8803dbee.
+// the contract method with ID 0x8803dbee.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function swapTokensForExactTokens(uint256 amountOut, uint256 amountInMax, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
 func (uniswapv2Router *Uniswapv2Router) PackSwapTokensForExactTokens(amountOut *big.Int, amountInMax *big.Int, path []common.Address, to common.Address, deadline *big.Int) []byte {
@@ -672,6 +897,15 @@ func (uniswapv2Router *Uniswapv2Router) PackSwapTokensForExactTokens(amountOut *
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackSwapTokensForExactTokens is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x8803dbee.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function swapTokensForExactTokens(uint256 amountOut, uint256 amountInMax, address[] path, address to, uint256 deadline) returns(uint256[] amounts)
+func (uniswapv2Router *Uniswapv2Router) TryPackSwapTokensForExactTokens(amountOut *big.Int, amountInMax *big.Int, path []common.Address, to common.Address, deadline *big.Int) ([]byte, error) {
+	return uniswapv2Router.abi.Pack("swapTokensForExactTokens", amountOut, amountInMax, path, to, deadline)
 }
 
 // UnpackSwapTokensForExactTokens is the Go binding that unpacks the parameters returned
@@ -684,5 +918,5 @@ func (uniswapv2Router *Uniswapv2Router) UnpackSwapTokensForExactTokens(data []by
 		return *new([]*big.Int), err
 	}
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	return out0, err
+	return out0, nil
 }
