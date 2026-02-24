@@ -114,9 +114,7 @@ func ExtractPubKeyFromScriptSig(scriptSig []byte) ([]byte, error) {
 	}
 
 	// Next byte is the pubkey push length
-	pubKeyPushLen := int(scriptSig[offset])
-
-	// Compressed pubkey is 33 bytes, uncompressed is 65 bytes
+	pubKeyPushLen := int(scriptSig[offset])	// Compressed pubkey is 33 bytes, uncompressed is 65 bytes
 	if pubKeyPushLen != 33 && pubKeyPushLen != 65 {
 		return nil, fmt.Errorf("invalid pubkey length: %d", pubKeyPushLen)
 	}

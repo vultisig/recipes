@@ -1,7 +1,7 @@
 // Code generated via abigen V2 - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package thorchain_router
+package mayachain_router
 
 import (
 	"bytes"
@@ -30,29 +30,29 @@ type THORChainRouterCoin struct {
 	Amount *big.Int
 }
 
-// ThorchainRouterMetaData contains all meta data concerning the ThorchainRouter contract.
-var ThorchainRouterMetaData = bind.MetaData{
+// MayachainRouterMetaData contains all meta data concerning the MayachainRouter contract.
+var MayachainRouterMetaData = bind.MetaData{
 	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"rune\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldVault\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"TransferAllowance\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"TransferOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"finalAsset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"TransferOutAndCall\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldVault\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newVault\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"indexed\":false,\"internalType\":\"structTHORChain_Router.Coin[]\",\"name\":\"coins\",\"type\":\"tuple[]\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"VaultTransfer\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"RUNE\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"vault\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"vault\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"expiration\",\"type\":\"uint256\"}],\"name\":\"depositWithExpiry\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"router\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"asgard\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structTHORChain_Router.Coin[]\",\"name\":\"coins\",\"type\":\"tuple[]\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"returnVaultAssets\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"router\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newVault\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"transferAllowance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"transferOut\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"finalToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"}],\"name\":\"transferOutAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"vault\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"vaultAllowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	ID:  "ThorchainRouter",
+	ID:  "MayachainRouter",
 }
 
-// ThorchainRouter is an auto generated Go binding around an Ethereum contract.
-type ThorchainRouter struct {
+// MayachainRouter is an auto generated Go binding around an Ethereum contract.
+type MayachainRouter struct {
 	abi abi.ABI
 }
 
-// NewThorchainRouter creates a new instance of ThorchainRouter.
-func NewThorchainRouter() *ThorchainRouter {
-	parsed, err := ThorchainRouterMetaData.ParseABI()
+// NewMayachainRouter creates a new instance of MayachainRouter.
+func NewMayachainRouter() *MayachainRouter {
+	parsed, err := MayachainRouterMetaData.ParseABI()
 	if err != nil {
 		panic(errors.New("invalid ABI: " + err.Error()))
 	}
-	return &ThorchainRouter{abi: *parsed}
+	return &MayachainRouter{abi: *parsed}
 }
 
 // Instance creates a wrapper for a deployed contract instance at the given address.
 // Use this to create the instance object passed to abigen v2 library functions Call, Transact, etc.
-func (c *ThorchainRouter) Instance(backend bind.ContractBackend, addr common.Address) *bind.BoundContract {
+func (c *MayachainRouter) Instance(backend bind.ContractBackend, addr common.Address) *bind.BoundContract {
 	return bind.NewBoundContract(addr, c.abi, backend, backend, backend)
 }
 
@@ -60,8 +60,8 @@ func (c *ThorchainRouter) Instance(backend bind.ContractBackend, addr common.Add
 // contract deployment.
 //
 // Solidity: constructor(address rune) returns()
-func (thorchainRouter *ThorchainRouter) PackConstructor(rune common.Address) []byte {
-	enc, err := thorchainRouter.abi.Pack("", rune)
+func (mayachainRouter *MayachainRouter) PackConstructor(rune common.Address) []byte {
+	enc, err := mayachainRouter.abi.Pack("", rune)
 	if err != nil {
 		panic(err)
 	}
@@ -73,8 +73,8 @@ func (thorchainRouter *ThorchainRouter) PackConstructor(rune common.Address) []b
 // invalid/nil inputs are passed.
 //
 // Solidity: function RUNE() view returns(address)
-func (thorchainRouter *ThorchainRouter) PackRUNE() []byte {
-	enc, err := thorchainRouter.abi.Pack("RUNE")
+func (mayachainRouter *MayachainRouter) PackRUNE() []byte {
+	enc, err := mayachainRouter.abi.Pack("RUNE")
 	if err != nil {
 		panic(err)
 	}
@@ -86,16 +86,16 @@ func (thorchainRouter *ThorchainRouter) PackRUNE() []byte {
 // if any inputs are invalid/nil.
 //
 // Solidity: function RUNE() view returns(address)
-func (thorchainRouter *ThorchainRouter) TryPackRUNE() ([]byte, error) {
-	return thorchainRouter.abi.Pack("RUNE")
+func (mayachainRouter *MayachainRouter) TryPackRUNE() ([]byte, error) {
+	return mayachainRouter.abi.Pack("RUNE")
 }
 
 // UnpackRUNE is the Go binding that unpacks the parameters returned
 // from invoking the contract method with ID 0x93e4eaa9.
 //
 // Solidity: function RUNE() view returns(address)
-func (thorchainRouter *ThorchainRouter) UnpackRUNE(data []byte) (common.Address, error) {
-	out, err := thorchainRouter.abi.Unpack("RUNE", data)
+func (mayachainRouter *MayachainRouter) UnpackRUNE(data []byte) (common.Address, error) {
+	out, err := mayachainRouter.abi.Unpack("RUNE", data)
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -108,8 +108,8 @@ func (thorchainRouter *ThorchainRouter) UnpackRUNE(data []byte) (common.Address,
 // invalid/nil inputs are passed.
 //
 // Solidity: function deposit(address vault, address asset, uint256 amount, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) PackDeposit(vault common.Address, asset common.Address, amount *big.Int, memo string) []byte {
-	enc, err := thorchainRouter.abi.Pack("deposit", vault, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) PackDeposit(vault common.Address, asset common.Address, amount *big.Int, memo string) []byte {
+	enc, err := mayachainRouter.abi.Pack("deposit", vault, asset, amount, memo)
 	if err != nil {
 		panic(err)
 	}
@@ -121,8 +121,8 @@ func (thorchainRouter *ThorchainRouter) PackDeposit(vault common.Address, asset 
 // if any inputs are invalid/nil.
 //
 // Solidity: function deposit(address vault, address asset, uint256 amount, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) TryPackDeposit(vault common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
-	return thorchainRouter.abi.Pack("deposit", vault, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) TryPackDeposit(vault common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
+	return mayachainRouter.abi.Pack("deposit", vault, asset, amount, memo)
 }
 
 // PackDepositWithExpiry is the Go binding used to pack the parameters required for calling
@@ -130,8 +130,8 @@ func (thorchainRouter *ThorchainRouter) TryPackDeposit(vault common.Address, ass
 // invalid/nil inputs are passed.
 //
 // Solidity: function depositWithExpiry(address vault, address asset, uint256 amount, string memo, uint256 expiration) payable returns()
-func (thorchainRouter *ThorchainRouter) PackDepositWithExpiry(vault common.Address, asset common.Address, amount *big.Int, memo string, expiration *big.Int) []byte {
-	enc, err := thorchainRouter.abi.Pack("depositWithExpiry", vault, asset, amount, memo, expiration)
+func (mayachainRouter *MayachainRouter) PackDepositWithExpiry(vault common.Address, asset common.Address, amount *big.Int, memo string, expiration *big.Int) []byte {
+	enc, err := mayachainRouter.abi.Pack("depositWithExpiry", vault, asset, amount, memo, expiration)
 	if err != nil {
 		panic(err)
 	}
@@ -143,8 +143,8 @@ func (thorchainRouter *ThorchainRouter) PackDepositWithExpiry(vault common.Addre
 // if any inputs are invalid/nil.
 //
 // Solidity: function depositWithExpiry(address vault, address asset, uint256 amount, string memo, uint256 expiration) payable returns()
-func (thorchainRouter *ThorchainRouter) TryPackDepositWithExpiry(vault common.Address, asset common.Address, amount *big.Int, memo string, expiration *big.Int) ([]byte, error) {
-	return thorchainRouter.abi.Pack("depositWithExpiry", vault, asset, amount, memo, expiration)
+func (mayachainRouter *MayachainRouter) TryPackDepositWithExpiry(vault common.Address, asset common.Address, amount *big.Int, memo string, expiration *big.Int) ([]byte, error) {
+	return mayachainRouter.abi.Pack("depositWithExpiry", vault, asset, amount, memo, expiration)
 }
 
 // PackReturnVaultAssets is the Go binding used to pack the parameters required for calling
@@ -152,8 +152,8 @@ func (thorchainRouter *ThorchainRouter) TryPackDepositWithExpiry(vault common.Ad
 // invalid/nil inputs are passed.
 //
 // Solidity: function returnVaultAssets(address router, address asgard, (address,uint256)[] coins, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) PackReturnVaultAssets(router common.Address, asgard common.Address, coins []THORChainRouterCoin, memo string) []byte {
-	enc, err := thorchainRouter.abi.Pack("returnVaultAssets", router, asgard, coins, memo)
+func (mayachainRouter *MayachainRouter) PackReturnVaultAssets(router common.Address, asgard common.Address, coins []THORChainRouterCoin, memo string) []byte {
+	enc, err := mayachainRouter.abi.Pack("returnVaultAssets", router, asgard, coins, memo)
 	if err != nil {
 		panic(err)
 	}
@@ -165,8 +165,8 @@ func (thorchainRouter *ThorchainRouter) PackReturnVaultAssets(router common.Addr
 // if any inputs are invalid/nil.
 //
 // Solidity: function returnVaultAssets(address router, address asgard, (address,uint256)[] coins, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) TryPackReturnVaultAssets(router common.Address, asgard common.Address, coins []THORChainRouterCoin, memo string) ([]byte, error) {
-	return thorchainRouter.abi.Pack("returnVaultAssets", router, asgard, coins, memo)
+func (mayachainRouter *MayachainRouter) TryPackReturnVaultAssets(router common.Address, asgard common.Address, coins []THORChainRouterCoin, memo string) ([]byte, error) {
+	return mayachainRouter.abi.Pack("returnVaultAssets", router, asgard, coins, memo)
 }
 
 // PackTransferAllowance is the Go binding used to pack the parameters required for calling
@@ -174,8 +174,8 @@ func (thorchainRouter *ThorchainRouter) TryPackReturnVaultAssets(router common.A
 // invalid/nil inputs are passed.
 //
 // Solidity: function transferAllowance(address router, address newVault, address asset, uint256 amount, string memo) returns()
-func (thorchainRouter *ThorchainRouter) PackTransferAllowance(router common.Address, newVault common.Address, asset common.Address, amount *big.Int, memo string) []byte {
-	enc, err := thorchainRouter.abi.Pack("transferAllowance", router, newVault, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) PackTransferAllowance(router common.Address, newVault common.Address, asset common.Address, amount *big.Int, memo string) []byte {
+	enc, err := mayachainRouter.abi.Pack("transferAllowance", router, newVault, asset, amount, memo)
 	if err != nil {
 		panic(err)
 	}
@@ -187,8 +187,8 @@ func (thorchainRouter *ThorchainRouter) PackTransferAllowance(router common.Addr
 // if any inputs are invalid/nil.
 //
 // Solidity: function transferAllowance(address router, address newVault, address asset, uint256 amount, string memo) returns()
-func (thorchainRouter *ThorchainRouter) TryPackTransferAllowance(router common.Address, newVault common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
-	return thorchainRouter.abi.Pack("transferAllowance", router, newVault, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) TryPackTransferAllowance(router common.Address, newVault common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
+	return mayachainRouter.abi.Pack("transferAllowance", router, newVault, asset, amount, memo)
 }
 
 // PackTransferOut is the Go binding used to pack the parameters required for calling
@@ -196,8 +196,8 @@ func (thorchainRouter *ThorchainRouter) TryPackTransferAllowance(router common.A
 // invalid/nil inputs are passed.
 //
 // Solidity: function transferOut(address to, address asset, uint256 amount, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) PackTransferOut(to common.Address, asset common.Address, amount *big.Int, memo string) []byte {
-	enc, err := thorchainRouter.abi.Pack("transferOut", to, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) PackTransferOut(to common.Address, asset common.Address, amount *big.Int, memo string) []byte {
+	enc, err := mayachainRouter.abi.Pack("transferOut", to, asset, amount, memo)
 	if err != nil {
 		panic(err)
 	}
@@ -209,8 +209,8 @@ func (thorchainRouter *ThorchainRouter) PackTransferOut(to common.Address, asset
 // if any inputs are invalid/nil.
 //
 // Solidity: function transferOut(address to, address asset, uint256 amount, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) TryPackTransferOut(to common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
-	return thorchainRouter.abi.Pack("transferOut", to, asset, amount, memo)
+func (mayachainRouter *MayachainRouter) TryPackTransferOut(to common.Address, asset common.Address, amount *big.Int, memo string) ([]byte, error) {
+	return mayachainRouter.abi.Pack("transferOut", to, asset, amount, memo)
 }
 
 // PackTransferOutAndCall is the Go binding used to pack the parameters required for calling
@@ -218,8 +218,8 @@ func (thorchainRouter *ThorchainRouter) TryPackTransferOut(to common.Address, as
 // invalid/nil inputs are passed.
 //
 // Solidity: function transferOutAndCall(address aggregator, address finalToken, address to, uint256 amountOutMin, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) PackTransferOutAndCall(aggregator common.Address, finalToken common.Address, to common.Address, amountOutMin *big.Int, memo string) []byte {
-	enc, err := thorchainRouter.abi.Pack("transferOutAndCall", aggregator, finalToken, to, amountOutMin, memo)
+func (mayachainRouter *MayachainRouter) PackTransferOutAndCall(aggregator common.Address, finalToken common.Address, to common.Address, amountOutMin *big.Int, memo string) []byte {
+	enc, err := mayachainRouter.abi.Pack("transferOutAndCall", aggregator, finalToken, to, amountOutMin, memo)
 	if err != nil {
 		panic(err)
 	}
@@ -231,8 +231,8 @@ func (thorchainRouter *ThorchainRouter) PackTransferOutAndCall(aggregator common
 // if any inputs are invalid/nil.
 //
 // Solidity: function transferOutAndCall(address aggregator, address finalToken, address to, uint256 amountOutMin, string memo) payable returns()
-func (thorchainRouter *ThorchainRouter) TryPackTransferOutAndCall(aggregator common.Address, finalToken common.Address, to common.Address, amountOutMin *big.Int, memo string) ([]byte, error) {
-	return thorchainRouter.abi.Pack("transferOutAndCall", aggregator, finalToken, to, amountOutMin, memo)
+func (mayachainRouter *MayachainRouter) TryPackTransferOutAndCall(aggregator common.Address, finalToken common.Address, to common.Address, amountOutMin *big.Int, memo string) ([]byte, error) {
+	return mayachainRouter.abi.Pack("transferOutAndCall", aggregator, finalToken, to, amountOutMin, memo)
 }
 
 // PackVaultAllowance is the Go binding used to pack the parameters required for calling
@@ -240,8 +240,8 @@ func (thorchainRouter *ThorchainRouter) TryPackTransferOutAndCall(aggregator com
 // invalid/nil inputs are passed.
 //
 // Solidity: function vaultAllowance(address vault, address token) view returns(uint256 amount)
-func (thorchainRouter *ThorchainRouter) PackVaultAllowance(vault common.Address, token common.Address) []byte {
-	enc, err := thorchainRouter.abi.Pack("vaultAllowance", vault, token)
+func (mayachainRouter *MayachainRouter) PackVaultAllowance(vault common.Address, token common.Address) []byte {
+	enc, err := mayachainRouter.abi.Pack("vaultAllowance", vault, token)
 	if err != nil {
 		panic(err)
 	}
@@ -253,16 +253,16 @@ func (thorchainRouter *ThorchainRouter) PackVaultAllowance(vault common.Address,
 // if any inputs are invalid/nil.
 //
 // Solidity: function vaultAllowance(address vault, address token) view returns(uint256 amount)
-func (thorchainRouter *ThorchainRouter) TryPackVaultAllowance(vault common.Address, token common.Address) ([]byte, error) {
-	return thorchainRouter.abi.Pack("vaultAllowance", vault, token)
+func (mayachainRouter *MayachainRouter) TryPackVaultAllowance(vault common.Address, token common.Address) ([]byte, error) {
+	return mayachainRouter.abi.Pack("vaultAllowance", vault, token)
 }
 
 // UnpackVaultAllowance is the Go binding that unpacks the parameters returned
 // from invoking the contract method with ID 0x03b6a673.
 //
 // Solidity: function vaultAllowance(address vault, address token) view returns(uint256 amount)
-func (thorchainRouter *ThorchainRouter) UnpackVaultAllowance(data []byte) (*big.Int, error) {
-	out, err := thorchainRouter.abi.Unpack("vaultAllowance", data)
+func (mayachainRouter *MayachainRouter) UnpackVaultAllowance(data []byte) (*big.Int, error) {
+	out, err := mayachainRouter.abi.Unpack("vaultAllowance", data)
 	if err != nil {
 		return new(big.Int), err
 	}
@@ -270,8 +270,8 @@ func (thorchainRouter *ThorchainRouter) UnpackVaultAllowance(data []byte) (*big.
 	return out0, nil
 }
 
-// ThorchainRouterDeposit represents a Deposit event raised by the ThorchainRouter contract.
-type ThorchainRouterDeposit struct {
+// MayachainRouterDeposit represents a Deposit event raised by the MayachainRouter contract.
+type MayachainRouterDeposit struct {
 	To     common.Address
 	Asset  common.Address
 	Amount *big.Int
@@ -279,30 +279,30 @@ type ThorchainRouterDeposit struct {
 	Raw    *types.Log // Blockchain specific contextual infos
 }
 
-const ThorchainRouterDepositEventName = "Deposit"
+const MayachainRouterDepositEventName = "Deposit"
 
 // ContractEventName returns the user-defined event name.
-func (ThorchainRouterDeposit) ContractEventName() string {
-	return ThorchainRouterDepositEventName
+func (MayachainRouterDeposit) ContractEventName() string {
+	return MayachainRouterDepositEventName
 }
 
 // UnpackDepositEvent is the Go binding that unpacks the event data emitted
 // by contract.
 //
 // Solidity: event Deposit(address indexed to, address indexed asset, uint256 amount, string memo)
-func (thorchainRouter *ThorchainRouter) UnpackDepositEvent(log *types.Log) (*ThorchainRouterDeposit, error) {
+func (mayachainRouter *MayachainRouter) UnpackDepositEvent(log *types.Log) (*MayachainRouterDeposit, error) {
 	event := "Deposit"
-	if len(log.Topics) == 0 || log.Topics[0] != thorchainRouter.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != mayachainRouter.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
-	out := new(ThorchainRouterDeposit)
+	out := new(MayachainRouterDeposit)
 	if len(log.Data) > 0 {
-		if err := thorchainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+		if err := mayachainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err
 		}
 	}
 	var indexed abi.Arguments
-	for _, arg := range thorchainRouter.abi.Events[event].Inputs {
+	for _, arg := range mayachainRouter.abi.Events[event].Inputs {
 		if arg.Indexed {
 			indexed = append(indexed, arg)
 		}
@@ -314,8 +314,8 @@ func (thorchainRouter *ThorchainRouter) UnpackDepositEvent(log *types.Log) (*Tho
 	return out, nil
 }
 
-// ThorchainRouterTransferAllowance represents a TransferAllowance event raised by the ThorchainRouter contract.
-type ThorchainRouterTransferAllowance struct {
+// MayachainRouterTransferAllowance represents a TransferAllowance event raised by the MayachainRouter contract.
+type MayachainRouterTransferAllowance struct {
 	OldVault common.Address
 	NewVault common.Address
 	Asset    common.Address
@@ -324,30 +324,30 @@ type ThorchainRouterTransferAllowance struct {
 	Raw      *types.Log // Blockchain specific contextual infos
 }
 
-const ThorchainRouterTransferAllowanceEventName = "TransferAllowance"
+const MayachainRouterTransferAllowanceEventName = "TransferAllowance"
 
 // ContractEventName returns the user-defined event name.
-func (ThorchainRouterTransferAllowance) ContractEventName() string {
-	return ThorchainRouterTransferAllowanceEventName
+func (MayachainRouterTransferAllowance) ContractEventName() string {
+	return MayachainRouterTransferAllowanceEventName
 }
 
 // UnpackTransferAllowanceEvent is the Go binding that unpacks the event data emitted
 // by contract.
 //
 // Solidity: event TransferAllowance(address indexed oldVault, address indexed newVault, address asset, uint256 amount, string memo)
-func (thorchainRouter *ThorchainRouter) UnpackTransferAllowanceEvent(log *types.Log) (*ThorchainRouterTransferAllowance, error) {
+func (mayachainRouter *MayachainRouter) UnpackTransferAllowanceEvent(log *types.Log) (*MayachainRouterTransferAllowance, error) {
 	event := "TransferAllowance"
-	if len(log.Topics) == 0 || log.Topics[0] != thorchainRouter.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != mayachainRouter.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
-	out := new(ThorchainRouterTransferAllowance)
+	out := new(MayachainRouterTransferAllowance)
 	if len(log.Data) > 0 {
-		if err := thorchainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+		if err := mayachainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err
 		}
 	}
 	var indexed abi.Arguments
-	for _, arg := range thorchainRouter.abi.Events[event].Inputs {
+	for _, arg := range mayachainRouter.abi.Events[event].Inputs {
 		if arg.Indexed {
 			indexed = append(indexed, arg)
 		}
@@ -359,8 +359,8 @@ func (thorchainRouter *ThorchainRouter) UnpackTransferAllowanceEvent(log *types.
 	return out, nil
 }
 
-// ThorchainRouterTransferOut represents a TransferOut event raised by the ThorchainRouter contract.
-type ThorchainRouterTransferOut struct {
+// MayachainRouterTransferOut represents a TransferOut event raised by the MayachainRouter contract.
+type MayachainRouterTransferOut struct {
 	Vault  common.Address
 	To     common.Address
 	Asset  common.Address
@@ -369,30 +369,30 @@ type ThorchainRouterTransferOut struct {
 	Raw    *types.Log // Blockchain specific contextual infos
 }
 
-const ThorchainRouterTransferOutEventName = "TransferOut"
+const MayachainRouterTransferOutEventName = "TransferOut"
 
 // ContractEventName returns the user-defined event name.
-func (ThorchainRouterTransferOut) ContractEventName() string {
-	return ThorchainRouterTransferOutEventName
+func (MayachainRouterTransferOut) ContractEventName() string {
+	return MayachainRouterTransferOutEventName
 }
 
 // UnpackTransferOutEvent is the Go binding that unpacks the event data emitted
 // by contract.
 //
 // Solidity: event TransferOut(address indexed vault, address indexed to, address asset, uint256 amount, string memo)
-func (thorchainRouter *ThorchainRouter) UnpackTransferOutEvent(log *types.Log) (*ThorchainRouterTransferOut, error) {
+func (mayachainRouter *MayachainRouter) UnpackTransferOutEvent(log *types.Log) (*MayachainRouterTransferOut, error) {
 	event := "TransferOut"
-	if len(log.Topics) == 0 || log.Topics[0] != thorchainRouter.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != mayachainRouter.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
-	out := new(ThorchainRouterTransferOut)
+	out := new(MayachainRouterTransferOut)
 	if len(log.Data) > 0 {
-		if err := thorchainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+		if err := mayachainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err
 		}
 	}
 	var indexed abi.Arguments
-	for _, arg := range thorchainRouter.abi.Events[event].Inputs {
+	for _, arg := range mayachainRouter.abi.Events[event].Inputs {
 		if arg.Indexed {
 			indexed = append(indexed, arg)
 		}
@@ -404,8 +404,8 @@ func (thorchainRouter *ThorchainRouter) UnpackTransferOutEvent(log *types.Log) (
 	return out, nil
 }
 
-// ThorchainRouterTransferOutAndCall represents a TransferOutAndCall event raised by the ThorchainRouter contract.
-type ThorchainRouterTransferOutAndCall struct {
+// MayachainRouterTransferOutAndCall represents a TransferOutAndCall event raised by the MayachainRouter contract.
+type MayachainRouterTransferOutAndCall struct {
 	Vault        common.Address
 	Target       common.Address
 	Amount       *big.Int
@@ -416,30 +416,30 @@ type ThorchainRouterTransferOutAndCall struct {
 	Raw          *types.Log // Blockchain specific contextual infos
 }
 
-const ThorchainRouterTransferOutAndCallEventName = "TransferOutAndCall"
+const MayachainRouterTransferOutAndCallEventName = "TransferOutAndCall"
 
 // ContractEventName returns the user-defined event name.
-func (ThorchainRouterTransferOutAndCall) ContractEventName() string {
-	return ThorchainRouterTransferOutAndCallEventName
+func (MayachainRouterTransferOutAndCall) ContractEventName() string {
+	return MayachainRouterTransferOutAndCallEventName
 }
 
 // UnpackTransferOutAndCallEvent is the Go binding that unpacks the event data emitted
 // by contract.
 //
 // Solidity: event TransferOutAndCall(address indexed vault, address target, uint256 amount, address finalAsset, address to, uint256 amountOutMin, string memo)
-func (thorchainRouter *ThorchainRouter) UnpackTransferOutAndCallEvent(log *types.Log) (*ThorchainRouterTransferOutAndCall, error) {
+func (mayachainRouter *MayachainRouter) UnpackTransferOutAndCallEvent(log *types.Log) (*MayachainRouterTransferOutAndCall, error) {
 	event := "TransferOutAndCall"
-	if len(log.Topics) == 0 || log.Topics[0] != thorchainRouter.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != mayachainRouter.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
-	out := new(ThorchainRouterTransferOutAndCall)
+	out := new(MayachainRouterTransferOutAndCall)
 	if len(log.Data) > 0 {
-		if err := thorchainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+		if err := mayachainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err
 		}
 	}
 	var indexed abi.Arguments
-	for _, arg := range thorchainRouter.abi.Events[event].Inputs {
+	for _, arg := range mayachainRouter.abi.Events[event].Inputs {
 		if arg.Indexed {
 			indexed = append(indexed, arg)
 		}
@@ -451,8 +451,8 @@ func (thorchainRouter *ThorchainRouter) UnpackTransferOutAndCallEvent(log *types
 	return out, nil
 }
 
-// ThorchainRouterVaultTransfer represents a VaultTransfer event raised by the ThorchainRouter contract.
-type ThorchainRouterVaultTransfer struct {
+// MayachainRouterVaultTransfer represents a VaultTransfer event raised by the MayachainRouter contract.
+type MayachainRouterVaultTransfer struct {
 	OldVault common.Address
 	NewVault common.Address
 	Coins    []THORChainRouterCoin
@@ -460,30 +460,30 @@ type ThorchainRouterVaultTransfer struct {
 	Raw      *types.Log // Blockchain specific contextual infos
 }
 
-const ThorchainRouterVaultTransferEventName = "VaultTransfer"
+const MayachainRouterVaultTransferEventName = "VaultTransfer"
 
 // ContractEventName returns the user-defined event name.
-func (ThorchainRouterVaultTransfer) ContractEventName() string {
-	return ThorchainRouterVaultTransferEventName
+func (MayachainRouterVaultTransfer) ContractEventName() string {
+	return MayachainRouterVaultTransferEventName
 }
 
 // UnpackVaultTransferEvent is the Go binding that unpacks the event data emitted
 // by contract.
 //
 // Solidity: event VaultTransfer(address indexed oldVault, address indexed newVault, (address,uint256)[] coins, string memo)
-func (thorchainRouter *ThorchainRouter) UnpackVaultTransferEvent(log *types.Log) (*ThorchainRouterVaultTransfer, error) {
+func (mayachainRouter *MayachainRouter) UnpackVaultTransferEvent(log *types.Log) (*MayachainRouterVaultTransfer, error) {
 	event := "VaultTransfer"
-	if len(log.Topics) == 0 || log.Topics[0] != thorchainRouter.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != mayachainRouter.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
-	out := new(ThorchainRouterVaultTransfer)
+	out := new(MayachainRouterVaultTransfer)
 	if len(log.Data) > 0 {
-		if err := thorchainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+		if err := mayachainRouter.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err
 		}
 	}
 	var indexed abi.Arguments
-	for _, arg := range thorchainRouter.abi.Events[event].Inputs {
+	for _, arg := range mayachainRouter.abi.Events[event].Inputs {
 		if arg.Indexed {
 			indexed = append(indexed, arg)
 		}

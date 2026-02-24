@@ -231,7 +231,7 @@ func TestEVMChains_ComputeTxHash_MultipleSignaturesError(t *testing.T) {
 
 func TestAllEVMChainConfigs(t *testing.T) {
 	configs := evm.AllEVMChainConfigs()
-	require.Len(t, configs, 10, "Should have 10 EVM chain configs")
+	require.Len(t, configs, 11, "Should have 11 EVM chain configs")
 
 	// Verify all configs have required fields
 	for _, config := range configs {

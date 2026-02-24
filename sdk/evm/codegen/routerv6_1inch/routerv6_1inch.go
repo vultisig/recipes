@@ -1746,7 +1746,7 @@ func (Routerv61inchBitInvalidatorUpdated) ContractEventName() string {
 // Solidity: event BitInvalidatorUpdated(address indexed maker, uint256 slotIndex, uint256 slotValue)
 func (routerv61inch *Routerv61inch) UnpackBitInvalidatorUpdatedEvent(log *types.Log) (*Routerv61inchBitInvalidatorUpdated, error) {
 	event := "BitInvalidatorUpdated"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchBitInvalidatorUpdated)
@@ -1786,7 +1786,7 @@ func (Routerv61inchEIP712DomainChanged) ContractEventName() string {
 // Solidity: event EIP712DomainChanged()
 func (routerv61inch *Routerv61inch) UnpackEIP712DomainChangedEvent(log *types.Log) (*Routerv61inchEIP712DomainChanged, error) {
 	event := "EIP712DomainChanged"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchEIP712DomainChanged)
@@ -1829,7 +1829,7 @@ func (Routerv61inchEpochIncreased) ContractEventName() string {
 // Solidity: event EpochIncreased(address indexed maker, uint256 series, uint256 newEpoch)
 func (routerv61inch *Routerv61inch) UnpackEpochIncreasedEvent(log *types.Log) (*Routerv61inchEpochIncreased, error) {
 	event := "EpochIncreased"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchEpochIncreased)
@@ -1870,7 +1870,7 @@ func (Routerv61inchOrderCancelled) ContractEventName() string {
 // Solidity: event OrderCancelled(bytes32 orderHash)
 func (routerv61inch *Routerv61inch) UnpackOrderCancelledEvent(log *types.Log) (*Routerv61inchOrderCancelled, error) {
 	event := "OrderCancelled"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchOrderCancelled)
@@ -1912,7 +1912,7 @@ func (Routerv61inchOrderFilled) ContractEventName() string {
 // Solidity: event OrderFilled(bytes32 orderHash, uint256 remainingAmount)
 func (routerv61inch *Routerv61inch) UnpackOrderFilledEvent(log *types.Log) (*Routerv61inchOrderFilled, error) {
 	event := "OrderFilled"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchOrderFilled)
@@ -1954,7 +1954,7 @@ func (Routerv61inchOwnershipTransferred) ContractEventName() string {
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (routerv61inch *Routerv61inch) UnpackOwnershipTransferredEvent(log *types.Log) (*Routerv61inchOwnershipTransferred, error) {
 	event := "OwnershipTransferred"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchOwnershipTransferred)
@@ -1995,7 +1995,7 @@ func (Routerv61inchPaused) ContractEventName() string {
 // Solidity: event Paused(address account)
 func (routerv61inch *Routerv61inch) UnpackPausedEvent(log *types.Log) (*Routerv61inchPaused, error) {
 	event := "Paused"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchPaused)
@@ -2036,7 +2036,7 @@ func (Routerv61inchUnpaused) ContractEventName() string {
 // Solidity: event Unpaused(address account)
 func (routerv61inch *Routerv61inch) UnpackUnpausedEvent(log *types.Log) (*Routerv61inchUnpaused, error) {
 	event := "Unpaused"
-	if log.Topics[0] != routerv61inch.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != routerv61inch.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(Routerv61inchUnpaused)
