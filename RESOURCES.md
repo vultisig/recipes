@@ -117,6 +117,290 @@ Transfer Dogecoin to another address
 ```
 
 
+### ethereum.aavev3_dataprovider.getReserveConfigurationData
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_dataprovider  
+**Function:** aavev3_dataprovider.getReserveConfigurationData  
+
+Call the getReserveConfigurationData function on aavev3_dataprovider
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_dataprovider.getReserveConfigurationData",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.borrow
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.borrow  
+
+Call the borrow function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| interestRateMode | decimal | interestRateMode parameter of type uint256 |
+| referralCode | decimal | referralCode parameter of type uint16 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.borrow",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "interestRateMode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "referralCode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.getReserveData
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.getReserveData  
+
+Call the getReserveData function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.getReserveData",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.getUserAccountData
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.getUserAccountData  
+
+Call the getUserAccountData function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| user | address | user parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.getUserAccountData",
+  "effect": "ALLOW",
+  "constraints": {
+    "user": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.repay
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.repay  
+
+Call the repay function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| interestRateMode | decimal | interestRateMode parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.repay",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "interestRateMode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.supply
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.supply  
+
+Call the supply function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| onBehalfOf | address | onBehalfOf parameter of type address |
+| referralCode | decimal | referralCode parameter of type uint16 |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.supply",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "onBehalfOf": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "referralCode": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
+### ethereum.aavev3_pool.withdraw
+
+**Chain:** Ethereum  
+**Protocol:** aavev3_pool  
+**Function:** aavev3_pool.withdraw  
+
+Call the withdraw function on aavev3_pool
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| asset | address | asset parameter of type address |
+| amount | decimal | amount parameter of type uint256 |
+| to | address | to parameter of type address |
+
+
+**Example Policy Rule:**
+
+```json
+{
+  "resource": "ethereum.aavev3_pool.withdraw",
+  "effect": "ALLOW",
+  "constraints": {
+    "asset": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "amount": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+    "to": {
+      "type": "fixed",
+      "value": "example_value"
+    },
+
+  }
+}
+```
+
+
 ### ethereum.dai.allowance
 
 **Chain:** Ethereum  
