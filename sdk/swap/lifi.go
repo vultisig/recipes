@@ -2,6 +2,7 @@ package swap
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,8 +12,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/mr-tron/base58"
 )
 
 const (
@@ -299,7 +298,7 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 }
 
 // decodeLiFiData decodes transaction data returned by LiFi.
-// EVM chains return hex (with 0x prefix), Solana returns base58.
+// EVM chains return hex (with 0x prefix), Solana returns base64.
 func decodeLiFiData(data string) ([]byte, error) {
 	if data == "" {
 		return nil, nil
@@ -312,8 +311,8 @@ func decodeLiFiData(data string) ([]byte, error) {
 	if decoded, err := hex.DecodeString(data); err == nil {
 		return decoded, nil
 	}
-	// Base58 (Solana)
-	return base58.Decode(data)
+	// Base64 (Solana)
+	return base64.StdEncoding.DecodeString(data)
 }
 
 // LiFi API types
