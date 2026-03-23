@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/mr-tron/base58"
 )
 
 const (
@@ -278,8 +280,8 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	// Check if approval is needed using consistent logic
 	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
 
-	// Decode hex-encoded transaction data
-	txData, err := decodeLiFiHexData(quoteResp.TransactionRequest.Data)
+	// Decode transaction data (hex for EVM, base58 for Solana)
+	txData, err := decodeLiFiData(quoteResp.TransactionRequest.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode tx data: %w", err)
 	}
@@ -296,13 +298,22 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	}, nil
 }
 
-// decodeLiFiHexData decodes a hex-encoded string (with optional 0x prefix) to bytes
-func decodeLiFiHexData(hexStr string) ([]byte, error) {
-	hexStr = strings.TrimPrefix(hexStr, "0x")
-	if hexStr == "" {
+// decodeLiFiData decodes transaction data returned by LiFi.
+// EVM chains return hex (with 0x prefix), Solana returns base58.
+func decodeLiFiData(data string) ([]byte, error) {
+	if data == "" {
 		return nil, nil
 	}
-	return hex.DecodeString(hexStr)
+	// Hex with 0x prefix (EVM chains)
+	if strings.HasPrefix(data, "0x") {
+		return hex.DecodeString(strings.TrimPrefix(data, "0x"))
+	}
+	// Try hex without prefix first
+	if decoded, err := hex.DecodeString(data); err == nil {
+		return decoded, nil
+	}
+	// Base58 (Solana)
+	return base58.Decode(data)
 }
 
 // LiFi API types
