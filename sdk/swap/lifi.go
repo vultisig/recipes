@@ -279,7 +279,7 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	// Check if approval is needed using consistent logic
 	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
 
-	// Decode transaction data (hex for EVM, base58 for Solana)
+	// Decode transaction data (hex for EVM, base64 for Solana)
 	txData, err := decodeLiFiData(quoteResp.TransactionRequest.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode tx data: %w", err)
