@@ -113,7 +113,7 @@ type QuoteRequest struct {
 	Amount      *big.Int // Amount in smallest unit (e.g., satoshis, wei)
 	Destination string   // Destination address for the swap output
 	Sender      string   // Sender address
-	ToleranceBps *int    // Optional THOR/Maya quote tolerance override
+	ToleranceBps *int    // Optional THOR/Maya quote tolerance override in basis points (typically 0-10000, where 10000 = 100%)
 
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.

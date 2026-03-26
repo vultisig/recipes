@@ -48,8 +48,8 @@ type SwapParams struct {
 
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.
-	Preference *ProviderPreference
-	ToleranceBps *int
+	Preference   *ProviderPreference
+	ToleranceBps *int // Optional THOR/Maya quote tolerance override in basis points (typically 0-10000, where 10000 = 100%)
 }
 
 // SwapTx contains the transaction data ready for signing.

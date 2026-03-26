@@ -197,6 +197,9 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	if req.ToleranceBps != nil {
 		toleranceBps = *req.ToleranceBps
 	}
+	if toleranceBps < 0 || toleranceBps > 10000 {
+		return nil, fmt.Errorf("invalid tolerance_bps %d: must be between 0 and 10000", toleranceBps)
+	}
 	params.Set("tolerance_bps", fmt.Sprintf("%d", toleranceBps))
 
 	// Try all endpoints with fallback
