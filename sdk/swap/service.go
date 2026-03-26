@@ -93,13 +93,13 @@ func (s *Service) GetSwapTx(ctx context.Context, params SwapParams) (*SwapTx, er
 
 	// Get quote
 	quote, err := s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
-		Preference:  params.Preference,
+		Preference:   params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -304,13 +304,13 @@ func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*Swap
 
 	// Get quote
 	quote, err := s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
-		Preference:  params.Preference,
+		Preference:   params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -357,13 +357,13 @@ func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, erro
 	}
 
 	return s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
-		Preference:  params.Preference,
+		Preference:   params.Preference,
 	})
 }
 
