@@ -48,7 +48,8 @@ type SwapParams struct {
 
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.
-	Preference *ProviderPreference
+	Preference   *ProviderPreference
+	ToleranceBps *int // Optional THOR/Maya quote tolerance override in basis points (typically 0-10000, where 10000 = 100%)
 }
 
 // SwapTx contains the transaction data ready for signing.
@@ -92,12 +93,13 @@ func (s *Service) GetSwapTx(ctx context.Context, params SwapParams) (*SwapTx, er
 
 	// Get quote
 	quote, err := s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
-		Preference:  params.Preference,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
+		ToleranceBps: params.ToleranceBps,
+		Preference:   params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -302,12 +304,13 @@ func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*Swap
 
 	// Get quote
 	quote, err := s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
-		Preference:  params.Preference,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
+		ToleranceBps: params.ToleranceBps,
+		Preference:   params.Preference,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -354,12 +357,13 @@ func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, erro
 	}
 
 	return s.router.GetQuote(ctx, QuoteRequest{
-		From:        from,
-		To:          to,
-		Amount:      params.Amount,
-		Sender:      params.Sender,
-		Destination: params.Destination,
-		Preference:  params.Preference,
+		From:         from,
+		To:           to,
+		Amount:       params.Amount,
+		Sender:       params.Sender,
+		Destination:  params.Destination,
+		ToleranceBps: params.ToleranceBps,
+		Preference:   params.Preference,
 	})
 }
 
@@ -373,4 +377,3 @@ func (s *Service) RequiresApproval(params SwapParams) bool {
 	}
 	return IsApprovalRequired(from)
 }
-
