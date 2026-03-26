@@ -113,6 +113,7 @@ type QuoteRequest struct {
 	Amount      *big.Int // Amount in smallest unit (e.g., satoshis, wei)
 	Destination string   // Destination address for the swap output
 	Sender      string   // Sender address
+	ToleranceBps *int    // Optional THOR/Maya quote tolerance override
 
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.
@@ -256,4 +257,3 @@ type SwapBundleRequest struct {
 	Nonce       *uint64  // Optional: starting nonce (fetched if nil)
 	GasPrice    *big.Int // Optional: gas price (fetched if nil)
 }
-

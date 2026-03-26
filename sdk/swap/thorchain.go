@@ -193,7 +193,11 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
-	params.Set("tolerance_bps", "2500")
+	toleranceBps := 2500
+	if req.ToleranceBps != nil {
+		toleranceBps = *req.ToleranceBps
+	}
+	params.Set("tolerance_bps", fmt.Sprintf("%d", toleranceBps))
 
 	// Try all endpoints with fallback
 	var lastErr error

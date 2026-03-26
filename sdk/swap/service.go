@@ -49,6 +49,7 @@ type SwapParams struct {
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.
 	Preference *ProviderPreference
+	ToleranceBps *int
 }
 
 // SwapTx contains the transaction data ready for signing.
@@ -97,6 +98,7 @@ func (s *Service) GetSwapTx(ctx context.Context, params SwapParams) (*SwapTx, er
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		ToleranceBps: params.ToleranceBps,
 		Preference:  params.Preference,
 	})
 	if err != nil {
@@ -307,6 +309,7 @@ func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*Swap
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		ToleranceBps: params.ToleranceBps,
 		Preference:  params.Preference,
 	})
 	if err != nil {
@@ -359,6 +362,7 @@ func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, erro
 		Amount:      params.Amount,
 		Sender:      params.Sender,
 		Destination: params.Destination,
+		ToleranceBps: params.ToleranceBps,
 		Preference:  params.Preference,
 	})
 }
@@ -373,4 +377,3 @@ func (s *Service) RequiresApproval(params SwapParams) bool {
 	}
 	return IsApprovalRequired(from)
 }
-
