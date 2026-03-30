@@ -77,9 +77,7 @@ func NewRouter(opts ...RouterOption) *Router {
 	return r
 }
 
-// NewDefaultRouter creates a router with all default providers.
-// Relay requires a Solana RPC client for Solana swaps but works without one for EVM-only.
-// Use NewDefaultRouterWithSolana to provide a Solana RPC client.
+// NewDefaultRouter creates a router with all default providers (Relay EVM-only).
 func NewDefaultRouter() *Router {
 	return NewRouter(
 		WithProvider(NewRelayProvider(nil)),
@@ -92,8 +90,7 @@ func NewDefaultRouter() *Router {
 	)
 }
 
-// NewDefaultRouterWithSolana creates a router with all default providers,
-// including Solana RPC support for Relay Solana swaps.
+// NewDefaultRouterWithSolana creates a router with Relay Solana support.
 func NewDefaultRouterWithSolana(solRPC *rpc.Client) *Router {
 	return NewRouter(
 		WithProvider(NewRelayProvider(solRPC)),
