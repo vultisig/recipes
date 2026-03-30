@@ -161,17 +161,25 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		}
 	}
 
-	// Check if approval is needed from the Relay response
+	// Check if approval is needed from the Relay response.
+	// The spender is the swap TX destination (Relay router), not the approval TX
+	// destination (which is the token contract receiving the approve() call).
 	needsApproval := approvalStep != nil
 	var approvalSpender string
-	if needsApproval {
-		approvalSpender = approvalStep.To
+	if needsApproval && txStep != nil {
+		approvalSpender = txStep.To
 	}
 
 	// Store the full quote response as ProviderData so BuildTx doesn't re-fetch.
 	providerData, err := json.Marshal(quoteResp)
 	if err != nil {
 		return nil, fmt.Errorf("relay: marshal provider data: %w", err)
+	}
+
+	// Router is the swap TX destination (Relay router contract).
+	var router string
+	if txStep != nil {
+		router = txStep.To
 	}
 
 	quote := &Quote{
@@ -181,6 +189,7 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		FromAmount:      req.Amount,
 		ExpectedOutput:  expectedOutput,
 		MinimumOutput:   expectedOutput, // Relay is solver-based: no AMM slippage
+		Router:          router,
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: approvalSpender,
 		ApprovalAmount:  req.Amount,
@@ -425,13 +434,6 @@ func trimHexPrefix(s string) string {
 		return s[2:]
 	}
 	return s
-}
-
-// RelayChainID returns the Relay chain ID for the given chain name.
-// Exported for use by MCP or other consumers that need chain ID mapping.
-func RelayChainID(chain string) (int, bool) {
-	id, ok := relayChainIDs[chain]
-	return id, ok
 }
 
 // --- Relay API types ---
