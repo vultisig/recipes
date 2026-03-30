@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-
-	"github.com/gagliardetto/solana-go/rpc"
 )
 
 var (
@@ -77,23 +75,10 @@ func NewRouter(opts ...RouterOption) *Router {
 	return r
 }
 
-// NewDefaultRouter creates a router with all default providers (Relay EVM-only).
+// NewDefaultRouter creates a router with all default providers
 func NewDefaultRouter() *Router {
 	return NewRouter(
 		WithProvider(NewRelayProvider(nil)),
-		WithProvider(NewTHORChainProvider(nil)),
-		WithProvider(NewMayachainProvider(nil)),
-		WithProvider(NewLiFiProvider("")),
-		WithProvider(NewOneInchProvider("")),
-		WithProvider(NewJupiterProvider("")),
-		WithProvider(NewUniswapProvider()),
-	)
-}
-
-// NewDefaultRouterWithSolana creates a router with Relay Solana support.
-func NewDefaultRouterWithSolana(solRPC *rpc.Client) *Router {
-	return NewRouter(
-		WithProvider(NewRelayProvider(solRPC)),
 		WithProvider(NewTHORChainProvider(nil)),
 		WithProvider(NewMayachainProvider(nil)),
 		WithProvider(NewLiFiProvider("")),
