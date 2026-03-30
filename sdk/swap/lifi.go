@@ -311,11 +311,8 @@ func decodeLiFiData(data string, chain string) ([]byte, error) {
 	if chain == "Solana" {
 		return base64.StdEncoding.DecodeString(data)
 	}
-	// Fallback: try hex without prefix, then base64
-	if decoded, err := hex.DecodeString(data); err == nil {
-		return decoded, nil
-	}
-	return base64.StdEncoding.DecodeString(data)
+	// Non-Solana chains: must be hex (with or without 0x prefix)
+	return hex.DecodeString(data)
 }
 
 // LiFi API types
