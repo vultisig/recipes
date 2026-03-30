@@ -36,18 +36,7 @@ var relayChainIDs = map[string]int{
 	"Solana":    792703809,
 }
 
-// relaySupportedEVMChains excludes Solana (used when solRPC is nil).
-var relaySupportedEVMChains = func() []string {
-	chains := make([]string, 0, len(relayChainIDs)-1)
-	for chain := range relayChainIDs {
-		if chain != "Solana" {
-			chains = append(chains, chain)
-		}
-	}
-	return chains
-}()
-
-// relaySupportedAllChains includes Solana.
+// relaySupportedAllChains lists all Relay-supported chains.
 var relaySupportedAllChains = func() []string {
 	chains := make([]string, 0, len(relayChainIDs))
 	for chain := range relayChainIDs {
@@ -66,12 +55,8 @@ type RelayProvider struct {
 
 // NewRelayProvider creates a new Relay provider
 func NewRelayProvider(solRPC *rpc.Client) *RelayProvider {
-	chains := relaySupportedEVMChains
-	if solRPC != nil {
-		chains = relaySupportedAllChains
-	}
 	return &RelayProvider{
-		BaseProvider: NewBaseProvider("Relay", PriorityRelay, chains),
+		BaseProvider: NewBaseProvider("Relay", PriorityRelay, relaySupportedAllChains),
 		client: &http.Client{
 			Timeout: 15 * time.Second,
 		},
@@ -118,6 +103,11 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		destCurrency = relayNativeAddress(req.To.Chain)
 	}
 
+	recipient := req.Destination
+	if recipient == "" {
+		recipient = req.Sender
+	}
+
 	quoteReq := relayQuoteRequest{
 		User:                req.Sender,
 		OriginChainID:       originChainID,
@@ -126,7 +116,7 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		DestinationCurrency: destCurrency,
 		Amount:              req.Amount.String(),
 		TradeType:           "EXACT_INPUT",
-		Recipient:           req.Destination,
+		Recipient:           recipient,
 		Referrer:            relayReferrer,
 	}
 
