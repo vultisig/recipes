@@ -21,7 +21,7 @@ const (
 	relayReferrer       = "vultisig"
 )
 
-// Relay chain IDs (subset of 75+ supported chains).
+// Relay chain IDs
 var relayChainIDs = map[string]int{
 	"Ethereum":  1,
 	"BSC":       56,
@@ -36,7 +36,7 @@ var relayChainIDs = map[string]int{
 	"Solana":    792703809,
 }
 
-// relaySupportedEVMChains lists all Relay-supported chains except Solana.
+// relaySupportedEVMChains excludes Solana (used when solRPC is nil).
 var relaySupportedEVMChains = func() []string {
 	chains := make([]string, 0, len(relayChainIDs)-1)
 	for chain := range relayChainIDs {
@@ -47,7 +47,7 @@ var relaySupportedEVMChains = func() []string {
 	return chains
 }()
 
-// relaySupportedAllChains includes Solana (requires solRPC).
+// relaySupportedAllChains includes Solana.
 var relaySupportedAllChains = func() []string {
 	chains := make([]string, 0, len(relayChainIDs))
 	for chain := range relayChainIDs {
@@ -56,19 +56,15 @@ var relaySupportedAllChains = func() []string {
 	return chains
 }()
 
-// RelayProvider implements SwapProvider for the Relay.link cross-chain swap API.
-// Relay is solver-based: quoted amounts are guaranteed by the solver network,
-// so MinimumOutput == ExpectedOutput (no AMM slippage).
-// No API key required.
+// RelayProvider implements SwapProvider for Relay.link
 type RelayProvider struct {
 	BaseProvider
 	client  *http.Client
 	baseURL string
-	solRPC  *rpc.Client // needed for Solana TX assembly (blockhash + ALT resolution)
+	solRPC  *rpc.Client
 }
 
-// NewRelayProvider creates a new Relay provider.
-// solRPC is only needed for Solana swaps (pass nil for EVM-only usage).
+// NewRelayProvider creates a new Relay provider
 func NewRelayProvider(solRPC *rpc.Client) *RelayProvider {
 	chains := relaySupportedEVMChains
 	if solRPC != nil {
@@ -89,8 +85,7 @@ func (p *RelayProvider) SupportsRoute(from, to Asset) bool {
 	return p.SupportsChain(from.Chain) && p.SupportsChain(to.Chain)
 }
 
-// IsAvailable checks if Relay is available for a specific chain.
-// Relay is generally always available if the chain is supported.
+// IsAvailable checks if Relay is available for a specific chain
 func (p *RelayProvider) IsAvailable(ctx context.Context, chain string) (bool, error) {
 	return p.SupportsChain(chain), nil
 }
@@ -161,22 +156,20 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		}
 	}
 
-	// Check if approval is needed from the Relay response.
-	// The spender is the swap TX destination (Relay router), not the approval TX
-	// destination (which is the token contract receiving the approve() call).
+	// Spender is the swap TX destination (router), not the approval TX target (token contract).
 	needsApproval := approvalStep != nil
 	var approvalSpender string
 	if needsApproval && txStep != nil {
 		approvalSpender = txStep.To
 	}
 
-	// Store the full quote response as ProviderData so BuildTx doesn't re-fetch.
+	// Cache quote response in ProviderData for BuildTx.
 	providerData, err := json.Marshal(quoteResp)
 	if err != nil {
 		return nil, fmt.Errorf("relay: marshal provider data: %w", err)
 	}
 
-	// Router is the swap TX destination (Relay router contract).
+	// Router address for approval spender resolution.
 	var router string
 	if txStep != nil {
 		router = txStep.To
@@ -205,14 +198,14 @@ func (p *RelayProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResu
 		return nil, fmt.Errorf("quote is required")
 	}
 
-	// Restore the cached quote response from ProviderData.
+	// Restore cached quote response.
 	var quoteResp relayQuoteResponse
 	if len(req.Quote.ProviderData) > 0 {
 		if err := json.Unmarshal(req.Quote.ProviderData, &quoteResp); err != nil {
 			return nil, fmt.Errorf("relay: unmarshal provider data: %w", err)
 		}
 	} else {
-		// Fallback: re-fetch quote (shouldn't happen in normal flow).
+		// Should not happen — GetQuote always sets ProviderData.
 		return nil, fmt.Errorf("relay: missing provider data, call GetQuote first")
 	}
 
@@ -418,8 +411,7 @@ func (p *RelayProvider) postQuote(ctx context.Context, req relayQuoteRequest) (*
 	return &quoteResp, nil
 }
 
-// relayNativeAddress returns the native currency address for a chain on Relay.
-// Solana uses the System Program address (not Wrapped SOL mint) per Relay API convention.
+// relayNativeAddress returns the Relay native currency address for a chain.
 func relayNativeAddress(chain string) string {
 	if chain == "Solana" {
 		return "11111111111111111111111111111111"
@@ -465,8 +457,6 @@ type relayStepItem struct {
 }
 
 // relayStepData contains the raw transaction fields from Relay.
-// For EVM: From/To/Data/Value are populated.
-// For Solana: Instructions and AddressLookupTableAddresses are populated.
 type relayStepData struct {
 	// EVM fields
 	From  string `json:"from,omitempty"`
