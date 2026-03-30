@@ -199,8 +199,14 @@ func (s *Service) IsChainSupported(chain string) bool {
 
 // GetChainStatus returns the availability status of a chain for swapping.
 func (s *Service) GetChainStatus(ctx context.Context, chain string) (*ProviderStatus, error) {
-	// Try THORChain first (highest priority for cross-chain)
-	status, err := s.router.GetProviderStatus(ctx, "THORChain", chain)
+	// Try Relay first (highest priority)
+	status, err := s.router.GetProviderStatus(ctx, "Relay", chain)
+	if err == nil && status.Available {
+		return status, nil
+	}
+
+	// Try THORChain (cross-chain)
+	status, err = s.router.GetProviderStatus(ctx, "THORChain", chain)
 	if err == nil && status.Available {
 		return status, nil
 	}

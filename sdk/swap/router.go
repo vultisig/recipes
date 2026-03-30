@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 
 // Provider names for routing logic - must match names used in NewBaseProvider calls
 const (
+	ProviderRelay     = "Relay"
 	ProviderTHORChain = "THORChain"
 	ProviderMayachain = "Mayachain"
 	ProviderLiFi      = "LiFi"
@@ -29,10 +32,11 @@ const (
 )
 
 // providerOrder defines the preferred provider order for ALL swaps.
-// THORChain/Mayachain are tried first (if they support the route),
-// then fall back to DEX aggregators for same-chain swaps.
+// Relay is tried first (solver-based, no slippage), then THORChain/Mayachain
+// for cross-chain, then DEX aggregators for same-chain swaps.
 var providerOrder = []string{
-	ProviderTHORChain, // Try cross-chain protocol first
+	ProviderRelay,     // Solver-based, no slippage, 75+ chains
+	ProviderTHORChain, // Cross-chain protocol
 	ProviderMayachain, // Alternative cross-chain
 	ProviderOneInch,   // Fallback for same-chain EVM
 	ProviderJupiter,   // Fallback for Solana
@@ -73,9 +77,26 @@ func NewRouter(opts ...RouterOption) *Router {
 	return r
 }
 
-// NewDefaultRouter creates a router with all default providers
+// NewDefaultRouter creates a router with all default providers.
+// Relay requires a Solana RPC client for Solana swaps but works without one for EVM-only.
+// Use NewDefaultRouterWithSolana to provide a Solana RPC client.
 func NewDefaultRouter() *Router {
 	return NewRouter(
+		WithProvider(NewRelayProvider(nil)),
+		WithProvider(NewTHORChainProvider(nil)),
+		WithProvider(NewMayachainProvider(nil)),
+		WithProvider(NewLiFiProvider("")),
+		WithProvider(NewOneInchProvider("")),
+		WithProvider(NewJupiterProvider("")),
+		WithProvider(NewUniswapProvider()),
+	)
+}
+
+// NewDefaultRouterWithSolana creates a router with all default providers,
+// including Solana RPC support for Relay Solana swaps.
+func NewDefaultRouterWithSolana(solRPC *rpc.Client) *Router {
+	return NewRouter(
+		WithProvider(NewRelayProvider(solRPC)),
 		WithProvider(NewTHORChainProvider(nil)),
 		WithProvider(NewMayachainProvider(nil)),
 		WithProvider(NewLiFiProvider("")),

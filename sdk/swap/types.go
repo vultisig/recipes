@@ -15,6 +15,7 @@ type Asset struct {
 
 // Provider priority constants - lower number = higher priority
 const (
+	PriorityRelay     = 0 // Solver-based, no slippage, 75+ chains
 	PriorityTHORChain = 1
 	PriorityMayachain = 2
 	PriorityLiFi      = 3
