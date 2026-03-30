@@ -280,7 +280,7 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	needsApproval := IsApprovalRequired(req.Quote.FromAsset)
 
 	// Decode transaction data (hex for EVM, base64 for Solana)
-	txData, err := decodeLiFiData(quoteResp.TransactionRequest.Data)
+	txData, err := decodeLiFiData(quoteResp.TransactionRequest.Data, req.Quote.FromAsset.Chain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode tx data: %w", err)
 	}
@@ -299,7 +299,7 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 
 // decodeLiFiData decodes transaction data returned by LiFi.
 // EVM chains return hex (with 0x prefix), Solana returns base64.
-func decodeLiFiData(data string) ([]byte, error) {
+func decodeLiFiData(data string, chain string) ([]byte, error) {
 	if data == "" {
 		return nil, nil
 	}
@@ -307,11 +307,14 @@ func decodeLiFiData(data string) ([]byte, error) {
 	if strings.HasPrefix(data, "0x") {
 		return hex.DecodeString(strings.TrimPrefix(data, "0x"))
 	}
-	// Try hex without prefix first
+	// For non-EVM chains (Solana), prefer base64 decoding
+	if chain == "Solana" {
+		return base64.StdEncoding.DecodeString(data)
+	}
+	// Fallback: try hex without prefix, then base64
 	if decoded, err := hex.DecodeString(data); err == nil {
 		return decoded, nil
 	}
-	// Base64 (Solana)
 	return base64.StdEncoding.DecodeString(data)
 }
 
