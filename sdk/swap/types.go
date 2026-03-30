@@ -17,7 +17,7 @@ type Asset struct {
 const (
 	PriorityTHORChain = 1
 	PriorityMayachain = 2
-	PriorityRelay     = 3 // Solver-based, no slippage, tried before LiFi
+	PriorityRelay     = 3
 	PriorityLiFi      = 3
 	PriorityOneInch   = 4
 	PriorityJupiter   = 5
