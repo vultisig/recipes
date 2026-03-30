@@ -371,7 +371,7 @@ func (p *RelayProvider) postQuote(ctx context.Context, req relayQuoteRequest) (*
 		return nil, fmt.Errorf("relay: marshal quote request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+"/quote", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+"/quote/v2", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("relay: create request: %w", err)
 	}
