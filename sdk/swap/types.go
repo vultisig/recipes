@@ -197,7 +197,10 @@ var EVMChains = []string{
 	"Optimism",
 	"Blast",
 	"CronosChain",
-	"ZkSync",
+	"Mantle",
+	"Sei",
+	"Zksync",
+	"ZkSync", // legacy casing
 }
 
 // IsEVMChain checks if a chain is an EVM-compatible chain

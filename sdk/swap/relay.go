@@ -154,7 +154,10 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 	}
 
 	// Store the full quote response as ProviderData so BuildTx doesn't re-fetch.
-	providerData, _ := json.Marshal(quoteResp)
+	providerData, err := json.Marshal(quoteResp)
+	if err != nil {
+		return nil, fmt.Errorf("relay: marshal provider data: %w", err)
+	}
 
 	quote := &Quote{
 		Provider:        p.Name(),
@@ -230,7 +233,7 @@ func (p *RelayProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResu
 		var ok bool
 		value, ok = new(big.Int).SetString(txStep.Value, 0)
 		if !ok {
-			value = big.NewInt(0)
+			return nil, fmt.Errorf("relay: invalid tx value %q", txStep.Value)
 		}
 	}
 
@@ -291,8 +294,8 @@ func (p *RelayProvider) buildSolanaTransaction(ctx context.Context, txData *rela
 			accounts = append(accounts, solana.NewAccountMeta(pk, key.IsWritable, key.IsSigner))
 		}
 
-		// Relay returns instruction data as hex-encoded string (no 0x prefix).
-		data, err := hex.DecodeString(inst.Data)
+		// Relay returns instruction data as hex-encoded string (typically no 0x prefix).
+		data, err := hex.DecodeString(trimHexPrefix(inst.Data))
 		if err != nil {
 			return nil, fmt.Errorf("decode instruction data %d: %w", i, err)
 		}
@@ -393,6 +396,7 @@ func (p *RelayProvider) postQuote(ctx context.Context, req relayQuoteRequest) (*
 }
 
 // relayNativeAddress returns the native currency address for a chain on Relay.
+// Solana uses the System Program address (not Wrapped SOL mint) per Relay API convention.
 func relayNativeAddress(chain string) string {
 	if chain == "Solana" {
 		return "11111111111111111111111111111111"
