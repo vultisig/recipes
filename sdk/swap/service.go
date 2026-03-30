@@ -199,26 +199,20 @@ func (s *Service) IsChainSupported(chain string) bool {
 
 // GetChainStatus returns the availability status of a chain for swapping.
 func (s *Service) GetChainStatus(ctx context.Context, chain string) (*ProviderStatus, error) {
-	// Try Relay first (highest priority)
-	status, err := s.router.GetProviderStatus(ctx, ProviderRelay, chain)
-	if err == nil && status.Available {
-		return status, nil
-	}
-
-	// Try THORChain (cross-chain)
-	status, err = s.router.GetProviderStatus(ctx, ProviderTHORChain, chain)
+	// Try THORChain first (highest priority for cross-chain)
+	status, err := s.router.GetProviderStatus(ctx, "THORChain", chain)
 	if err == nil && status.Available {
 		return status, nil
 	}
 
 	// Try Mayachain
-	status, err = s.router.GetProviderStatus(ctx, ProviderMayachain, chain)
+	status, err = s.router.GetProviderStatus(ctx, "Mayachain", chain)
 	if err == nil && status.Available {
 		return status, nil
 	}
 
 	// For EVM/Solana chains, check LiFi
-	status, err = s.router.GetProviderStatus(ctx, ProviderLiFi, chain)
+	status, err = s.router.GetProviderStatus(ctx, "LiFi", chain)
 	if err == nil && status.Available {
 		return status, nil
 	}

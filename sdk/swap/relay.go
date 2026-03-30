@@ -36,8 +36,19 @@ var relayChainIDs = map[string]int{
 	"Solana":    792703809,
 }
 
-// Relay supported chains
-var relaySupportedChains = func() []string {
+// relaySupportedEVMChains lists all Relay-supported chains except Solana.
+var relaySupportedEVMChains = func() []string {
+	chains := make([]string, 0, len(relayChainIDs)-1)
+	for chain := range relayChainIDs {
+		if chain != "Solana" {
+			chains = append(chains, chain)
+		}
+	}
+	return chains
+}()
+
+// relaySupportedAllChains includes Solana (requires solRPC).
+var relaySupportedAllChains = func() []string {
 	chains := make([]string, 0, len(relayChainIDs))
 	for chain := range relayChainIDs {
 		chains = append(chains, chain)
@@ -59,8 +70,12 @@ type RelayProvider struct {
 // NewRelayProvider creates a new Relay provider.
 // solRPC is only needed for Solana swaps (pass nil for EVM-only usage).
 func NewRelayProvider(solRPC *rpc.Client) *RelayProvider {
+	chains := relaySupportedEVMChains
+	if solRPC != nil {
+		chains = relaySupportedAllChains
+	}
 	return &RelayProvider{
-		BaseProvider: NewBaseProvider("Relay", PriorityRelay, relaySupportedChains),
+		BaseProvider: NewBaseProvider("Relay", PriorityRelay, chains),
 		client: &http.Client{
 			Timeout: 15 * time.Second,
 		},

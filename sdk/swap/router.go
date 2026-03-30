@@ -32,14 +32,14 @@ const (
 )
 
 // providerOrder defines the preferred provider order for ALL swaps.
-// Relay is tried first (solver-based, no slippage), then THORChain/Mayachain
-// for cross-chain, then DEX aggregators for same-chain swaps.
+// THORChain/Mayachain are tried first (if they support the route),
+// then Relay and LiFi as multi-chain aggregators, then DEX fallbacks.
 var providerOrder = []string{
-	ProviderRelay,     // Solver-based, no slippage, 75+ chains
-	ProviderTHORChain, // Cross-chain protocol
+	ProviderTHORChain, // Cross-chain protocol first
 	ProviderMayachain, // Alternative cross-chain
-	ProviderOneInch,   // Fallback for same-chain EVM
-	ProviderJupiter,   // Fallback for Solana
+	ProviderRelay,     // Solver-based multi-chain (before LiFi)
+	ProviderOneInch,   // Same-chain EVM
+	ProviderJupiter,   // Solana DEX
 	ProviderLiFi,      // Multi-chain aggregator
 	ProviderUniswap,   // Last resort DEX
 }

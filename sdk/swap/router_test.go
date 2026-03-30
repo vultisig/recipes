@@ -13,8 +13,8 @@ func TestNewDefaultRouter(t *testing.T) {
 		t.Errorf("expected 7 providers, got %d", len(providers))
 	}
 
-	// Verify priority order (Relay first, then THORChain, etc.)
-	expectedOrder := []string{"Relay", "THORChain", "Mayachain", "LiFi", "1inch", "Jupiter", "Uniswap"}
+	// Verify priority order
+	expectedOrder := []string{"THORChain", "Mayachain", "Relay", "LiFi", "1inch", "Jupiter", "Uniswap"}
 	for i, name := range expectedOrder {
 		if providers[i] != name {
 			t.Errorf("expected provider %d to be %s, got %s", i, name, providers[i])
@@ -392,28 +392,25 @@ func TestUnitConversions(t *testing.T) {
 func TestSmartProviderRouting(t *testing.T) {
 	router := NewDefaultRouter()
 
-	t.Run("All swaps prefer Relay first", func(t *testing.T) {
+	t.Run("All swaps prefer THORChain first", func(t *testing.T) {
 		ordered := router.getOrderedProviders(nil)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
 		}
-		if ordered[0].Name() != "Relay" {
-			t.Errorf("expected first provider to be Relay, got %s", ordered[0].Name())
-		}
-		if ordered[1].Name() != "THORChain" {
-			t.Errorf("expected second provider to be THORChain, got %s", ordered[1].Name())
+		if ordered[0].Name() != "THORChain" {
+			t.Errorf("expected first provider to be THORChain, got %s", ordered[0].Name())
 		}
 	})
 
-	t.Run("Cross-chain prefers Relay then THORChain", func(t *testing.T) {
+	t.Run("Cross-chain prefers THORChain", func(t *testing.T) {
 		ordered := router.getOrderedProviders(nil)
 
 		if len(ordered) == 0 {
 			t.Fatal("expected at least one provider")
 		}
-		if ordered[0].Name() != "Relay" {
-			t.Errorf("expected first provider to be Relay for cross-chain, got %s", ordered[0].Name())
+		if ordered[0].Name() != "THORChain" {
+			t.Errorf("expected first provider to be THORChain for cross-chain, got %s", ordered[0].Name())
 		}
 	})
 

@@ -185,7 +185,7 @@ func (a *ChainAdapter) IsAvailable(ctx context.Context) (bool, error) {
 // GetStatus returns the status of swap providers for this chain.
 func (a *ChainAdapter) GetStatus(ctx context.Context) (*ProviderStatus, error) {
 	// Try providers in priority order
-	providers := providerOrder
+	providers := []string{"THORChain", "Mayachain", "LiFi", "1inch", "Jupiter", "Uniswap"}
 
 	for _, p := range providers {
 		status, err := a.router.GetProviderStatus(ctx, p, a.chain)

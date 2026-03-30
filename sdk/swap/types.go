@@ -15,9 +15,9 @@ type Asset struct {
 
 // Provider priority constants - lower number = higher priority
 const (
-	PriorityRelay     = 0 // Solver-based, no slippage, 75+ chains
 	PriorityTHORChain = 1
 	PriorityMayachain = 2
+	PriorityRelay     = 3 // Solver-based, no slippage, tried before LiFi
 	PriorityLiFi      = 3
 	PriorityOneInch   = 4
 	PriorityJupiter   = 5
@@ -197,10 +197,7 @@ var EVMChains = []string{
 	"Optimism",
 	"Blast",
 	"CronosChain",
-	"Mantle",
-	"Sei",
-	"Zksync",
-	"ZkSync", // legacy casing
+	"ZkSync",
 }
 
 // IsEVMChain checks if a chain is an EVM-compatible chain
