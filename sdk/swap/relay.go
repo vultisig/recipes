@@ -280,11 +280,10 @@ func (p *RelayProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResu
 		result.NeedsApproval = true
 		result.ApprovalAddress = approvalStep.To
 
-		approvalAmount := req.Quote.FromAmount
-		if approvalAmount == nil {
-			approvalAmount = big.NewInt(0)
+		if req.Quote.FromAmount == nil {
+			return nil, fmt.Errorf("relay: approval required but FromAmount is nil")
 		}
-		result.ApprovalAmount = approvalAmount
+		result.ApprovalAmount = req.Quote.FromAmount
 	}
 
 	return result, nil
