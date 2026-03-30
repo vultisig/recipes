@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 // Service provides a high-level swap service for applications.
@@ -14,9 +16,10 @@ type Service struct {
 }
 
 // NewService creates a new swap service with the default router.
-func NewService() *Service {
+// Optional solRPC enables Relay Solana TX assembly.
+func NewService(solRPC ...*rpc.Client) *Service {
 	return &Service{
-		router: NewDefaultRouter(),
+		router: NewDefaultRouter(solRPC...),
 	}
 }
 

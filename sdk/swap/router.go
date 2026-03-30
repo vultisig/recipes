@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 var (
@@ -75,10 +77,15 @@ func NewRouter(opts ...RouterOption) *Router {
 	return r
 }
 
-// NewDefaultRouter creates a router with all default providers
-func NewDefaultRouter() *Router {
+// NewDefaultRouter creates a router with all default providers.
+// Optional solRPC enables Relay Solana TX assembly (pass nil for EVM-only Relay).
+func NewDefaultRouter(solRPC ...*rpc.Client) *Router {
+	var sol *rpc.Client
+	if len(solRPC) > 0 {
+		sol = solRPC[0]
+	}
 	return NewRouter(
-		WithProvider(NewRelayProvider(nil)),
+		WithProvider(NewRelayProvider(sol)),
 		WithProvider(NewTHORChainProvider(nil)),
 		WithProvider(NewMayachainProvider(nil)),
 		WithProvider(NewLiFiProvider("")),
