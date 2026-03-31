@@ -286,7 +286,7 @@ func TestTHORChainVaultResolver_APIConsistency(t *testing.T) {
 func queryTHORChainAPIDirect() ([]InboundAddress, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	resp, err := client.Get("https://thornode.ninerealms.com/thorchain/inbound_addresses")
+	resp, err := client.Get("https://thornode.thorchain.network/thorchain/inbound_addresses")
 	if err != nil {
 		return nil, err
 	}

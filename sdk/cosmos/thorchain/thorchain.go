@@ -9,12 +9,12 @@ import (
 
 // THORChain mainnet endpoints (REST API)
 var MainnetEndpoints = []string{
-	"https://thornode.ninerealms.com",
+	"https://thornode.thorchain.network",
 }
 
 // THORChain stagenet endpoints
 var StagenetEndpoints = []string{
-	"https://stagenet-thornode.ninerealms.com",
+	"https://chainnet-thornode.thorchain.network",
 }
 
 // SDK represents the THORChain SDK for transaction signing and broadcasting

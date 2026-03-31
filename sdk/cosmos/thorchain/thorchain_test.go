@@ -46,7 +46,7 @@ func TestNewStagenetSDK(t *testing.T) {
 }
 
 func TestNewHTTPRPCClient(t *testing.T) {
-	endpoints := []string{"https://thornode.ninerealms.com"}
+	endpoints := []string{"https://thornode.thorchain.network"}
 	client := NewHTTPRPCClient(endpoints)
 
 	assert.NotNil(t, client)
