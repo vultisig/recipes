@@ -6,6 +6,8 @@ import (
 	"github.com/vultisig/vultisig-go/common"
 )
 
+const defaultTHORChainBaseURL = "https://thornode.thorchain.network"
+
 func getThorChainSymbol(chain common.Chain) (string, error) {
 	switch chain {
 	case common.Bitcoin:
