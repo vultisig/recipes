@@ -85,7 +85,6 @@ var thorChainNetworks = map[string]string{
 // Default THORChain endpoints
 var defaultTHORChainEndpoints = []string{
 	"https://thornode.ninerealms.com",
-	"https://thornode.thorchain.info",
 }
 
 // THORChainProvider implements SwapProvider for THORChain
