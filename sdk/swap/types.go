@@ -17,10 +17,11 @@ type Asset struct {
 const (
 	PriorityTHORChain = 1
 	PriorityMayachain = 2
-	PriorityLiFi      = 3
-	PriorityOneInch   = 4
-	PriorityJupiter   = 5
-	PriorityUniswap   = 6
+	PriorityRelay     = 3
+	PriorityLiFi      = 4
+	PriorityOneInch   = 5
+	PriorityJupiter   = 6
+	PriorityUniswap   = 7
 )
 
 // ProviderPreference configures which swap providers to use and in what order.
