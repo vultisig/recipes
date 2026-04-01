@@ -85,7 +85,6 @@ var thorChainNetworks = map[string]string{
 // Default THORChain endpoints
 var defaultTHORChainEndpoints = []string{
 	"https://thornode.ninerealms.com",
-	"https://thornode.thorchain.info",
 }
 
 // THORChainProvider implements SwapProvider for THORChain
@@ -193,7 +192,14 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
-	params.Set("tolerance_bps", "2500")
+	toleranceBps := 2500
+	if req.ToleranceBps != nil {
+		toleranceBps = *req.ToleranceBps
+	}
+	if toleranceBps < 0 || toleranceBps > 10000 {
+		return nil, fmt.Errorf("invalid tolerance_bps %d: must be between 0 and 10000", toleranceBps)
+	}
+	params.Set("tolerance_bps", fmt.Sprintf("%d", toleranceBps))
 
 	// Try all endpoints with fallback
 	var lastErr error

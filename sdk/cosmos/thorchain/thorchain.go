@@ -10,7 +10,6 @@ import (
 // THORChain mainnet endpoints (REST API)
 var MainnetEndpoints = []string{
 	"https://thornode.ninerealms.com",
-	"https://thornode.thorchain.info",
 }
 
 // THORChain stagenet endpoints
