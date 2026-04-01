@@ -33,7 +33,7 @@ func NewTHORChainVaultResolver() Resolver {
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		baseURL: "https://thornode.ninerealms.com",
+		baseURL: defaultTHORChainBaseURL,
 	}
 }
 
