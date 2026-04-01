@@ -14,7 +14,7 @@ var MainnetEndpoints = []string{
 
 // THORChain stagenet endpoints
 var StagenetEndpoints = []string{
-	"https://chainnet-thornode.thorchain.network",
+	"https://stagenet-thornode.thorchain.network",
 }
 
 // SDK represents the THORChain SDK for transaction signing and broadcasting
