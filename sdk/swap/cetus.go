@@ -120,7 +120,10 @@ func (p *CetusProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		return nil, fmt.Errorf("Cetus routing failed: %s", msg)
 	}
 
-	outAmount := new(big.Int).SetUint64(routeResp.Data.AmountOut)
+	outAmount, ok := new(big.Int).SetString(routeResp.Data.AmountOut.String(), 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid output amount: %s", routeResp.Data.AmountOut)
+	}
 	if outAmount.Sign() == 0 {
 		return nil, fmt.Errorf("Cetus returned zero output for this swap")
 	}
@@ -169,8 +172,8 @@ type cetusRouteResponse struct {
 }
 
 type cetusRouteData struct {
-	AmountOut             uint64  `json:"amount_out"`
-	AmountIn              uint64  `json:"amount_in"`
-	InsufficientLiquidity bool    `json:"insufficient_liquidity"`
-	RequestID             string  `json:"request_id"`
+	AmountOut             json.Number `json:"amount_out"`
+	AmountIn              json.Number `json:"amount_in"`
+	InsufficientLiquidity bool        `json:"insufficient_liquidity"`
+	RequestID             string      `json:"request_id"`
 }
