@@ -29,6 +29,7 @@ const (
 	ProviderOneInch   = "1inch"
 	ProviderJupiter   = "Jupiter"
 	ProviderUniswap   = "Uniswap"
+	ProviderCetus     = "Cetus"
 )
 
 // providerOrder defines the preferred provider order for ALL swaps.
@@ -42,6 +43,7 @@ var providerOrder = []string{
 	ProviderJupiter,   // Fallback for Solana
 	ProviderLiFi,      // Multi-chain aggregator
 	ProviderUniswap,   // Last resort DEX
+	ProviderCetus,     // SUI DEX aggregator
 }
 
 // Router orchestrates swap provider selection and execution
@@ -92,6 +94,7 @@ func NewDefaultRouter(solRPC ...*rpc.Client) *Router {
 		WithProvider(NewOneInchProvider("")),
 		WithProvider(NewJupiterProvider("")),
 		WithProvider(NewUniswapProvider()),
+		WithProvider(NewCetusProvider("")),
 	)
 }
 

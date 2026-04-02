@@ -22,6 +22,7 @@ const (
 	PriorityOneInch   = 5
 	PriorityJupiter   = 6
 	PriorityUniswap   = 7
+	PriorityCetus     = 8
 )
 
 // ProviderPreference configures which swap providers to use and in what order.
