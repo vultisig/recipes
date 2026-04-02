@@ -69,11 +69,21 @@ func (p *CetusProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 
 	fromCoinType := req.From.Address
 	if fromCoinType == "" {
+		if req.From.Symbol != "SUI" {
+			return nil, fmt.Errorf("non-SUI asset missing contract address")
+		}
 		fromCoinType = suiNativeCoinType
 	}
 	toCoinType := req.To.Address
 	if toCoinType == "" {
+		if req.To.Symbol != "SUI" {
+			return nil, fmt.Errorf("non-SUI asset missing contract address")
+		}
 		toCoinType = suiNativeCoinType
+	}
+
+	if req.Amount == nil {
+		return nil, fmt.Errorf("amount is required")
 	}
 
 	// Build route query (v param required by Cetus API)
@@ -147,18 +157,19 @@ func (p *CetusProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 	}, nil
 }
 
-// BuildTx builds an unsigned SUI transaction for the Cetus swap.
-// For now, returns the route data — the MCP layer handles SUI TX construction.
+// BuildTx returns the Cetus route data for the MCP layer to construct
+// the actual SUI Programmable Transaction Block. The PTB construction
+// requires SUI-specific tooling (shared object resolution, BCS encoding)
+// which lives in the MCP's internal/cetus package, not in this SDK.
 func (p *CetusProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResult, error) {
 	if req.Quote == nil {
 		return nil, fmt.Errorf("quote is required")
 	}
 
-	// The route data from GetQuote contains the swap instructions
-	// The MCP/app layer will construct the actual SUI transaction
 	return &SwapResult{
 		Provider:    p.Name(),
 		TxData:      req.Quote.ProviderData,
+		ToAddress:   req.Destination,
 		ExpectedOut: req.Quote.ExpectedOutput,
 	}, nil
 }
