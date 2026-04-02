@@ -21,6 +21,14 @@ const (
 	relayReferrer       = "vultisig"
 )
 
+const (
+	// solanaMaxTxSize is the maximum serialized Solana transaction size in bytes.
+	solanaMaxTxSize = 1232
+
+	// solanaRetryMaxRouteLength limits swap hops when retrying an oversized transaction.
+	solanaRetryMaxRouteLength = 2
+)
+
 // Relay chain IDs
 var relayChainIDs = map[string]int{
 	"Ethereum":  1,
@@ -118,6 +126,12 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		TradeType:           "EXACT_INPUT",
 		Recipient:           recipient,
 		Referrer:            relayReferrer,
+	}
+
+	// Reduce Solana transaction size by using shared accounts.
+	if req.From.Chain == "Solana" {
+		useShared := true
+		quoteReq.UseSharedAccounts = &useShared
 	}
 
 	quoteResp, err := p.postQuote(ctx, quoteReq)
@@ -225,6 +239,19 @@ func (p *RelayProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResu
 		if err != nil {
 			return nil, fmt.Errorf("relay: build solana tx: %w", err)
 		}
+
+		// Validate Solana transaction size. If oversized, re-quote with a simpler
+		// route (maxRouteLength=2) and rebuild. This asks Relay for fewer hops
+		// rather than trying to split instructions ourselves.
+		if len(txData) > solanaMaxTxSize {
+			simpleTxData, retryErr := p.retrySolanaWithSimplerRoute(ctx, req, req.Sender)
+			if retryErr != nil {
+				return nil, fmt.Errorf("relay: solana tx oversized (%d bytes, max %d) and retry with simpler route failed: %w",
+					len(txData), solanaMaxTxSize, retryErr)
+			}
+			txData = simpleTxData
+		}
+
 		return &SwapResult{
 			Provider:    p.Name(),
 			TxData:      txData,
@@ -341,6 +368,81 @@ func (p *RelayProvider) buildSolanaTransaction(ctx context.Context, txData *rela
 	return txBytes, nil
 }
 
+// retrySolanaWithSimplerRoute re-quotes and rebuilds the Solana transaction with
+// maxRouteLength constrained to reduce transaction size. This asks Relay for fewer
+// swap hops rather than trying to split the transaction ourselves.
+func (p *RelayProvider) retrySolanaWithSimplerRoute(ctx context.Context, req SwapRequest, senderAddr string) ([]byte, error) {
+	originChainID, ok := relayChainIDs[req.Quote.FromAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported origin chain %q", req.Quote.FromAsset.Chain)
+	}
+	destChainID, ok := relayChainIDs[req.Quote.ToAsset.Chain]
+	if !ok {
+		return nil, fmt.Errorf("unsupported destination chain %q", req.Quote.ToAsset.Chain)
+	}
+
+	originCurrency := req.Quote.FromAsset.Address
+	if originCurrency == "" {
+		originCurrency = relayNativeAddress(req.Quote.FromAsset.Chain)
+	}
+	destCurrency := req.Quote.ToAsset.Address
+	if destCurrency == "" {
+		destCurrency = relayNativeAddress(req.Quote.ToAsset.Chain)
+	}
+
+	recipient := req.Destination
+	if recipient == "" {
+		recipient = req.Sender
+	}
+
+	maxRoute := solanaRetryMaxRouteLength
+	useShared := true
+	retryReq := relayQuoteRequest{
+		User:                req.Sender,
+		OriginChainID:       originChainID,
+		DestinationChainID:  destChainID,
+		OriginCurrency:      originCurrency,
+		DestinationCurrency: destCurrency,
+		Amount:              req.Quote.FromAmount.String(),
+		TradeType:           "EXACT_INPUT",
+		Recipient:           recipient,
+		Referrer:            relayReferrer,
+		MaxRouteLength:      &maxRoute,
+		UseSharedAccounts:   &useShared,
+	}
+
+	retryResp, err := p.postQuote(ctx, retryReq)
+	if err != nil {
+		return nil, fmt.Errorf("retry quote failed: %w", err)
+	}
+
+	// Find the transaction step in the retry response.
+	var txStep *relayStepData
+	for i := range retryResp.Steps {
+		step := &retryResp.Steps[i]
+		if len(step.Items) == 0 {
+			continue
+		}
+		if step.Kind == "transaction" && txStep == nil {
+			txStep = &step.Items[0].Data
+		}
+	}
+	if txStep == nil {
+		return nil, fmt.Errorf("no transaction step in retry response")
+	}
+
+	txBytes, err := p.buildSolanaTransaction(ctx, txStep, senderAddr)
+	if err != nil {
+		return nil, fmt.Errorf("build retry tx: %w", err)
+	}
+
+	if len(txBytes) > solanaMaxTxSize {
+		return nil, fmt.Errorf("transaction still oversized after retry (%d bytes, max %d)", len(txBytes), solanaMaxTxSize)
+	}
+
+	return txBytes, nil
+}
+
 // resolveRelayALTs fetches address lookup table accounts from the Solana chain.
 func resolveRelayALTs(ctx context.Context, solRPC *rpc.Client, altAddresses []string) (map[solana.PublicKey]solana.PublicKeySlice, error) {
 	result := make(map[solana.PublicKey]solana.PublicKeySlice, len(altAddresses))
@@ -429,6 +531,12 @@ type relayQuoteRequest struct {
 	TradeType           string `json:"tradeType"`
 	Recipient           string `json:"recipient"`
 	Referrer            string `json:"referrer"`
+
+	// Solana-specific parameters to control transaction size.
+	// MaxRouteLength limits swap hops to reduce transaction size.
+	MaxRouteLength   *int `json:"maxRouteLength,omitempty"`
+	// UseSharedAccounts prevents certain ATA creation instructions in Solana routing.
+	UseSharedAccounts *bool `json:"useSharedAccounts,omitempty"`
 }
 
 type relayQuoteResponse struct {
