@@ -14,11 +14,13 @@ import (
 	"github.com/gagliardetto/solana-go"
 	addresslookuptable "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/vultisig/recipes/resolver"
 )
 
 const (
-	relayDefaultBaseURL = "https://api.relay.link"
-	relayReferrer       = "vultisig"
+	relayDefaultBaseURL  = "https://api.relay.link"
+	relayReferrer        = "vultisig"
+	relayAffiliateBps    = "50" // 0.5%
 )
 
 // Relay chain IDs
@@ -118,6 +120,10 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		TradeType:           "EXACT_INPUT",
 		Recipient:           recipient,
 		Referrer:            relayReferrer,
+		AppFees: []relayAppFee{{
+			Recipient: resolver.DefaultEVMTreasuryAddress,
+			Fee:       relayAffiliateBps,
+		}},
 	}
 
 	// Reduce Solana transaction size by using shared accounts.
@@ -426,19 +432,25 @@ func trimHexPrefix(s string) string {
 // --- Relay API types ---
 
 type relayQuoteRequest struct {
-	User                string `json:"user"`
-	OriginChainID       int    `json:"originChainId"`
-	DestinationChainID  int    `json:"destinationChainId"`
-	OriginCurrency      string `json:"originCurrency"`
-	DestinationCurrency string `json:"destinationCurrency"`
-	Amount              string `json:"amount"`
-	TradeType           string `json:"tradeType"`
-	Recipient           string `json:"recipient"`
-	Referrer            string `json:"referrer"`
+	User                string        `json:"user"`
+	OriginChainID       int           `json:"originChainId"`
+	DestinationChainID  int           `json:"destinationChainId"`
+	OriginCurrency      string        `json:"originCurrency"`
+	DestinationCurrency string        `json:"destinationCurrency"`
+	Amount              string        `json:"amount"`
+	TradeType           string        `json:"tradeType"`
+	Recipient           string        `json:"recipient"`
+	Referrer            string        `json:"referrer"`
+	AppFees             []relayAppFee `json:"appFees,omitempty"`
 
 	// UseSharedAccounts prevents certain ATA creation instructions in Solana routing,
 	// reducing transaction size.
 	UseSharedAccounts *bool `json:"useSharedAccounts,omitempty"`
+}
+
+type relayAppFee struct {
+	Recipient string `json:"recipient"`
+	Fee       string `json:"fee"` // basis points
 }
 
 type relayQuoteResponse struct {
