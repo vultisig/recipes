@@ -120,6 +120,12 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		Referrer:            relayReferrer,
 	}
 
+	// Reduce Solana transaction size by using shared accounts.
+	if req.From.Chain == "Solana" {
+		useShared := true
+		quoteReq.UseSharedAccounts = &useShared
+	}
+
 	quoteResp, err := p.postQuote(ctx, quoteReq)
 	if err != nil {
 		return nil, err
@@ -429,6 +435,10 @@ type relayQuoteRequest struct {
 	TradeType           string `json:"tradeType"`
 	Recipient           string `json:"recipient"`
 	Referrer            string `json:"referrer"`
+
+	// UseSharedAccounts prevents certain ATA creation instructions in Solana routing,
+	// reducing transaction size.
+	UseSharedAccounts *bool `json:"useSharedAccounts,omitempty"`
 }
 
 type relayQuoteResponse struct {
