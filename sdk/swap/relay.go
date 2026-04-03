@@ -17,8 +17,10 @@ import (
 )
 
 const (
-	relayDefaultBaseURL = "https://api.relay.link"
-	relayReferrer       = "vultisig"
+	relayDefaultBaseURL   = "https://api.relay.link"
+	relayReferrer         = "vultisig"
+	relayAffiliateBps     = "50" // 0.5%
+	relayAffiliatAddress  = "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9"
 )
 
 // Relay chain IDs
@@ -118,6 +120,10 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		TradeType:           "EXACT_INPUT",
 		Recipient:           recipient,
 		Referrer:            relayReferrer,
+		AppFees: []relayAppFee{{
+			Recipient: relayAffiliatAddress,
+			Fee:       relayAffiliateBps,
+		}},
 	}
 
 	quoteResp, err := p.postQuote(ctx, quoteReq)
@@ -420,15 +426,21 @@ func trimHexPrefix(s string) string {
 // --- Relay API types ---
 
 type relayQuoteRequest struct {
-	User                string `json:"user"`
-	OriginChainID       int    `json:"originChainId"`
-	DestinationChainID  int    `json:"destinationChainId"`
-	OriginCurrency      string `json:"originCurrency"`
-	DestinationCurrency string `json:"destinationCurrency"`
-	Amount              string `json:"amount"`
-	TradeType           string `json:"tradeType"`
-	Recipient           string `json:"recipient"`
-	Referrer            string `json:"referrer"`
+	User                string        `json:"user"`
+	OriginChainID       int           `json:"originChainId"`
+	DestinationChainID  int           `json:"destinationChainId"`
+	OriginCurrency      string        `json:"originCurrency"`
+	DestinationCurrency string        `json:"destinationCurrency"`
+	Amount              string        `json:"amount"`
+	TradeType           string        `json:"tradeType"`
+	Recipient           string        `json:"recipient"`
+	Referrer            string        `json:"referrer"`
+	AppFees             []relayAppFee `json:"appFees,omitempty"`
+}
+
+type relayAppFee struct {
+	Recipient string `json:"recipient"`
+	Fee       string `json:"fee"` // basis points
 }
 
 type relayQuoteResponse struct {
