@@ -14,13 +14,13 @@ import (
 	"github.com/gagliardetto/solana-go"
 	addresslookuptable "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/vultisig/recipes/resolver"
 )
 
 const (
-	relayDefaultBaseURL   = "https://api.relay.link"
-	relayReferrer         = "vultisig"
-	relayAffiliateBps     = "50" // 0.5%
-	relayAffiliatAddress  = "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9"
+	relayDefaultBaseURL  = "https://api.relay.link"
+	relayReferrer        = "vultisig"
+	relayAffiliateBps    = "50" // 0.5%
 )
 
 // Relay chain IDs
@@ -121,7 +121,7 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		Recipient:           recipient,
 		Referrer:            relayReferrer,
 		AppFees: []relayAppFee{{
-			Recipient: relayAffiliatAddress,
+			Recipient: resolver.DefaultEVMTreasuryAddress,
 			Fee:       relayAffiliateBps,
 		}},
 	}
