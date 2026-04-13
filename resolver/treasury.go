@@ -6,6 +6,9 @@ import (
 	"github.com/vultisig/recipes/types"
 )
 
+// DefaultEVMTreasuryAddress is the canonical Vultisig treasury address on all EVM chains.
+const DefaultEVMTreasuryAddress = "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9"
+
 type TreasuryResolver struct {
 	treasuryConfig map[string]map[string]string
 }
@@ -23,20 +26,20 @@ func NewDefaultTreasuryResolver() Resolver {
 func defaultTreasuryConfig() map[string]map[string]string {
 	return map[string]map[string]string{
 		"ethereum": {
-			"eth":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"usdc":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"dai":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"weth":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"default": "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"eth":     DefaultEVMTreasuryAddress,
+			"usdc":    DefaultEVMTreasuryAddress,
+			"dai":     DefaultEVMTreasuryAddress,
+			"weth":    DefaultEVMTreasuryAddress,
+			"default": DefaultEVMTreasuryAddress,
 		},
 		"bitcoin": {
 			"btc":     "bc1qelza2cr7w92dmzgkmhdn0a4vcqpe9rfpfknr6a",
 			"default": "bc1qelza2cr7w92dmzgkmhdn0a4vcqpe9rfpfknr6a",
 		},
 		"arbitrum": {
-			"eth":     "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"usdc":    "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
-			"default": "0x8E247a480449c84a5fDD25974A8501f3EFa4ABb9",
+			"eth":     DefaultEVMTreasuryAddress,
+			"usdc":    DefaultEVMTreasuryAddress,
+			"default": DefaultEVMTreasuryAddress,
 		},
 	}
 }

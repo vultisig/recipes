@@ -140,6 +140,15 @@ func (p *THORChainProvider) GetStatus(ctx context.Context, chain string) (*Provi
 		}, nil
 	}
 
+	// THORChain itself doesn't appear in inbound_addresses (native RUNE
+	// transfers don't go through vaults). Always available for receives.
+	if network == thorChainTHOR {
+		return &ProviderStatus{
+			Chain:     chain,
+			Available: true,
+		}, nil
+	}
+
 	addresses, err := p.getInboundAddresses(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inbound addresses: %w", err)
