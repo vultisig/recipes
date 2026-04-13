@@ -9,12 +9,12 @@ func TestNewDefaultRouter(t *testing.T) {
 	router := NewDefaultRouter()
 
 	providers := router.ListProviders()
-	if len(providers) != 7 {
-		t.Errorf("expected 7 providers, got %d", len(providers))
+	if len(providers) != 8 {
+		t.Errorf("expected 8 providers, got %d", len(providers))
 	}
 
 	// Verify priority order
-	expectedOrder := []string{"THORChain", "Mayachain", "Relay", "LiFi", "1inch", "Jupiter", "Uniswap"}
+	expectedOrder := []string{"THORChain", "Mayachain", "Relay", "LiFi", "1inch", "Jupiter", "Uniswap", "Cetus"}
 	for i, name := range expectedOrder {
 		if providers[i] != name {
 			t.Errorf("expected provider %d to be %s, got %s", i, name, providers[i])
