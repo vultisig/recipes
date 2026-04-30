@@ -92,6 +92,24 @@ func TestExtractParameterFromMsgBeginRedelegate(t *testing.T) {
 		assert.Contains(t, err.Error(), "src and dst validators must differ")
 	})
 
+	// CR companion to the withdraw fix already shipped (1d5f4ac):
+	// without the delegator_address required-field check, a malformed
+	// redelegate payload with an empty delegator slips past extraction
+	// when policy rules don't constrain delegator. Mirrors the
+	// withdraw_rewards / staking validator early-rejects above.
+	t.Run("rejects empty delegator address", func(t *testing.T) {
+		msg := &stakingtypes.MsgBeginRedelegate{
+			DelegatorAddress:    "",
+			ValidatorSrcAddress: "cosmosvaloper1srcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorDstAddress: "cosmosvaloper1dstxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+		}
+
+		_, err := e.extractParameterFromMsgBeginRedelegate("delegator_address", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "delegator_address required")
+	})
+
 	// Regression: previously the equality check was guarded by `Src != ""`, which let
 	// a fully empty pair ("" == "") slip past validation. Both empty addresses must
 	// each be rejected on their own, before the equality comparison runs.

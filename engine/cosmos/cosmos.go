@@ -460,6 +460,9 @@ func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *ty
 // belong on the per-chain engine wiring (where Bech32Prefix is known) — this generic
 // extractor mirrors how MsgSend handles ToAddress without prefix checks.
 func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *stakingtypes.MsgBeginRedelegate) (any, error) {
+	if msg.DelegatorAddress == "" {
+		return nil, fmt.Errorf("redelegate delegator_address required")
+	}
 	if msg.ValidatorSrcAddress == "" {
 		return nil, fmt.Errorf("redelegate validator_src_address required")
 	}
