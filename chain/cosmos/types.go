@@ -15,6 +15,8 @@ const (
 	MessageTypeUnknown MessageType = iota - 1
 	MessageTypeSend
 	MessageTypeDeposit
+	MessageTypeBeginRedelegate
+	MessageTypeWithdrawDelegatorReward
 )
 
 // String returns string representation of MessageType
@@ -24,6 +26,10 @@ func (mt MessageType) String() string {
 		return "MsgSend"
 	case MessageTypeDeposit:
 		return "MsgDeposit"
+	case MessageTypeBeginRedelegate:
+		return "MsgBeginRedelegate"
+	case MessageTypeWithdrawDelegatorReward:
+		return "MsgWithdrawDelegatorReward"
 	default:
 		return "Unknown"
 	}
@@ -37,6 +43,12 @@ const (
 	// Custom chain-specific MsgSend/MsgDeposit TypeUrls
 	TypeUrlCustomMsgSend    = "/types.MsgSend"
 	TypeUrlCustomMsgDeposit = "/types.MsgDeposit"
+
+	// Cosmos staking module
+	TypeUrlCosmosMsgBeginRedelegate = "/cosmos.staking.v1beta1.MsgBeginRedelegate"
+
+	// Cosmos distribution module
+	TypeUrlCosmosMsgWithdrawDelegatorReward = "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward"
 )
 
 // MessageTypeRegistry maps TypeUrls to MessageTypes for a chain
