@@ -202,6 +202,42 @@ func TestExtractParameterFromMsgWithdrawDelegatorReward(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported parameter")
 	})
+
+	// Regression: empty addresses must be rejected before the parameter switch
+	// runs, mirroring the redelegate validator-address checks. Without these
+	// guards, a policy match could silently succeed against an empty string.
+	t.Run("rejects empty delegator address", func(t *testing.T) {
+		msg := &distributiontypes.MsgWithdrawDelegatorReward{
+			DelegatorAddress: "",
+			ValidatorAddress: "cosmosvaloper1abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		}
+
+		_, err := e.extractParameterFromMsgWithdrawDelegatorReward("delegator_address", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "delegator_address required")
+	})
+
+	t.Run("rejects empty validator address", func(t *testing.T) {
+		msg := &distributiontypes.MsgWithdrawDelegatorReward{
+			DelegatorAddress: "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorAddress: "",
+		}
+
+		_, err := e.extractParameterFromMsgWithdrawDelegatorReward("validator_address", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validator_address required")
+	})
+
+	t.Run("rejects both empty addresses", func(t *testing.T) {
+		msg := &distributiontypes.MsgWithdrawDelegatorReward{
+			DelegatorAddress: "",
+			ValidatorAddress: "",
+		}
+
+		_, err := e.extractParameterFromMsgWithdrawDelegatorReward("delegator_address", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "delegator_address required")
+	})
 }
 
 func TestUnpackMsgBeginRedelegate(t *testing.T) {

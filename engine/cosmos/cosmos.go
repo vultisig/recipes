@@ -494,8 +494,17 @@ func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *s
 //
 // This message has no amount field — the chain pays out whatever rewards have accrued
 // from the delegator/validator pair. Policy rules can therefore only constrain by
-// delegator and validator address (e.g., validator allowlist).
+// delegator and validator address (e.g., validator allowlist), so we fail fast if
+// either is empty rather than letting an empty string flow into the constraint
+// matcher (mirrors the redelegate validator address checks).
 func (e *Engine) extractParameterFromMsgWithdrawDelegatorReward(paramName string, msg *distributiontypes.MsgWithdrawDelegatorReward) (any, error) {
+	if msg.DelegatorAddress == "" {
+		return nil, fmt.Errorf("withdraw_rewards delegator_address required")
+	}
+	if msg.ValidatorAddress == "" {
+		return nil, fmt.Errorf("withdraw_rewards validator_address required")
+	}
+
 	switch paramName {
 	case "delegator_address":
 		return msg.DelegatorAddress, nil
