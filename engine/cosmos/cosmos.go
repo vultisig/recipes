@@ -12,6 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/vultisig/recipes/chain/cosmos"
 	"github.com/vultisig/recipes/engine/compare"
@@ -55,6 +57,12 @@ func NewEngine(config Config) *Engine {
 
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
+
+	// Register staking message types (MsgDelegate, MsgUndelegate, MsgBeginRedelegate, ...)
+	stakingtypes.RegisterInterfaces(ir)
+
+	// Register distribution message types (MsgWithdrawDelegatorReward, ...)
+	distributiontypes.RegisterInterfaces(ir)
 
 	// Register any extra types specific to this chain
 	if config.RegisterExtraTypes != nil {
@@ -207,6 +215,44 @@ func (e *Engine) unpackMsgDeposit(msg *codectypes.Any) (*types.MsgDeposit, error
 	return msgDeposit, nil
 }
 
+// unpackMsgBeginRedelegate unpacks a message to staking MsgBeginRedelegate type.
+func (e *Engine) unpackMsgBeginRedelegate(msg *codectypes.Any) (*stakingtypes.MsgBeginRedelegate, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("nil message")
+	}
+
+	var sdkMsg sdk.Msg
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
+	}
+
+	msgRedelegate, ok := sdkMsg.(*stakingtypes.MsgBeginRedelegate)
+	if !ok {
+		return nil, fmt.Errorf("expected staking MsgBeginRedelegate, got: %T", sdkMsg)
+	}
+
+	return msgRedelegate, nil
+}
+
+// unpackMsgWithdrawDelegatorReward unpacks a message to distribution MsgWithdrawDelegatorReward type.
+func (e *Engine) unpackMsgWithdrawDelegatorReward(msg *codectypes.Any) (*distributiontypes.MsgWithdrawDelegatorReward, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("nil message")
+	}
+
+	var sdkMsg sdk.Msg
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
+	}
+
+	msgWithdraw, ok := sdkMsg.(*distributiontypes.MsgWithdrawDelegatorReward)
+	if !ok {
+		return nil, fmt.Errorf("expected distribution MsgWithdrawDelegatorReward, got: %T", sdkMsg)
+	}
+
+	return msgWithdraw, nil
+}
+
 
 // validateTarget validates the transaction target against the rule target.
 func (e *Engine) validateTarget(resource *types.ResourcePath, target *types.Target, txData *tx.Tx, mt cosmos.MessageType) error {
@@ -317,6 +363,20 @@ func (e *Engine) extractParameterValue(paramName string, txData *tx.Tx, mt cosmo
 		}
 		return e.extractParameterFromMsgDeposit(paramName, msgDeposit)
 
+	case cosmos.MessageTypeBeginRedelegate:
+		msgRedelegate, err := e.unpackMsgBeginRedelegate(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgBeginRedelegate(paramName, msgRedelegate)
+
+	case cosmos.MessageTypeWithdrawDelegatorReward:
+		msgWithdraw, err := e.unpackMsgWithdrawDelegatorReward(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgWithdrawDelegatorReward(paramName, msgWithdraw)
+
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", mt)
 	}
@@ -381,6 +441,60 @@ func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *ty
 			return nil, fmt.Errorf("coin missing asset information")
 		}
 		return coin.Asset.Symbol, nil
+	default:
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
+	}
+}
+
+// extractParameterFromMsgBeginRedelegate extracts parameters from staking MsgBeginRedelegate.
+//
+// MsgBeginRedelegate moves stake from one validator (src) to another (dst) for a given
+// delegator. We expose the addresses, the amount and the denom so that policy rules can
+// constrain redelegation by validator allowlist or amount caps. We also enforce two
+// invariants here that any healthy redelegate tx must satisfy:
+//   - amount > 0 (zero-amount redelegations are nonsensical and rejected by the chain)
+//   - validator_src_address != validator_dst_address (chain rejects, but we fail fast)
+//
+// Bech32 prefix validation for the addresses is intentionally not enforced at this layer:
+// the Cosmos SDK proto-decode will accept any string, and chain-specific prefix checks
+// belong on the per-chain engine wiring (where Bech32Prefix is known) — this generic
+// extractor mirrors how MsgSend handles ToAddress without prefix checks.
+func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *stakingtypes.MsgBeginRedelegate) (any, error) {
+	if msg.ValidatorSrcAddress != "" && msg.ValidatorSrcAddress == msg.ValidatorDstAddress {
+		return nil, fmt.Errorf("redelegate src and dst validators must differ: %s", msg.ValidatorSrcAddress)
+	}
+	if msg.Amount.Amount.IsNil() || !msg.Amount.Amount.IsPositive() {
+		return nil, fmt.Errorf("redelegate amount must be > 0")
+	}
+
+	switch paramName {
+	case "delegator_address":
+		return msg.DelegatorAddress, nil
+	case "validator_src_address":
+		return msg.ValidatorSrcAddress, nil
+	case "validator_dst_address":
+		return msg.ValidatorDstAddress, nil
+	case "amount":
+		return msg.Amount.Amount.BigInt(), nil
+	case "denom":
+		return msg.Amount.Denom, nil
+	default:
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
+	}
+}
+
+// extractParameterFromMsgWithdrawDelegatorReward extracts parameters from
+// distribution MsgWithdrawDelegatorReward.
+//
+// This message has no amount field — the chain pays out whatever rewards have accrued
+// from the delegator/validator pair. Policy rules can therefore only constrain by
+// delegator and validator address (e.g., validator allowlist).
+func (e *Engine) extractParameterFromMsgWithdrawDelegatorReward(paramName string, msg *distributiontypes.MsgWithdrawDelegatorReward) (any, error) {
+	switch paramName {
+	case "delegator_address":
+		return msg.DelegatorAddress, nil
+	case "validator_address":
+		return msg.ValidatorAddress, nil
 	default:
 		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
 	}

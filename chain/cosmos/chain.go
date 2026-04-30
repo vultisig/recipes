@@ -13,6 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/vultisig/mobile-tss-lib/tss"
 	"github.com/vultisig/recipes/types"
 )
@@ -56,6 +58,12 @@ func NewChain(config ChainConfig) *Chain {
 
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
+
+	// Register staking message types (MsgDelegate, MsgUndelegate, MsgBeginRedelegate, ...)
+	stakingtypes.RegisterInterfaces(ir)
+
+	// Register distribution message types (MsgWithdrawDelegatorReward, ...)
+	distributiontypes.RegisterInterfaces(ir)
 
 	// Register any extra types specific to this chain
 	if config.RegisterExtraTypes != nil {

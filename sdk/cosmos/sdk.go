@@ -18,6 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/vultisig/mobile-tss-lib/tss"
 
 	chainCosmos "github.com/vultisig/recipes/chain/cosmos"
@@ -36,6 +38,8 @@ func NewSDK(rpcClient RPCClient) *SDK {
 	ir := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(ir)
 	banktypes.RegisterInterfaces(ir)
+	stakingtypes.RegisterInterfaces(ir)
+	distributiontypes.RegisterInterfaces(ir)
 
 	return &SDK{
 		rpcClient: rpcClient,
