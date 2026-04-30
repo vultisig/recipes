@@ -92,6 +92,48 @@ func TestExtractParameterFromMsgBeginRedelegate(t *testing.T) {
 		assert.Contains(t, err.Error(), "src and dst validators must differ")
 	})
 
+	// Regression: previously the equality check was guarded by `Src != ""`, which let
+	// a fully empty pair ("" == "") slip past validation. Both empty addresses must
+	// each be rejected on their own, before the equality comparison runs.
+	t.Run("rejects both empty validator addresses", func(t *testing.T) {
+		msg := &stakingtypes.MsgBeginRedelegate{
+			DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorSrcAddress: "",
+			ValidatorDstAddress: "",
+			Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+		}
+
+		_, err := e.extractParameterFromMsgBeginRedelegate("amount", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validator_src_address required")
+	})
+
+	t.Run("rejects empty src validator address", func(t *testing.T) {
+		msg := &stakingtypes.MsgBeginRedelegate{
+			DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorSrcAddress: "",
+			ValidatorDstAddress: "cosmosvaloper1dstxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+		}
+
+		_, err := e.extractParameterFromMsgBeginRedelegate("amount", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validator_src_address required")
+	})
+
+	t.Run("rejects empty dst validator address", func(t *testing.T) {
+		msg := &stakingtypes.MsgBeginRedelegate{
+			DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorSrcAddress: "cosmosvaloper1srcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			ValidatorDstAddress: "",
+			Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+		}
+
+		_, err := e.extractParameterFromMsgBeginRedelegate("amount", msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validator_dst_address required")
+	})
+
 	t.Run("rejects zero amount", func(t *testing.T) {
 		msg := &stakingtypes.MsgBeginRedelegate{
 			DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
