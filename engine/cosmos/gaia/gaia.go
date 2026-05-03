@@ -19,11 +19,15 @@ func NewGaia() *Gaia {
 			ChainID:         "cosmos",
 			SupportedChains: []common.Chain{common.GaiaChain},
 			MessageTypeRegistry: cosmos.NewMessageTypeRegistry(map[string]cosmos.MessageType{
-				cosmos.TypeUrlCosmosMsgSend: cosmos.MessageTypeSend,
+				cosmos.TypeUrlCosmosMsgSend:                    cosmos.MessageTypeSend,
+				cosmos.TypeUrlCosmosMsgBeginRedelegate:         cosmos.MessageTypeBeginRedelegate,
+				cosmos.TypeUrlCosmosMsgWithdrawDelegatorReward: cosmos.MessageTypeWithdrawDelegatorReward,
 			}),
 			ProtocolMessageTypes: map[string]cosmos.MessageType{
-				"atom": cosmos.MessageTypeSend,
-				"send": cosmos.MessageTypeSend,
+				"atom":                     cosmos.MessageTypeSend,
+				"send":                     cosmos.MessageTypeSend,
+				"staking_redelegate":       cosmos.MessageTypeBeginRedelegate,
+				"staking_withdraw_rewards": cosmos.MessageTypeWithdrawDelegatorReward,
 			},
 		}),
 	}
