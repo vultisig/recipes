@@ -94,9 +94,14 @@ func NewStakingRedelegate() *StakingRedelegate {
 				Name:        "Redelegate ATOM",
 				Description: "Move staked ATOM from a source validator to a destination validator",
 				Parameters: []*types.FunctionParam{
-					{Name: "delegator_address", Type: "address", Description: "The Cosmos address of the delegator"},
-					{Name: "validator_src_address", Type: "address", Description: "The source validator operator address"},
-					{Name: "validator_dst_address", Type: "address", Description: "The destination validator operator address"},
+					// delegator_address carries the account (cosmos1...) HRP.
+					{Name: "delegator_address", Type: "address", Description: "The Cosmos account address of the delegator (cosmos1... prefix)"},
+					// validator_src_address and validator_dst_address MUST carry the validator
+					// operator (cosmosvaloper1...) HRP — not the delegator HRP. The engine
+					// enforces this at extraction time; rules that constrain these fields will
+					// reject any cosmos1... address.
+					{Name: "validator_src_address", Type: "address", Description: "The source validator operator address (cosmosvaloper1... prefix)"},
+					{Name: "validator_dst_address", Type: "address", Description: "The destination validator operator address (cosmosvaloper1... prefix)"},
 					{Name: "amount", Type: "decimal", Description: "The amount of ATOM to redelegate (in uatom)"},
 					{Name: "denom", Type: "string", Description: "The coin denomination (e.g. uatom)"},
 				},
@@ -155,8 +160,12 @@ func NewStakingWithdrawRewards() *StakingWithdrawRewards {
 				Name:        "Withdraw Staking Rewards",
 				Description: "Claim accumulated ATOM staking rewards from a validator",
 				Parameters: []*types.FunctionParam{
-					{Name: "delegator_address", Type: "address", Description: "The Cosmos address of the delegator"},
-					{Name: "validator_address", Type: "address", Description: "The validator operator address to claim rewards from"},
+					// delegator_address carries the account (cosmos1...) HRP.
+					{Name: "delegator_address", Type: "address", Description: "The Cosmos account address of the delegator (cosmos1... prefix)"},
+					// validator_address MUST carry the validator operator (cosmosvaloper1...)
+					// HRP — not the delegator HRP. The engine enforces this at extraction
+					// time; rules constraining this field will reject any cosmos1... address.
+					{Name: "validator_address", Type: "address", Description: "The validator operator address to claim rewards from (cosmosvaloper1... prefix)"},
 				},
 			},
 		},

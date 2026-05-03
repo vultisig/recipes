@@ -10,6 +10,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -40,6 +41,17 @@ type Config struct {
 
 	// RegisterExtraTypes is an optional function to register additional protobuf types
 	RegisterExtraTypes func(ir codectypes.InterfaceRegistry)
+
+	// Bech32Prefix is the account address prefix (e.g., "cosmos", "maya", "thor").
+	// When non-empty, delegator address fields are validated to carry this HRP.
+	Bech32Prefix string
+
+	// ValidatorBech32Prefix is the validator operator address prefix
+	// (e.g., "cosmosvaloper"). Per Cosmos SDK convention this is always
+	// Bech32Prefix+"valoper". When non-empty, validator address fields are
+	// validated to carry this HRP, preventing a delegator address from being
+	// silently accepted in a validator field (fail-open attack).
+	ValidatorBech32Prefix string
 }
 
 // Engine is a generic Cosmos engine that can be configured for different chains.
@@ -446,19 +458,36 @@ func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *ty
 	}
 }
 
+// validateHRP decodes addr as bech32 and verifies its human-readable part equals
+// wantPrefix. Returns a descriptive error on mismatch or decode failure.
+// If wantPrefix is empty the check is skipped (chains that don't set a prefix).
+func validateHRP(addr, wantPrefix, fieldName string) error {
+	if wantPrefix == "" {
+		return nil
+	}
+	hrp, _, err := bech32.DecodeAndConvert(addr)
+	if err != nil {
+		return fmt.Errorf("invalid bech32 address in %s %q: %w", fieldName, addr, err)
+	}
+	if hrp != wantPrefix {
+		return fmt.Errorf("invalid %s HRP: expected %q, got %q (address %s)",
+			fieldName, wantPrefix, hrp, addr)
+	}
+	return nil
+}
+
 // extractParameterFromMsgBeginRedelegate extracts parameters from staking MsgBeginRedelegate.
 //
 // MsgBeginRedelegate moves stake from one validator (src) to another (dst) for a given
 // delegator. We expose the addresses, the amount and the denom so that policy rules can
-// constrain redelegation by validator allowlist or amount caps. We also enforce two
-// invariants here that any healthy redelegate tx must satisfy:
+// constrain redelegation by validator allowlist or amount caps. We enforce three invariants:
 //   - amount > 0 (zero-amount redelegations are nonsensical and rejected by the chain)
 //   - validator_src_address != validator_dst_address (chain rejects, but we fail fast)
-//
-// Bech32 prefix validation for the addresses is intentionally not enforced at this layer:
-// the Cosmos SDK proto-decode will accept any string, and chain-specific prefix checks
-// belong on the per-chain engine wiring (where Bech32Prefix is known) — this generic
-// extractor mirrors how MsgSend handles ToAddress without prefix checks.
+//   - HRP of each address matches the expected Bech32 prefix for its role: delegator
+//     addresses must carry Bech32Prefix (e.g. "cosmos"), validator addresses must carry
+//     ValidatorBech32Prefix (e.g. "cosmosvaloper"). Without this check a rule constraining
+//     validator_src_address to a cosmosvaloper1... value would silently accept a cosmos1...
+//     delegator address — a fail-open bypass.
 func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *stakingtypes.MsgBeginRedelegate) (any, error) {
 	if msg.DelegatorAddress == "" {
 		return nil, fmt.Errorf("redelegate delegator_address required")
@@ -474,6 +503,20 @@ func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *s
 	}
 	if msg.Amount.Amount.IsNil() || !msg.Amount.Amount.IsPositive() {
 		return nil, fmt.Errorf("redelegate amount must be > 0")
+	}
+
+	// HRP validation: enforce that each address carries the correct bech32 prefix
+	// for its role. This prevents a cosmos1... delegator address from being accepted
+	// in a validator field (and vice versa), which would otherwise be a fail-open
+	// bypass for rules that constrain validator addresses.
+	if err := validateHRP(msg.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+		return nil, err
+	}
+	if err := validateHRP(msg.ValidatorSrcAddress, e.config.ValidatorBech32Prefix, "validator_src_address"); err != nil {
+		return nil, err
+	}
+	if err := validateHRP(msg.ValidatorDstAddress, e.config.ValidatorBech32Prefix, "validator_dst_address"); err != nil {
+		return nil, err
 	}
 
 	switch paramName {
@@ -500,12 +543,24 @@ func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *s
 // delegator and validator address (e.g., validator allowlist), so we fail fast if
 // either is empty rather than letting an empty string flow into the constraint
 // matcher (mirrors the redelegate validator address checks).
+//
+// HRP validation is applied for the same reason as in extractParameterFromMsgBeginRedelegate:
+// a rule constraining validator_address to cosmosvaloper1... must not silently accept
+// cosmos1... — that would be a fail-open bypass.
 func (e *Engine) extractParameterFromMsgWithdrawDelegatorReward(paramName string, msg *distributiontypes.MsgWithdrawDelegatorReward) (any, error) {
 	if msg.DelegatorAddress == "" {
 		return nil, fmt.Errorf("withdraw_rewards delegator_address required")
 	}
 	if msg.ValidatorAddress == "" {
 		return nil, fmt.Errorf("withdraw_rewards validator_address required")
+	}
+
+	// HRP validation: same fail-open protection as in extractParameterFromMsgBeginRedelegate.
+	if err := validateHRP(msg.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+		return nil, err
+	}
+	if err := validateHRP(msg.ValidatorAddress, e.config.ValidatorBech32Prefix, "validator_address"); err != nil {
+		return nil, err
 	}
 
 	switch paramName {

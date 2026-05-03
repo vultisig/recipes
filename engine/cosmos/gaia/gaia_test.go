@@ -1,6 +1,7 @@
 package gaia_test
 
 import (
+	"strings"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -17,6 +18,25 @@ import (
 
 	"github.com/vultisig/recipes/engine/cosmos/gaia"
 	"github.com/vultisig/recipes/types"
+)
+
+// Valid bech32 test addresses (deterministic, not real keys).
+// Generated with bech32.ConvertAndEncode over fixed 20-byte payloads.
+const (
+	// Account (delegator) addresses — HRP "cosmos".
+	testDelegator1 = "cosmos1uzqrd7nsnmvwjflffw48gs6u8a3n5ugrvs2dlk"
+	testDelegator2 = "cosmos1e5mzm3769s7ksr64lw4533yc88sgne68gt3nuy"
+
+	// Validator operator addresses — HRP "cosmosvaloper".
+	testValSrc = "cosmosvaloper14dpelgwgj5pnhkqwf05sgeqdjas52k2qqsptjp"
+	testValDst = "cosmosvaloper18w90vkkuhm2a39m8u63uh6c89kj00v6ukg4jqc"
+	testValAbc = "cosmosvaloper1mn7wzsk6h3aqcxeuyl9vye4w08rnnstnmk4j66"
+
+	// Wrong-HRP addresses used in negative tests.
+	// These are valid bech32 but carry the wrong prefix for the field they are
+	// placed in — proving that the extractor rejects them.
+	testAccountAsValidator  = "cosmos1gvll0hewp46cvm8wm6hqysyh2cve38j5k7npf7"   // "cosmos" HRP where "cosmosvaloper" is required
+	testValidatorAsDelegator = "cosmosvaloper1d8dg727hwgyqq6h34nwysvsm3fqkvcs3fvndue" // "cosmosvaloper" HRP where "cosmos" is required
 )
 
 // buildTestCodec creates a codec that can pack Any messages for test tx construction.
@@ -51,9 +71,9 @@ func TestNewGaia_MsgBeginRedelegate_Dispatch(t *testing.T) {
 	cdc := buildTestCodec()
 
 	msg := &stakingtypes.MsgBeginRedelegate{
-		DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorSrcAddress: "cosmosvaloper1srcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorDstAddress: "cosmosvaloper1dstxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		DelegatorAddress:    testDelegator1,
+		ValidatorSrcAddress: testValSrc,
+		ValidatorDstAddress: testValDst,
 		Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
 	}
 	txBytes := marshalTx(t, cdc, msg)
@@ -77,8 +97,8 @@ func TestNewGaia_MsgWithdrawDelegatorReward_Dispatch(t *testing.T) {
 	cdc := buildTestCodec()
 
 	msg := &distributiontypes.MsgWithdrawDelegatorReward{
-		DelegatorAddress: "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorAddress: "cosmosvaloper1abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		DelegatorAddress: testDelegator1,
+		ValidatorAddress: testValAbc,
 	}
 	txBytes := marshalTx(t, cdc, msg)
 
@@ -98,12 +118,10 @@ func TestNewGaia_MsgBeginRedelegate_WithConstraint(t *testing.T) {
 	g := gaia.NewGaia()
 	cdc := buildTestCodec()
 
-	const dstValidator = "cosmosvaloper1dstxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
 	msg := &stakingtypes.MsgBeginRedelegate{
-		DelegatorAddress:    "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorSrcAddress: "cosmosvaloper1srcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorDstAddress: dstValidator,
+		DelegatorAddress:    testDelegator1,
+		ValidatorSrcAddress: testValSrc,
+		ValidatorDstAddress: testValDst,
 		Amount:              cosmostypes.NewCoin("uatom", math.NewInt(500_000)),
 	}
 	txBytes := marshalTx(t, cdc, msg)
@@ -117,7 +135,7 @@ func TestNewGaia_MsgBeginRedelegate_WithConstraint(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: dstValidator,
+						FixedValue: testValDst,
 					},
 				},
 			},
@@ -134,11 +152,9 @@ func TestNewGaia_MsgWithdrawDelegatorReward_WithConstraint(t *testing.T) {
 	g := gaia.NewGaia()
 	cdc := buildTestCodec()
 
-	const valAddr = "cosmosvaloper1abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
 	msg := &distributiontypes.MsgWithdrawDelegatorReward{
-		DelegatorAddress: "cosmos1delegatorxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ValidatorAddress: valAddr,
+		DelegatorAddress: testDelegator1,
+		ValidatorAddress: testValAbc,
 	}
 	txBytes := marshalTx(t, cdc, msg)
 
@@ -151,7 +167,7 @@ func TestNewGaia_MsgWithdrawDelegatorReward_WithConstraint(t *testing.T) {
 				Constraint: &types.Constraint{
 					Type: types.ConstraintType_CONSTRAINT_TYPE_FIXED,
 					Value: &types.Constraint_FixedValue{
-						FixedValue: valAddr,
+						FixedValue: testValAbc,
 					},
 				},
 			},
@@ -169,8 +185,8 @@ func TestNewGaia_UnknownProtocol_Fails(t *testing.T) {
 	cdc := buildTestCodec()
 
 	msg := &banktypes.MsgSend{
-		FromAddress: "cosmos1fromxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-		ToAddress:   "cosmos1toxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		FromAddress: testDelegator1,
+		ToAddress:   testDelegator2,
 		Amount:      cosmostypes.NewCoins(cosmostypes.NewCoin("uatom", math.NewInt(1))),
 	}
 	txBytes := marshalTx(t, cdc, msg)
@@ -182,4 +198,107 @@ func TestNewGaia_UnknownProtocol_Fails(t *testing.T) {
 
 	err := g.Evaluate(rule, txBytes)
 	assert.Error(t, err, "unknown protocol must still return an error")
+}
+
+// --- Negative tests (C3): verify that wrong-HRP addresses are REJECTED ---
+
+// TestNewGaia_RedelegateRejectsAccountHRPInSrcValidatorField proves that a
+// cosmos1... (account HRP) address in validator_src_address is rejected.
+// A rule constraining validator_src_address to cosmosvaloper1... would otherwise
+// silently accept a cosmos1... address — a fail-open bypass (codex C1).
+func TestNewGaia_RedelegateRejectsAccountHRPInSrcValidatorField(t *testing.T) {
+	g := gaia.NewGaia()
+	cdc := buildTestCodec()
+
+	msg := &stakingtypes.MsgBeginRedelegate{
+		DelegatorAddress:    testDelegator1,
+		ValidatorSrcAddress: testAccountAsValidator, // cosmos1... where cosmosvaloper1... required
+		ValidatorDstAddress: testValDst,
+		Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+	}
+	txBytes := marshalTx(t, cdc, msg)
+
+	rule := &types.Rule{
+		Resource: "cosmos.staking_redelegate.redelegate",
+		Effect:   types.Effect_EFFECT_ALLOW,
+	}
+
+	err := g.Evaluate(rule, txBytes)
+	require.Error(t, err, "account HRP in validator_src_address must be rejected")
+	assert.True(t, strings.Contains(err.Error(), "validator_src_address") || strings.Contains(err.Error(), "HRP"),
+		"error should mention the field or HRP mismatch, got: %s", err)
+}
+
+// TestNewGaia_RedelegateRejectsAccountHRPInDstValidatorField proves the same
+// for validator_dst_address.
+func TestNewGaia_RedelegateRejectsAccountHRPInDstValidatorField(t *testing.T) {
+	g := gaia.NewGaia()
+	cdc := buildTestCodec()
+
+	msg := &stakingtypes.MsgBeginRedelegate{
+		DelegatorAddress:    testDelegator1,
+		ValidatorSrcAddress: testValSrc,
+		ValidatorDstAddress: testAccountAsValidator, // cosmos1... where cosmosvaloper1... required
+		Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+	}
+	txBytes := marshalTx(t, cdc, msg)
+
+	rule := &types.Rule{
+		Resource: "cosmos.staking_redelegate.redelegate",
+		Effect:   types.Effect_EFFECT_ALLOW,
+	}
+
+	err := g.Evaluate(rule, txBytes)
+	require.Error(t, err, "account HRP in validator_dst_address must be rejected")
+	assert.True(t, strings.Contains(err.Error(), "validator_dst_address") || strings.Contains(err.Error(), "HRP"),
+		"error should mention the field or HRP mismatch, got: %s", err)
+}
+
+// TestNewGaia_WithdrawRejectsAccountHRPInValidatorField proves that a cosmos1...
+// address in MsgWithdrawDelegatorReward.ValidatorAddress is rejected.
+func TestNewGaia_WithdrawRejectsAccountHRPInValidatorField(t *testing.T) {
+	g := gaia.NewGaia()
+	cdc := buildTestCodec()
+
+	msg := &distributiontypes.MsgWithdrawDelegatorReward{
+		DelegatorAddress: testDelegator1,
+		ValidatorAddress: testAccountAsValidator, // cosmos1... where cosmosvaloper1... required
+	}
+	txBytes := marshalTx(t, cdc, msg)
+
+	rule := &types.Rule{
+		Resource: "cosmos.staking_withdraw_rewards.withdraw_rewards",
+		Effect:   types.Effect_EFFECT_ALLOW,
+	}
+
+	err := g.Evaluate(rule, txBytes)
+	require.Error(t, err, "account HRP in validator_address must be rejected")
+	assert.True(t, strings.Contains(err.Error(), "validator_address") || strings.Contains(err.Error(), "HRP"),
+		"error should mention the field or HRP mismatch, got: %s", err)
+}
+
+// TestNewGaia_RedelegateRejectsValidatorHRPInDelegatorField is a symmetric
+// defensive test: a cosmosvaloper1... address in DelegatorAddress must also be
+// rejected. This closes the reverse confusion direction.
+func TestNewGaia_RedelegateRejectsValidatorHRPInDelegatorField(t *testing.T) {
+	g := gaia.NewGaia()
+	cdc := buildTestCodec()
+
+	msg := &stakingtypes.MsgBeginRedelegate{
+		DelegatorAddress:    testValidatorAsDelegator, // cosmosvaloper1... where cosmos1... required
+		ValidatorSrcAddress: testValSrc,
+		ValidatorDstAddress: testValDst,
+		Amount:              cosmostypes.NewCoin("uatom", math.NewInt(1_000_000)),
+	}
+	txBytes := marshalTx(t, cdc, msg)
+
+	rule := &types.Rule{
+		Resource: "cosmos.staking_redelegate.redelegate",
+		Effect:   types.Effect_EFFECT_ALLOW,
+	}
+
+	err := g.Evaluate(rule, txBytes)
+	require.Error(t, err, "validator HRP in delegator_address must be rejected")
+	assert.True(t, strings.Contains(err.Error(), "delegator_address") || strings.Contains(err.Error(), "HRP"),
+		"error should mention the field or HRP mismatch, got: %s", err)
 }

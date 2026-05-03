@@ -29,6 +29,12 @@ func NewGaia() *Gaia {
 				"staking_redelegate":       cosmos.MessageTypeBeginRedelegate,
 				"staking_withdraw_rewards": cosmos.MessageTypeWithdrawDelegatorReward,
 			},
+			// Cosmos Hub uses "cosmos" for account addresses and "cosmosvaloper" for
+			// validator operator addresses (Cosmos SDK convention: <prefix>valoper).
+			// These are enforced by the engine to prevent a delegator address from
+			// being silently accepted in a validator field (fail-open bypass, codex C1).
+			Bech32Prefix:          "cosmos",
+			ValidatorBech32Prefix: "cosmosvaloper",
 		}),
 	}
 }
