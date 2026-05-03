@@ -131,6 +131,15 @@ func (e *Engine) Evaluate(rule *types.Rule, txBytes []byte) error {
 		return err
 	}
 
+	// Validate address HRPs unconditionally — before parameter constraint evaluation.
+	// This prevents a delegator (cosmos1...) address from reaching a rule that expects
+	// a validator (cosmosvaloper1...) address, regardless of whether the rule has
+	// parameter constraints. Without this eager check, a rule with no constraints
+	// (or constraints on non-address fields) would silently accept a wrong-HRP address.
+	if err := e.validateAddressHRPs(msg, mt); err != nil {
+		return err
+	}
+
 	if err := e.validateTarget(r, rule.GetTarget(), txData, mt); err != nil {
 		return fmt.Errorf("failed to validate target: %w", err)
 	}
@@ -458,6 +467,47 @@ func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *ty
 	}
 }
 
+// validateAddressHRPs performs eager HRP validation for all address fields in
+// staking/distribution messages, unconditionally — before parameter constraint
+// evaluation. This ensures a wrong-HRP address is rejected even when the rule
+// has no parameter constraints (or constraints on non-address fields), closing
+// the fail-open window identified in codex C1.
+//
+// Only staking message types carry validator addresses; other message types are
+// a no-op. Chains that leave Bech32Prefix/ValidatorBech32Prefix empty skip the
+// check (backward-compatible).
+func (e *Engine) validateAddressHRPs(msg *codectypes.Any, mt cosmos.MessageType) error {
+	switch mt {
+	case cosmos.MessageTypeBeginRedelegate:
+		msgRedelegate, err := e.unpackMsgBeginRedelegate(msg)
+		if err != nil {
+			return fmt.Errorf("failed to unpack MsgBeginRedelegate for HRP validation: %w", err)
+		}
+		if err := validateHRP(msgRedelegate.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgRedelegate.ValidatorSrcAddress, e.config.ValidatorBech32Prefix, "validator_src_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgRedelegate.ValidatorDstAddress, e.config.ValidatorBech32Prefix, "validator_dst_address"); err != nil {
+			return err
+		}
+
+	case cosmos.MessageTypeWithdrawDelegatorReward:
+		msgWithdraw, err := e.unpackMsgWithdrawDelegatorReward(msg)
+		if err != nil {
+			return fmt.Errorf("failed to unpack MsgWithdrawDelegatorReward for HRP validation: %w", err)
+		}
+		if err := validateHRP(msgWithdraw.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgWithdraw.ValidatorAddress, e.config.ValidatorBech32Prefix, "validator_address"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // validateHRP decodes addr as bech32 and verifies its human-readable part equals
 // wantPrefix. Returns a descriptive error on mismatch or decode failure.
 // If wantPrefix is empty the check is skipped (chains that don't set a prefix).
@@ -480,14 +530,12 @@ func validateHRP(addr, wantPrefix, fieldName string) error {
 //
 // MsgBeginRedelegate moves stake from one validator (src) to another (dst) for a given
 // delegator. We expose the addresses, the amount and the denom so that policy rules can
-// constrain redelegation by validator allowlist or amount caps. We enforce three invariants:
+// constrain redelegation by validator allowlist or amount caps. We enforce two invariants:
 //   - amount > 0 (zero-amount redelegations are nonsensical and rejected by the chain)
 //   - validator_src_address != validator_dst_address (chain rejects, but we fail fast)
-//   - HRP of each address matches the expected Bech32 prefix for its role: delegator
-//     addresses must carry Bech32Prefix (e.g. "cosmos"), validator addresses must carry
-//     ValidatorBech32Prefix (e.g. "cosmosvaloper"). Without this check a rule constraining
-//     validator_src_address to a cosmosvaloper1... value would silently accept a cosmos1...
-//     delegator address — a fail-open bypass.
+//
+// HRP validation for the address fields is performed earlier in validateAddressHRPs,
+// called unconditionally from Evaluate before this extractor is ever reached.
 func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *stakingtypes.MsgBeginRedelegate) (any, error) {
 	if msg.DelegatorAddress == "" {
 		return nil, fmt.Errorf("redelegate delegator_address required")
@@ -503,20 +551,6 @@ func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *s
 	}
 	if msg.Amount.Amount.IsNil() || !msg.Amount.Amount.IsPositive() {
 		return nil, fmt.Errorf("redelegate amount must be > 0")
-	}
-
-	// HRP validation: enforce that each address carries the correct bech32 prefix
-	// for its role. This prevents a cosmos1... delegator address from being accepted
-	// in a validator field (and vice versa), which would otherwise be a fail-open
-	// bypass for rules that constrain validator addresses.
-	if err := validateHRP(msg.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
-		return nil, err
-	}
-	if err := validateHRP(msg.ValidatorSrcAddress, e.config.ValidatorBech32Prefix, "validator_src_address"); err != nil {
-		return nil, err
-	}
-	if err := validateHRP(msg.ValidatorDstAddress, e.config.ValidatorBech32Prefix, "validator_dst_address"); err != nil {
-		return nil, err
 	}
 
 	switch paramName {
@@ -542,25 +576,16 @@ func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *s
 // from the delegator/validator pair. Policy rules can therefore only constrain by
 // delegator and validator address (e.g., validator allowlist), so we fail fast if
 // either is empty rather than letting an empty string flow into the constraint
-// matcher (mirrors the redelegate validator address checks).
+// matcher.
 //
-// HRP validation is applied for the same reason as in extractParameterFromMsgBeginRedelegate:
-// a rule constraining validator_address to cosmosvaloper1... must not silently accept
-// cosmos1... — that would be a fail-open bypass.
+// HRP validation for address fields is performed earlier in validateAddressHRPs,
+// called unconditionally from Evaluate before this extractor is ever reached.
 func (e *Engine) extractParameterFromMsgWithdrawDelegatorReward(paramName string, msg *distributiontypes.MsgWithdrawDelegatorReward) (any, error) {
 	if msg.DelegatorAddress == "" {
 		return nil, fmt.Errorf("withdraw_rewards delegator_address required")
 	}
 	if msg.ValidatorAddress == "" {
 		return nil, fmt.Errorf("withdraw_rewards validator_address required")
-	}
-
-	// HRP validation: same fail-open protection as in extractParameterFromMsgBeginRedelegate.
-	if err := validateHRP(msg.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
-		return nil, err
-	}
-	if err := validateHRP(msg.ValidatorAddress, e.config.ValidatorBech32Prefix, "validator_address"); err != nil {
-		return nil, err
 	}
 
 	switch paramName {
