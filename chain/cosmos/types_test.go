@@ -40,9 +40,9 @@ func TestNewChainRegistersStakingAndDistributionInterfaces(t *testing.T) {
 		Bech32Prefix: "cosmos",
 		Protocols:    []string{"atom"},
 		MessageTypeRegistry: NewMessageTypeRegistry(map[string]MessageType{
-			TypeUrlCosmosMsgSend:                           MessageTypeSend,
-			TypeUrlCosmosMsgBeginRedelegate:                MessageTypeBeginRedelegate,
-			TypeUrlCosmosMsgWithdrawDelegatorReward:        MessageTypeWithdrawDelegatorReward,
+			TypeUrlCosmosMsgSend:                    MessageTypeSend,
+			TypeUrlCosmosMsgBeginRedelegate:         MessageTypeBeginRedelegate,
+			TypeUrlCosmosMsgWithdrawDelegatorReward: MessageTypeWithdrawDelegatorReward,
 		}),
 	})
 

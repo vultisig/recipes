@@ -262,5 +262,3 @@ func (s *SDK) DeriveSigningHashes(txBytes []byte, opts sdk.DeriveOptions) ([]sdk
 		},
 	}, nil
 }
-
-

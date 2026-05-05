@@ -279,4 +279,3 @@ func DefaultFromExtractorWithDeposit(tx *tx.Tx, cdc codec.Codec, bech32Prefix st
 	}
 	return ""
 }
-

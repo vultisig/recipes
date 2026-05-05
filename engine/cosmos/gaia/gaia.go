@@ -53,4 +53,3 @@ func (g *Gaia) Evaluate(rule *types.Rule, txBytes []byte) error {
 func (g *Gaia) ExtractTxBytes(txData string) ([]byte, error) {
 	return g.engine.ExtractTxBytes(txData)
 }
-

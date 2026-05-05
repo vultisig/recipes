@@ -14,7 +14,7 @@ func NewChain() *cosmos.Chain {
 		Name:         "Cosmos",
 		Description:  "Cosmos (GAIA) is the hub of the Cosmos network, enabling cross-chain communication via IBC.",
 		Bech32Prefix: "cosmos",
-		Protocols: []string{"atom", "send", "staking_redelegate", "staking_withdraw_rewards"},
+		Protocols:    []string{"atom", "send", "staking_redelegate", "staking_withdraw_rewards"},
 		MessageTypeRegistry: cosmos.NewMessageTypeRegistry(map[string]cosmos.MessageType{
 			cosmos.TypeUrlCosmosMsgSend:                    cosmos.MessageTypeSend,
 			cosmos.TypeUrlCosmosMsgBeginRedelegate:         cosmos.MessageTypeBeginRedelegate,
@@ -33,4 +33,3 @@ func NewChain() *cosmos.Chain {
 		},
 	})
 }
-

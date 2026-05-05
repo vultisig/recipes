@@ -274,7 +274,6 @@ func (e *Engine) unpackMsgWithdrawDelegatorReward(msg *codectypes.Any) (*distrib
 	return msgWithdraw, nil
 }
 
-
 // validateTarget validates the transaction target against the rule target.
 func (e *Engine) validateTarget(resource *types.ResourcePath, target *types.Target, txData *tx.Tx, mt cosmos.MessageType) error {
 	if target == nil || target.GetTargetType() == types.TargetType_TARGET_TYPE_UNSPECIFIED {
@@ -635,4 +634,3 @@ func (e *Engine) assertArgsByType(chainId, inputName string, arg any, constraint
 func (e *Engine) ExtractTxBytes(txData string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(txData)
 }
-

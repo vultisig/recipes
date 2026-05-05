@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
@@ -12,7 +13,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,7 +35,7 @@ const (
 	// Wrong-HRP addresses used in negative tests.
 	// These are valid bech32 but carry the wrong prefix for the field they are
 	// placed in — proving that the extractor rejects them.
-	testAccountAsValidator  = "cosmos1gvll0hewp46cvm8wm6hqysyh2cve38j5k7npf7"   // "cosmos" HRP where "cosmosvaloper" is required
+	testAccountAsValidator   = "cosmos1gvll0hewp46cvm8wm6hqysyh2cve38j5k7npf7"        // "cosmos" HRP where "cosmosvaloper" is required
 	testValidatorAsDelegator = "cosmosvaloper1d8dg727hwgyqq6h34nwysvsm3fqkvcs3fvndue" // "cosmosvaloper" HRP where "cosmos" is required
 )
 
@@ -221,6 +221,15 @@ func TestNewGaia_RedelegateRejectsAccountHRPInSrcValidatorField(t *testing.T) {
 	rule := &types.Rule{
 		Resource: "cosmos.staking_redelegate.redelegate",
 		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "validator_src_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: testValSrc},
+				},
+			},
+		},
 	}
 
 	err := g.Evaluate(rule, txBytes)
@@ -246,6 +255,15 @@ func TestNewGaia_RedelegateRejectsAccountHRPInDstValidatorField(t *testing.T) {
 	rule := &types.Rule{
 		Resource: "cosmos.staking_redelegate.redelegate",
 		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "validator_dst_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: testValDst},
+				},
+			},
+		},
 	}
 
 	err := g.Evaluate(rule, txBytes)
@@ -269,6 +287,15 @@ func TestNewGaia_WithdrawRejectsAccountHRPInValidatorField(t *testing.T) {
 	rule := &types.Rule{
 		Resource: "cosmos.staking_withdraw_rewards.withdraw_rewards",
 		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "validator_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: testValAbc},
+				},
+			},
+		},
 	}
 
 	err := g.Evaluate(rule, txBytes)
@@ -295,6 +322,15 @@ func TestNewGaia_RedelegateRejectsValidatorHRPInDelegatorField(t *testing.T) {
 	rule := &types.Rule{
 		Resource: "cosmos.staking_redelegate.redelegate",
 		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{
+			{
+				ParameterName: "delegator_address",
+				Constraint: &types.Constraint{
+					Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+					Value: &types.Constraint_FixedValue{FixedValue: testDelegator1},
+				},
+			},
+		},
 	}
 
 	err := g.Evaluate(rule, txBytes)

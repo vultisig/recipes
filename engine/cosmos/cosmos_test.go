@@ -24,14 +24,14 @@ func newTestEngine() *Engine {
 		ChainID:         "cosmos",
 		SupportedChains: []common.Chain{common.GaiaChain},
 		MessageTypeRegistry: cosmos.NewMessageTypeRegistry(map[string]cosmos.MessageType{
-			cosmos.TypeUrlCosmosMsgSend:                     cosmos.MessageTypeSend,
-			cosmos.TypeUrlCosmosMsgBeginRedelegate:          cosmos.MessageTypeBeginRedelegate,
-			cosmos.TypeUrlCosmosMsgWithdrawDelegatorReward:  cosmos.MessageTypeWithdrawDelegatorReward,
+			cosmos.TypeUrlCosmosMsgSend:                    cosmos.MessageTypeSend,
+			cosmos.TypeUrlCosmosMsgBeginRedelegate:         cosmos.MessageTypeBeginRedelegate,
+			cosmos.TypeUrlCosmosMsgWithdrawDelegatorReward: cosmos.MessageTypeWithdrawDelegatorReward,
 		}),
 		ProtocolMessageTypes: map[string]cosmos.MessageType{
-			"atom":                       cosmos.MessageTypeSend,
-			"staking_redelegate":         cosmos.MessageTypeBeginRedelegate,
-			"staking_withdraw_rewards":   cosmos.MessageTypeWithdrawDelegatorReward,
+			"atom":                     cosmos.MessageTypeSend,
+			"staking_redelegate":       cosmos.MessageTypeBeginRedelegate,
+			"staking_withdraw_rewards": cosmos.MessageTypeWithdrawDelegatorReward,
 		},
 	})
 }

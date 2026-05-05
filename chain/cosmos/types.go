@@ -136,4 +136,3 @@ func (p *ParsedCosmosTransaction) GetMemo() string {
 	}
 	return ""
 }
-
