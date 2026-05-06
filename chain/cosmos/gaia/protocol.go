@@ -201,4 +201,3 @@ func (p *StakingWithdrawRewards) GetFunction(id string) (*types.Function, error)
 func (p *StakingWithdrawRewards) MatchFunctionCall(decodedTx types.DecodedTransaction, policyMatcher *types.PolicyFunctionMatcher) (bool, map[string]interface{}, error) {
 	return false, nil, fmt.Errorf("cosmos function matching is handled by the engine")
 }
-
