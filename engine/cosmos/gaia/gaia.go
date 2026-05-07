@@ -19,12 +19,22 @@ func NewGaia() *Gaia {
 			ChainID:         "cosmos",
 			SupportedChains: []common.Chain{common.GaiaChain},
 			MessageTypeRegistry: cosmos.NewMessageTypeRegistry(map[string]cosmos.MessageType{
-				cosmos.TypeUrlCosmosMsgSend: cosmos.MessageTypeSend,
+				cosmos.TypeUrlCosmosMsgSend:                    cosmos.MessageTypeSend,
+				cosmos.TypeUrlCosmosMsgBeginRedelegate:         cosmos.MessageTypeBeginRedelegate,
+				cosmos.TypeUrlCosmosMsgWithdrawDelegatorReward: cosmos.MessageTypeWithdrawDelegatorReward,
 			}),
 			ProtocolMessageTypes: map[string]cosmos.MessageType{
-				"atom": cosmos.MessageTypeSend,
-				"send": cosmos.MessageTypeSend,
+				"atom":                     cosmos.MessageTypeSend,
+				"send":                     cosmos.MessageTypeSend,
+				"staking_redelegate":       cosmos.MessageTypeBeginRedelegate,
+				"staking_withdraw_rewards": cosmos.MessageTypeWithdrawDelegatorReward,
 			},
+			// Cosmos Hub uses "cosmos" for account addresses and "cosmosvaloper" for
+			// validator operator addresses (Cosmos SDK convention: <prefix>valoper).
+			// These are enforced by the engine to prevent a delegator address from
+			// being silently accepted in a validator field (fail-open bypass, codex C1).
+			Bech32Prefix:          "cosmos",
+			ValidatorBech32Prefix: "cosmosvaloper",
 		}),
 	}
 }
@@ -43,4 +53,3 @@ func (g *Gaia) Evaluate(rule *types.Rule, txBytes []byte) error {
 func (g *Gaia) ExtractTxBytes(txData string) ([]byte, error) {
 	return g.engine.ExtractTxBytes(txData)
 }
-

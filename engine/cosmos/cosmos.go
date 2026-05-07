@@ -10,8 +10,11 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/vultisig/recipes/chain/cosmos"
 	"github.com/vultisig/recipes/engine/compare"
@@ -38,6 +41,17 @@ type Config struct {
 
 	// RegisterExtraTypes is an optional function to register additional protobuf types
 	RegisterExtraTypes func(ir codectypes.InterfaceRegistry)
+
+	// Bech32Prefix is the account address prefix (e.g., "cosmos", "maya", "thor").
+	// When non-empty, delegator address fields are validated to carry this HRP.
+	Bech32Prefix string
+
+	// ValidatorBech32Prefix is the validator operator address prefix
+	// (e.g., "cosmosvaloper"). Per Cosmos SDK convention this is always
+	// Bech32Prefix+"valoper". When non-empty, validator address fields are
+	// validated to carry this HRP, preventing a delegator address from being
+	// silently accepted in a validator field (fail-open attack).
+	ValidatorBech32Prefix string
 }
 
 // Engine is a generic Cosmos engine that can be configured for different chains.
@@ -55,6 +69,12 @@ func NewEngine(config Config) *Engine {
 
 	// Register bank message types
 	banktypes.RegisterInterfaces(ir)
+
+	// Register staking message types (MsgDelegate, MsgUndelegate, MsgBeginRedelegate, ...)
+	stakingtypes.RegisterInterfaces(ir)
+
+	// Register distribution message types (MsgWithdrawDelegatorReward, ...)
+	distributiontypes.RegisterInterfaces(ir)
 
 	// Register any extra types specific to this chain
 	if config.RegisterExtraTypes != nil {
@@ -108,6 +128,15 @@ func (e *Engine) Evaluate(rule *types.Rule, txBytes []byte) error {
 	}
 
 	if err := e.ensureResourceMessageCompatibility(r, mt); err != nil {
+		return err
+	}
+
+	// Validate address HRPs unconditionally — before parameter constraint evaluation.
+	// This prevents a delegator (cosmos1...) address from reaching a rule that expects
+	// a validator (cosmosvaloper1...) address, regardless of whether the rule has
+	// parameter constraints. Without this eager check, a rule with no constraints
+	// (or constraints on non-address fields) would silently accept a wrong-HRP address.
+	if err := e.validateAddressHRPs(msg, mt); err != nil {
 		return err
 	}
 
@@ -207,6 +236,43 @@ func (e *Engine) unpackMsgDeposit(msg *codectypes.Any) (*types.MsgDeposit, error
 	return msgDeposit, nil
 }
 
+// unpackMsgBeginRedelegate unpacks a message to staking MsgBeginRedelegate type.
+func (e *Engine) unpackMsgBeginRedelegate(msg *codectypes.Any) (*stakingtypes.MsgBeginRedelegate, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("nil message")
+	}
+
+	var sdkMsg sdk.Msg
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
+	}
+
+	msgRedelegate, ok := sdkMsg.(*stakingtypes.MsgBeginRedelegate)
+	if !ok {
+		return nil, fmt.Errorf("expected staking MsgBeginRedelegate, got: %T", sdkMsg)
+	}
+
+	return msgRedelegate, nil
+}
+
+// unpackMsgWithdrawDelegatorReward unpacks a message to distribution MsgWithdrawDelegatorReward type.
+func (e *Engine) unpackMsgWithdrawDelegatorReward(msg *codectypes.Any) (*distributiontypes.MsgWithdrawDelegatorReward, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("nil message")
+	}
+
+	var sdkMsg sdk.Msg
+	if err := e.cdc.UnpackAny(msg, &sdkMsg); err != nil {
+		return nil, fmt.Errorf("failed to unpack sdk.Msg: %w (typeUrl=%s)", err, msg.TypeUrl)
+	}
+
+	msgWithdraw, ok := sdkMsg.(*distributiontypes.MsgWithdrawDelegatorReward)
+	if !ok {
+		return nil, fmt.Errorf("expected distribution MsgWithdrawDelegatorReward, got: %T", sdkMsg)
+	}
+
+	return msgWithdraw, nil
+}
 
 // validateTarget validates the transaction target against the rule target.
 func (e *Engine) validateTarget(resource *types.ResourcePath, target *types.Target, txData *tx.Tx, mt cosmos.MessageType) error {
@@ -317,6 +383,20 @@ func (e *Engine) extractParameterValue(paramName string, txData *tx.Tx, mt cosmo
 		}
 		return e.extractParameterFromMsgDeposit(paramName, msgDeposit)
 
+	case cosmos.MessageTypeBeginRedelegate:
+		msgRedelegate, err := e.unpackMsgBeginRedelegate(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgBeginRedelegate(paramName, msgRedelegate)
+
+	case cosmos.MessageTypeWithdrawDelegatorReward:
+		msgWithdraw, err := e.unpackMsgWithdrawDelegatorReward(msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack message: %w", err)
+		}
+		return e.extractParameterFromMsgWithdrawDelegatorReward(paramName, msgWithdraw)
+
 	default:
 		return nil, fmt.Errorf("unsupported message type: %s", mt)
 	}
@@ -386,6 +466,137 @@ func (e *Engine) extractParameterFromMsgDeposit(paramName string, msgDeposit *ty
 	}
 }
 
+// validateAddressHRPs performs eager HRP validation for all address fields in
+// staking/distribution messages, unconditionally — before parameter constraint
+// evaluation. This ensures a wrong-HRP address is rejected even when the rule
+// has no parameter constraints (or constraints on non-address fields), closing
+// the fail-open window identified in codex C1.
+//
+// Only staking message types carry validator addresses; other message types are
+// a no-op. Chains that leave Bech32Prefix/ValidatorBech32Prefix empty skip the
+// check (backward-compatible).
+func (e *Engine) validateAddressHRPs(msg *codectypes.Any, mt cosmos.MessageType) error {
+	switch mt {
+	case cosmos.MessageTypeBeginRedelegate:
+		msgRedelegate, err := e.unpackMsgBeginRedelegate(msg)
+		if err != nil {
+			return fmt.Errorf("failed to unpack MsgBeginRedelegate for HRP validation: %w", err)
+		}
+		if err := validateHRP(msgRedelegate.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgRedelegate.ValidatorSrcAddress, e.config.ValidatorBech32Prefix, "validator_src_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgRedelegate.ValidatorDstAddress, e.config.ValidatorBech32Prefix, "validator_dst_address"); err != nil {
+			return err
+		}
+
+	case cosmos.MessageTypeWithdrawDelegatorReward:
+		msgWithdraw, err := e.unpackMsgWithdrawDelegatorReward(msg)
+		if err != nil {
+			return fmt.Errorf("failed to unpack MsgWithdrawDelegatorReward for HRP validation: %w", err)
+		}
+		if err := validateHRP(msgWithdraw.DelegatorAddress, e.config.Bech32Prefix, "delegator_address"); err != nil {
+			return err
+		}
+		if err := validateHRP(msgWithdraw.ValidatorAddress, e.config.ValidatorBech32Prefix, "validator_address"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateHRP decodes addr as bech32 and verifies its human-readable part equals
+// wantPrefix. Returns a descriptive error on mismatch or decode failure.
+// If wantPrefix is empty the check is skipped (chains that don't set a prefix).
+func validateHRP(addr, wantPrefix, fieldName string) error {
+	if wantPrefix == "" {
+		return nil
+	}
+	hrp, _, err := bech32.DecodeAndConvert(addr)
+	if err != nil {
+		return fmt.Errorf("invalid bech32 address in %s %q: %w", fieldName, addr, err)
+	}
+	if hrp != wantPrefix {
+		return fmt.Errorf("invalid %s HRP: expected %q, got %q (address %s)",
+			fieldName, wantPrefix, hrp, addr)
+	}
+	return nil
+}
+
+// extractParameterFromMsgBeginRedelegate extracts parameters from staking MsgBeginRedelegate.
+//
+// MsgBeginRedelegate moves stake from one validator (src) to another (dst) for a given
+// delegator. We expose the addresses, the amount and the denom so that policy rules can
+// constrain redelegation by validator allowlist or amount caps. We enforce two invariants:
+//   - amount > 0 (zero-amount redelegations are nonsensical and rejected by the chain)
+//   - validator_src_address != validator_dst_address (chain rejects, but we fail fast)
+//
+// HRP validation for the address fields is performed earlier in validateAddressHRPs,
+// called unconditionally from Evaluate before this extractor is ever reached.
+func (e *Engine) extractParameterFromMsgBeginRedelegate(paramName string, msg *stakingtypes.MsgBeginRedelegate) (any, error) {
+	if msg.DelegatorAddress == "" {
+		return nil, fmt.Errorf("redelegate delegator_address required")
+	}
+	if msg.ValidatorSrcAddress == "" {
+		return nil, fmt.Errorf("redelegate validator_src_address required")
+	}
+	if msg.ValidatorDstAddress == "" {
+		return nil, fmt.Errorf("redelegate validator_dst_address required")
+	}
+	if msg.ValidatorSrcAddress == msg.ValidatorDstAddress {
+		return nil, fmt.Errorf("redelegate src and dst validators must differ: %s", msg.ValidatorSrcAddress)
+	}
+	if msg.Amount.Amount.IsNil() || !msg.Amount.Amount.IsPositive() {
+		return nil, fmt.Errorf("redelegate amount must be > 0")
+	}
+
+	switch paramName {
+	case "delegator_address":
+		return msg.DelegatorAddress, nil
+	case "validator_src_address":
+		return msg.ValidatorSrcAddress, nil
+	case "validator_dst_address":
+		return msg.ValidatorDstAddress, nil
+	case "amount":
+		return msg.Amount.Amount.BigInt(), nil
+	case "denom":
+		return msg.Amount.Denom, nil
+	default:
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
+	}
+}
+
+// extractParameterFromMsgWithdrawDelegatorReward extracts parameters from
+// distribution MsgWithdrawDelegatorReward.
+//
+// This message has no amount field — the chain pays out whatever rewards have accrued
+// from the delegator/validator pair. Policy rules can therefore only constrain by
+// delegator and validator address (e.g., validator allowlist), so we fail fast if
+// either is empty rather than letting an empty string flow into the constraint
+// matcher.
+//
+// HRP validation for address fields is performed earlier in validateAddressHRPs,
+// called unconditionally from Evaluate before this extractor is ever reached.
+func (e *Engine) extractParameterFromMsgWithdrawDelegatorReward(paramName string, msg *distributiontypes.MsgWithdrawDelegatorReward) (any, error) {
+	if msg.DelegatorAddress == "" {
+		return nil, fmt.Errorf("withdraw_rewards delegator_address required")
+	}
+	if msg.ValidatorAddress == "" {
+		return nil, fmt.Errorf("withdraw_rewards validator_address required")
+	}
+
+	switch paramName {
+	case "delegator_address":
+		return msg.DelegatorAddress, nil
+	case "validator_address":
+		return msg.ValidatorAddress, nil
+	default:
+		return nil, fmt.Errorf("unsupported parameter: %s", paramName)
+	}
+}
+
 // assertArgsByType validates constraints using the appropriate comparator based on Go type.
 func (e *Engine) assertArgsByType(chainId, inputName string, arg any, constraints []*types.ParameterConstraint) error {
 	switch actual := arg.(type) {
@@ -423,4 +634,3 @@ func (e *Engine) assertArgsByType(chainId, inputName string, arg any, constraint
 func (e *Engine) ExtractTxBytes(txData string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(txData)
 }
-
