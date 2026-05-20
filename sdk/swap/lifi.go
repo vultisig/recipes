@@ -116,6 +116,7 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 	params.Set("fromAddress", req.Sender)
 	params.Set("toAddress", req.Destination)
 	params.Set("integrator", lifiIntegratorName)
+	setLiFiAffiliateParams(params, req.AffiliateBps, req.AffiliateAddress)
 
 	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
 
@@ -171,6 +172,15 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 	// Check if approval is needed (ERC20 token on EVM chain)
 	needsApproval := IsApprovalRequired(req.From)
 
+	// Store affiliate data so BuildTx can replay the same fee param.
+	var providerData []byte
+	if req.AffiliateBps != nil && *req.AffiliateBps > 0 && req.AffiliateAddress != "" {
+		providerData, _ = json.Marshal(lifiProviderData{
+			AffiliateBps:     *req.AffiliateBps,
+			AffiliateAddress: req.AffiliateAddress,
+		})
+	}
+
 	quote := &Quote{
 		Provider:        p.Name(),
 		FromAsset:       req.From,
@@ -181,6 +191,7 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: routerAddress,
 		ApprovalAmount:  req.Amount,
+		ProviderData:    providerData,
 	}
 
 	return quote, nil
@@ -220,6 +231,14 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	params.Set("fromAddress", req.Sender)
 	params.Set("toAddress", req.Destination)
 	params.Set("integrator", lifiIntegratorName)
+	// Replay affiliate params stored during GetQuote.
+	if req.Quote.ProviderData != nil {
+		var pd lifiProviderData
+		if err := json.Unmarshal(req.Quote.ProviderData, &pd); err == nil {
+			bps := pd.AffiliateBps
+			setLiFiAffiliateParams(params, &bps, pd.AffiliateAddress)
+		}
+	}
 
 	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
 
@@ -338,5 +357,22 @@ type lifiTransactionRequest struct {
 type lifiErrorResponse struct {
 	Message string `json:"message"`
 	Code    string `json:"code"`
+}
+
+// lifiProviderData is stored in Quote.ProviderData so BuildTx can replay
+// the same affiliate params that were used when fetching the quote.
+type lifiProviderData struct {
+	AffiliateBps     int    `json:"affiliate_bps,omitempty"`
+	AffiliateAddress string `json:"affiliate_address,omitempty"`
+}
+
+// setLiFiAffiliateParams adds fee query param to params when the triple guard
+// (bps != nil, bps > 0, address non-empty) passes.
+// LiFi fee is fractional: 50 bps = 0.0050 (bps/10000).
+func setLiFiAffiliateParams(params url.Values, bps *int, address string) {
+	if bps == nil || *bps <= 0 || address == "" {
+		return
+	}
+	params.Set("fee", fmt.Sprintf("%.4f", float64(*bps)/10000))
 }
 

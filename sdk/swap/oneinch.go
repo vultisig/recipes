@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -118,6 +119,7 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 	q.Set("disableEstimate", "true")
 	q.Set("allowPartialFill", "false")
 	q.Set("compatibility", "true")
+	setOneInchAffiliateParams(q, req.AffiliateBps, req.AffiliateAddress)
 	httpReq.URL.RawQuery = q.Encode()
 
 	// Add API key header if provided
@@ -159,6 +161,15 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 	// Check if approval is needed (ERC20 token)
 	needsApproval := IsApprovalRequired(req.From)
 
+	// Store affiliate data so BuildTx can replay the same params.
+	var providerData []byte
+	if req.AffiliateBps != nil && *req.AffiliateBps > 0 && req.AffiliateAddress != "" {
+		providerData, _ = json.Marshal(oneInchProviderData{
+			AffiliateAddress: req.AffiliateAddress,
+			AffiliateBps:     *req.AffiliateBps,
+		})
+	}
+
 	return &Quote{
 		Provider:        p.Name(),
 		FromAsset:       req.From,
@@ -169,6 +180,7 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: routerAddress,
 		ApprovalAmount:  req.Amount,
+		ProviderData:    providerData,
 	}, nil
 }
 
@@ -210,6 +222,15 @@ func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 	q.Set("disableEstimate", "true")
 	q.Set("allowPartialFill", "false")
 	q.Set("compatibility", "true")
+	// Replay affiliate params stored during GetQuote so the final swap tx
+	// includes the same referrer + fee the user agreed to in the quote.
+	if req.Quote.ProviderData != nil {
+		var pd oneInchProviderData
+		if err := json.Unmarshal(req.Quote.ProviderData, &pd); err == nil {
+			bps := pd.AffiliateBps
+			setOneInchAffiliateParams(q, &bps, pd.AffiliateAddress)
+		}
+	}
 	httpReq.URL.RawQuery = q.Encode()
 
 	if p.apiKey != "" {
@@ -275,6 +296,24 @@ func decodeHexData(hexStr string) ([]byte, error) {
 		return nil, nil
 	}
 	return hex.DecodeString(hexStr)
+}
+
+// setOneInchAffiliateParams adds referrer + fee query params to q when the
+// triple guard (bps != nil, bps > 0, address non-empty) passes.
+// 1inch fee is a percentage: 50 bps = 0.5000 (bps/100).
+func setOneInchAffiliateParams(q url.Values, bps *int, address string) {
+	if bps == nil || *bps <= 0 || address == "" {
+		return
+	}
+	q.Set("referrer", address)
+	q.Set("fee", fmt.Sprintf("%.4f", float64(*bps)/100))
+}
+
+// oneInchProviderData is stored in Quote.ProviderData so BuildTx can replay
+// the same affiliate params that were used when fetching the quote.
+type oneInchProviderData struct {
+	AffiliateAddress string `json:"affiliate_address,omitempty"`
+	AffiliateBps     int    `json:"affiliate_bps,omitempty"`
 }
 
 // 1inch API response types
