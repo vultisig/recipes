@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -209,6 +211,18 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		return nil, fmt.Errorf("invalid tolerance_bps %d: must be between 0 and 10000", toleranceBps)
 	}
 	params.Set("tolerance_bps", fmt.Sprintf("%d", toleranceBps))
+
+	// Plumb affiliate fee when caller has both a positive bps and a non-empty address.
+	// nil or zero bps -> skip (preserves backward compat with existing callsites).
+	// positive bps + empty address -> skip silently; don't auto-route to an unknown address.
+	if req.AffiliateBps != nil && *req.AffiliateBps > 0 {
+		if req.AffiliateAddress == "" {
+			log.Printf("thorchain: AffiliateBps=%d but AffiliateAddress is empty - skipping affiliate params", *req.AffiliateBps)
+		} else {
+			params.Set("affiliate", req.AffiliateAddress)
+			params.Set("affiliate_bps", strconv.Itoa(*req.AffiliateBps))
+		}
+	}
 
 	// Try all endpoints with fallback
 	var lastErr error
