@@ -117,6 +117,20 @@ type QuoteRequest struct {
 	Sender       string   // Sender address
 	ToleranceBps *int     // Optional THOR/Maya quote tolerance override in basis points (typically 0-10000, where 10000 = 100%)
 
+	// AffiliateBps is the optional affiliate fee in basis points (100 = 1%).
+	// nil means no affiliate fee. 0 means an explicit "no fee" signal (caller
+	// disabled it). >0 enables the upstream provider's affiliate hook with
+	// the provided bps. Per-provider param naming (affiliate_bps,
+	// referrer+fee, integrator+fee, platformFeeBps+feeAccount)
+	// is handled in the provider-specific quote builders.
+	AffiliateBps *int
+
+	// AffiliateAddress is the on-chain destination for affiliate fees. Empty
+	// means use the provider/chain default treasury (resolved per-chain in
+	// the affiliate chain maps). Non-empty overrides the default. For
+	// Solana, this should be a base58-encoded SPL token account.
+	AffiliateAddress string
+
 	// Preference specifies which providers to use and in what order.
 	// If nil, uses default provider order.
 	Preference *ProviderPreference
