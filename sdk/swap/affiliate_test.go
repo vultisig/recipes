@@ -227,3 +227,73 @@ func TestMayachainAffiliate_PositiveBps_NonEmptyAddress_BothParams(t *testing.T)
 		t.Errorf("expected affiliate_bps=50, got %q", got)
 	}
 }
+
+// ---------- affiliate_bps bounds validation ----------
+
+func TestTHORChainAffiliate_BpsAbove1000_Error(t *testing.T) {
+	srv, _ := captureQuoteParams(t)
+	defer srv.Close()
+
+	provider := NewTHORChainProvider([]string{srv.URL})
+	req := baseQuoteRequest()
+	req.AffiliateBps = intPtr(1001)
+	req.AffiliateAddress = "thor1vultisig"
+
+	_, err := provider.GetQuote(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for affiliate_bps=1001, got nil")
+	}
+}
+
+func TestTHORChainAffiliate_Bps1000_Ok(t *testing.T) {
+	srv, getParams := captureQuoteParams(t)
+	defer srv.Close()
+
+	provider := NewTHORChainProvider([]string{srv.URL})
+	req := baseQuoteRequest()
+	req.AffiliateBps = intPtr(1000)
+	req.AffiliateAddress = "thor1vultisig"
+
+	// error from empty-response server is fine; we only care no bounds error fired
+	_, _ = provider.GetQuote(context.Background(), req)
+
+	params := getParams()
+	if got := params.Get("affiliate_bps"); got != "1000" {
+		t.Errorf("expected affiliate_bps=1000, got %q", got)
+	}
+}
+
+func TestMayachainAffiliate_BpsAbove500_Error(t *testing.T) {
+	srv, _ := captureQuoteParams(t)
+	defer srv.Close()
+
+	provider := NewMayachainProvider([]string{srv.URL})
+	req := baseQuoteRequest()
+	req.From.Chain = "Bitcoin"
+	req.AffiliateBps = intPtr(501)
+	req.AffiliateAddress = "maya1vultisig"
+
+	_, err := provider.GetQuote(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for affiliate_bps=501, got nil")
+	}
+}
+
+func TestMayachainAffiliate_Bps500_Ok(t *testing.T) {
+	srv, getParams := captureQuoteParams(t)
+	defer srv.Close()
+
+	provider := NewMayachainProvider([]string{srv.URL})
+	req := baseQuoteRequest()
+	req.From.Chain = "Bitcoin"
+	req.AffiliateBps = intPtr(500)
+	req.AffiliateAddress = "maya1vultisig"
+
+	// error from empty-response server is fine; we only care no bounds error fired
+	_, _ = provider.GetQuote(context.Background(), req)
+
+	params := getParams()
+	if got := params.Get("affiliate_bps"); got != "500" {
+		t.Errorf("expected affiliate_bps=500, got %q", got)
+	}
+}

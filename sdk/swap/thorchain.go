@@ -216,6 +216,9 @@ func (p *THORChainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	// nil or zero bps -> skip (preserves backward compat with existing callsites).
 	// positive bps + empty address -> skip silently; don't auto-route to an unknown address.
 	if req.AffiliateBps != nil && *req.AffiliateBps > 0 {
+		if *req.AffiliateBps > 1000 {
+			return nil, fmt.Errorf("invalid affiliate_bps %d: must be between 0 and 1000", *req.AffiliateBps)
+		}
 		if req.AffiliateAddress == "" {
 			log.Printf("thorchain: AffiliateBps=%d but AffiliateAddress is empty - skipping affiliate params", *req.AffiliateBps)
 		} else {
