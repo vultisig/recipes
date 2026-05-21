@@ -125,10 +125,11 @@ type QuoteRequest struct {
 	// is handled in the provider-specific quote builders.
 	AffiliateBps *int
 
-	// AffiliateAddress is the on-chain destination for affiliate fees. Empty
-	// means use the provider/chain default treasury (resolved per-chain in
-	// the affiliate chain maps). Non-empty overrides the default. For
-	// Solana, this should be a base58-encoded SPL token account.
+	// AffiliateAddress is the on-chain destination for affiliate fees.
+	// When empty, no affiliate params are sent to the provider and no fee
+	// is captured, even if AffiliateBps is set. Non-empty enables fee
+	// collection at the given address. For Solana, this should be a
+	// base58-encoded SPL token account.
 	AffiliateAddress string
 
 	// Preference specifies which providers to use and in what order.
