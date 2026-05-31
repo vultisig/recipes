@@ -28,6 +28,7 @@ const (
 	send   metaProtocol = "send"
 	swap   metaProtocol = "swap"
 	bridge metaProtocol = "bridge"
+	dca    metaProtocol = "dca"
 )
 
 func getOneInchSpender(chain common.Chain) (string, error) {
@@ -257,6 +258,59 @@ func getSendConstraints(rule *types.Rule) (sendConstraints, error) {
 	return res, nil
 }
 
+// dcaConstraints holds parameters for DCA (dollar-cost average) operations on Solana.
+// Uses the Jupiter DCA program to create recurring swap orders.
+type dcaConstraints struct {
+	fromAsset      *types.Constraint // Input mint address (empty = native SOL)
+	fromAddress    *types.Constraint // User wallet address (signer)
+	inAmount       *types.Constraint // Total input amount for the entire DCA order
+	inAmountPerCycle *types.Constraint // Input amount per DCA cycle
+	cycleFrequency *types.Constraint // Seconds between DCA cycles
+	toAsset        *types.Constraint // Output mint address (empty = native SOL)
+}
+
+func getDCAConstraints(rule *types.Rule) (dcaConstraints, error) {
+	res := dcaConstraints{}
+
+	for _, c := range rule.GetParameterConstraints() {
+		switch c.GetParameterName() {
+		case "from_asset":
+			res.fromAsset = c.GetConstraint()
+		case "from_address":
+			res.fromAddress = c.GetConstraint()
+		case "in_amount":
+			res.inAmount = c.GetConstraint()
+		case "in_amount_per_cycle":
+			res.inAmountPerCycle = c.GetConstraint()
+		case "cycle_frequency":
+			res.cycleFrequency = c.GetConstraint()
+		case "to_asset":
+			res.toAsset = c.GetConstraint()
+		}
+	}
+
+	if res.fromAsset == nil {
+		res.fromAsset = fixed("")
+	}
+	if res.fromAddress == nil {
+		return res, fmt.Errorf("failed to find constraint: from_address")
+	}
+	if res.inAmount == nil {
+		return res, fmt.Errorf("failed to find constraint: in_amount")
+	}
+	if res.inAmountPerCycle == nil {
+		return res, fmt.Errorf("failed to find constraint: in_amount_per_cycle")
+	}
+	if res.cycleFrequency == nil {
+		return res, fmt.Errorf("failed to find constraint: cycle_frequency")
+	}
+	if res.toAsset == nil {
+		res.toAsset = fixed("")
+	}
+
+	return res, nil
+}
+
 // bridgeConstraints holds parameters for bridge operations (same asset across chains)
 type bridgeConstraints struct {
 	fromAsset   *types.Constraint // Token address on source chain (empty for native)
@@ -434,6 +488,17 @@ func (m *MetaRule) handleSolana(in *types.Rule, r *types.ResourcePath) ([]*types
 		rules, err := m.createJupiterRule(in, c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create jupiter rules: %w", err)
+		}
+		return rules, nil
+	case dca:
+		c, err := getDCAConstraints(in)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse `dca` constraints: %w", err)
+		}
+
+		rules, err := m.createJupiterDCARule(in, c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create jupiter dca rules: %w", err)
 		}
 		return rules, nil
 	default:
@@ -1805,6 +1870,173 @@ func (m *MetaRule) createJupiterRule(_ *types.Rule, c swapConstraints) ([]*types
 	}
 
 	rules = append(rules, jupiterRouteRule, jupiterSharedAccountsRouteRule)
+
+	return rules, nil
+}
+
+// createJupiterDCARule creates the rule set for a Jupiter DCA (dollar-cost average) order.
+//
+// The Jupiter DCA program (DCA265Vj8a9CEuX1eb1LWRnDT7uK6q1xMipnNyatn23M) executes recurring
+// swaps. A single openDcaV2 instruction creates the order; the program then executes
+// inAmountPerCycle every cycleFrequency seconds until inAmount is exhausted.
+//
+// The meta-rule resource "solana.dca" expands to "solana.jupiter_dca.openDcaV2" plus
+// the ATA-creation and SOL-transfer helper rules needed by the Jupiter DCA program.
+//
+// Required constraints:
+//   - from_address: user wallet (signer)
+//   - from_asset:   input mint address (USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)
+//   - in_amount:    total input amount for the entire order (in base units)
+//   - in_amount_per_cycle: amount per cycle (in base units)
+//   - cycle_frequency: seconds between cycles
+//   - to_asset:     output mint address (PENGU: 2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv)
+func (m *MetaRule) createJupiterDCARule(_ *types.Rule, c dcaConstraints) ([]*types.Rule, error) {
+	const (
+		dcaProgram    = "DCA265Vj8a9CEuX1eb1LWRnDT7uK6q1xMipnNyatn23M"
+		dcaEventAuth  = "Cspp27eGUDMXxPEdhmEXFVs9PEjPMEZdZ2N4y9VCBfzC"
+	)
+
+	fromAddressStr := c.fromAddress.GetFixedValue()
+	if fromAddressStr == "" {
+		return nil, fmt.Errorf("`from_address` must be a fixed constraint for DCA")
+	}
+
+	fromAssetStr := c.fromAsset.GetFixedValue()
+	toAssetStr := c.toAsset.GetFixedValue()
+
+	getMint := func(asset string) string {
+		if asset == "" {
+			return solana.SolMint.String()
+		}
+		return asset
+	}
+
+	inputMint := getMint(fromAssetStr)
+	outputMint := getMint(toAssetStr)
+
+	inputMintConstraint := c.fromAsset
+	if fromAssetStr == "" {
+		inputMintConstraint = fixed(inputMint)
+	}
+	outputMintConstraint := c.toAsset
+	if toAssetStr == "" {
+		outputMintConstraint = fixed(outputMint)
+	}
+
+	// The DCA program's inAta is the token account it holds on behalf of the user.
+	// It is derived as: ATA(dcaAccount, inputMint) — but since dcaAccount is created
+	// per-order (derived from seeds), we accept any inAta value.
+	// The userAta (source of funds) must be the user's ATA for the input mint.
+	userInputATA, err := DeriveATA(fromAddressStr, inputMint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive user input ATA: %w", err)
+	}
+
+	var rules []*types.Rule
+
+	// ATA creation for user's input token account (source of funds)
+	rules = append(rules, &types.Rule{
+		Resource: "solana.associated_token_account.create",
+		Effect:   types.Effect_EFFECT_ALLOW,
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_payer",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_associated_token_account",
+			Constraint:    fixed(userInputATA),
+		}, {
+			ParameterName: "account_owner",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_mint",
+			Constraint:    inputMintConstraint,
+		}, {
+			ParameterName: "account_system_program",
+			Constraint:    fixed(solana.SystemProgramID.String()),
+		}, {
+			ParameterName: "account_token_program",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}},
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: solana.SPLAssociatedTokenAccountProgramID.String(),
+			},
+		},
+	})
+
+	// Jupiter DCA openDcaV2 instruction
+	rules = append(rules, &types.Rule{
+		Effect:   types.Effect_EFFECT_ALLOW,
+		Resource: "solana.jupiter_dca.openDcaV2",
+		Target: &types.Target{
+			TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+			Target: &types.Target_Address{
+				Address: dcaProgram,
+			},
+		},
+		ParameterConstraints: []*types.ParameterConstraint{{
+			ParameterName: "account_dca",
+			Constraint:    anyConstraint(), // per-order PDA, not predictable without applicationIdx
+		}, {
+			ParameterName: "account_user",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_payer",
+			Constraint:    c.fromAddress,
+		}, {
+			ParameterName: "account_inputMint",
+			Constraint:    inputMintConstraint,
+		}, {
+			ParameterName: "account_outputMint",
+			Constraint:    outputMintConstraint,
+		}, {
+			ParameterName: "account_userAta",
+			Constraint:    fixed(userInputATA),
+		}, {
+			ParameterName: "account_inAta",
+			Constraint:    anyConstraint(), // DCA vault ATA, derived from PDA
+		}, {
+			ParameterName: "account_outAta",
+			Constraint:    anyConstraint(), // DCA output ATA, derived from PDA
+		}, {
+			ParameterName: "account_systemProgram",
+			Constraint:    fixed(solana.SystemProgramID.String()),
+		}, {
+			ParameterName: "account_tokenProgram",
+			Constraint:    fixed(solana.TokenProgramID.String()),
+		}, {
+			ParameterName: "account_associatedTokenProgram",
+			Constraint:    fixed(solana.SPLAssociatedTokenAccountProgramID.String()),
+		}, {
+			ParameterName: "account_eventAuthority",
+			Constraint:    fixed(dcaEventAuth),
+		}, {
+			ParameterName: "account_program",
+			Constraint:    fixed(dcaProgram),
+		}, {
+			ParameterName: "arg_applicationIdx",
+			Constraint:    anyConstraint(), // unique per order, chosen by caller
+		}, {
+			ParameterName: "arg_inAmount",
+			Constraint:    c.inAmount,
+		}, {
+			ParameterName: "arg_inAmountPerCycle",
+			Constraint:    c.inAmountPerCycle,
+		}, {
+			ParameterName: "arg_cycleFrequency",
+			Constraint:    c.cycleFrequency,
+		}, {
+			ParameterName: "arg_minOutAmount",
+			Constraint:    anyConstraint(), // slippage guard, user's choice
+		}, {
+			ParameterName: "arg_maxOutAmount",
+			Constraint:    anyConstraint(), // upper bound, user's choice
+		}, {
+			ParameterName: "arg_startAt",
+			Constraint:    anyConstraint(), // optional start delay
+		}},
+	})
 
 	return rules, nil
 }

@@ -1,0 +1,112 @@
+{
+  "address": "DCA265Vj8a9CEuX1eb1LWRnDT7uK6q1xMipnNyatn23M",
+  "metadata": {
+    "name": "jupiter_dca",
+    "version": "1.0.0",
+    "spec": "0.1.0",
+    "description": "Jupiter DCA program IDL for dollar-cost averaging orders"
+  },
+  "instructions": [
+    {
+      "name": "openDcaV2",
+      "discriminator": [142, 21, 97, 40, 157, 174, 217, 37],
+      "accounts": [
+        {
+          "name": "dca",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "inputMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "outputMint",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "userAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "inAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "outAta",
+          "writable": true,
+          "signer": false
+        },
+        {
+          "name": "systemProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "tokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "eventAuthority",
+          "writable": false,
+          "signer": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false
+        }
+      ],
+      "args": [
+        {
+          "name": "applicationIdx",
+          "type": "u64"
+        },
+        {
+          "name": "inAmount",
+          "type": "u64"
+        },
+        {
+          "name": "inAmountPerCycle",
+          "type": "u64"
+        },
+        {
+          "name": "cycleFrequency",
+          "type": "u64"
+        },
+        {
+          "name": "minOutAmount",
+          "type": "u64"
+        },
+        {
+          "name": "maxOutAmount",
+          "type": "u64"
+        },
+        {
+          "name": "startAt",
+          "type": "u64"
+        }
+      ]
+    }
+  ]
+}
