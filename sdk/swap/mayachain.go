@@ -24,6 +24,17 @@ const (
 	mayaChainKUJI = "KUJI"
 )
 
+// mayaChainDecimals is the internal decimal precision used by the MayaChain API
+// for the CACAO native asset. Unlike THORChain (8 decimals for RUNE), CACAO
+// uses 10 decimals. All non-CACAO assets are still quoted by the API using the
+// same 8-decimal "thor-amount" convention as THORChain.
+//
+// Verified empirically 2026-06-01: /mayachain/quote/swap returns CACAO amounts
+// in 10-dec base units. Example: 0.01 BTC → 57763399808087 in expected_amount_out
+// = 5776.33 CACAO at 1e10, matching the pool ratio (BTC/CACAO pool depth).
+// At 1e8 it would read 577633 CACAO — off by 100x.
+const mayaChainDecimals = 10
+
 // Mayachain supported chains mapped to their network identifiers
 var mayaChainNetworks = map[string]string{
 	"Bitcoin":   mayaChainBTC,
@@ -142,13 +153,33 @@ func (p *MayachainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 		return nil, fmt.Errorf("invalid to asset: %w", err)
 	}
 
-	// Convert amount from native decimals to Mayachain's 8 decimals
-	// Note: Mayachain uses the same 8 decimal format as THORChain
+	// Convert the input amount to the Maya API's internal precision.
+	//
+	// Non-CACAO assets (BTC, ETH, ARB, ZEC, DASH, KUJI, …) follow the same
+	// 8-decimal "thor-amount" convention as THORChain. toThorChainAmount
+	// handles all these cases correctly.
+	//
+	// CACAO (the native asset of MayaChain) uses 10 decimals. The Maya API
+	// /quote/swap expects CACAO amounts in 10-decimal base units — verified
+	// empirically: querying 1000 CACAO as amount=10000000000000 (10-dec) yields
+	// a result matching the pool price; using 1000000000000 (8-dec) returns a
+	// result that is ~10x too low.
+	//
+	// To avoid the conversion error, when CACAO is the from-asset we pass the
+	// amount directly (10-dec in → 10-dec out, no op). For all other assets the
+	// original toThorChainAmount path applies.
 	fromDecimals := req.From.Decimals
 	if fromDecimals == 0 {
 		fromDecimals = 18 // Default to 18 for EVM native tokens
 	}
-	mayaAmount := toThorChainAmount(req.Amount, fromDecimals)
+	var mayaAmount *big.Int
+	if isMayaCACAO(req.From) {
+		// CACAO is already in 10-dec; pass through without scaling.
+		mayaAmount = new(big.Int).Set(req.Amount)
+	} else {
+		// All other assets: convert from native decimals to Maya's 8-dec format.
+		mayaAmount = toThorChainAmount(req.Amount, fromDecimals)
+	}
 
 	params := url.Values{}
 	params.Set("from_asset", fromAsset)
@@ -204,18 +235,29 @@ func (p *MayachainProvider) fetchQuote(ctx context.Context, endpoint string, par
 		return nil, fmt.Errorf("failed to parse quote response: %w", err)
 	}
 
-	// Parse expected output from Mayachain (in 8 decimals)
+	// Parse expected output from the Maya API.
+	// Non-CACAO outputs are returned in 8-decimal "thor-amount" units (same as
+	// THORChain). CACAO outputs are returned in 10-decimal base units.
+	// fromThorChainAmount(amount, toDecimals) converts from the API's source
+	// precision to the asset's native decimal count.
 	expectedOutputMaya, ok := new(big.Int).SetString(quoteResp.ExpectedAmountOut, 10)
 	if !ok {
 		return nil, fmt.Errorf("invalid expected_amount_out: %s", quoteResp.ExpectedAmountOut)
 	}
 
-	// Convert expected output from Mayachain's 8 decimals to destination asset's native decimals
 	toDecimals := req.To.Decimals
 	if toDecimals == 0 {
 		toDecimals = 18 // Default to 18 for EVM native tokens
 	}
-	expectedOutput := fromThorChainAmount(expectedOutputMaya, toDecimals)
+	var expectedOutput *big.Int
+	if isMayaCACAO(req.To) {
+		// CACAO output is already in 10-dec native units. No scaling needed:
+		// pass the raw API value through as-is (the result IS the base unit amount).
+		expectedOutput = expectedOutputMaya
+	} else {
+		// Non-CACAO: API returns 8-dec thor-amount; scale to destination native decimals.
+		expectedOutput = fromThorChainAmount(expectedOutputMaya, toDecimals)
+	}
 
 	// Determine router address - try resolver first, fallback to quote response
 	routerAddress := quoteResp.Router
@@ -406,5 +448,13 @@ type mayaChainQuoteResponse struct {
 
 type mayaChainErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// isMayaCACAO returns true when the asset is MayaChain's native CACAO token.
+// CACAO is the only asset on MayaChain that uses 10 decimal places; all other
+// Maya-routable assets (BTC, ETH, ZEC, DASH, …) follow the 8-decimal
+// "thor-amount" convention used by the Maya quote API.
+func isMayaCACAO(a Asset) bool {
+	return a.Chain == "MayaChain" && a.Address == ""
 }
 
