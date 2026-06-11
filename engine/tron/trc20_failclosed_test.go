@@ -130,6 +130,24 @@ func TestTRC20_FailsClosed_OnMissingConstraints(t *testing.T) {
 			},
 			wantErr: "recipient mismatch",
 		},
+		{
+			name: "recipient present but EMPTY value — present-but-empty bypass, now rejected",
+			constraints: []*types.ParameterConstraint{
+				fixed("recipient", ""),
+				fixed("amount", "100000000"),
+				fixed("from_asset", contractB58),
+			},
+			wantErr: "no enforceable value",
+		},
+		{
+			name: "from_asset present but EMPTY value — present-but-empty bypass, now rejected",
+			constraints: []*types.ParameterConstraint{
+				fixed("recipient", recipientB58),
+				fixed("amount", "100000000"),
+				fixed("from_asset", ""),
+			},
+			wantErr: "no enforceable value",
+		},
 	}
 
 	for _, tc := range cases {

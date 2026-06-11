@@ -254,17 +254,30 @@ func (t *Tron) validateTRC20Transfer(resource *types.ResourcePath, rule *types.R
 	// the same way (asserts target + requires a constraint per decoded arg).
 	// The metarule always emits recipient+amount+from_asset for legitimate
 	// tron.trc20.transfer rules, so this rejects only under-constrained policies.
-	present := make(map[string]bool, len(rule.GetParameterConstraints()))
+	byName := make(map[string]*types.ParameterConstraint, len(rule.GetParameterConstraints()))
 	for _, c := range rule.GetParameterConstraints() {
-		present[c.GetParameterName()] = true
+		byName[c.GetParameterName()] = c
 	}
 	for _, required := range []string{"recipient", "amount", "from_asset"} {
-		if !present[required] {
+		if _, ok := byName[required]; !ok {
 			return fmt.Errorf(
 				"TRC-20 rule missing required constraint for %q: transfers must constrain recipient, amount, and from_asset (refusing to fail open)",
 				required,
 			)
 		}
+	}
+
+	// Presence is not enough: a present-but-empty recipient/from_asset constraint
+	// would pass the gate above but be skipped by the value loop's `!= ""` guards
+	// (treated as a wildcard). Require each to carry an enforceable value.
+	if rc := byName["recipient"].GetConstraint(); rc.GetFixedValue() == "" &&
+		rc.GetMagicConstantValue() == types.MagicConstant_UNSPECIFIED {
+		return fmt.Errorf("TRC-20 recipient constraint has no enforceable value " +
+			"(empty fixed value and no magic constant) — refusing to fail open")
+	}
+	if fc := byName["from_asset"].GetConstraint(); fc.GetFixedValue() == "" {
+		return fmt.Errorf("TRC-20 from_asset constraint has no enforceable value " +
+			"(empty fixed value) — refusing to fail open")
 	}
 
 	for _, constraint := range rule.GetParameterConstraints() {
