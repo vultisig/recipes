@@ -113,6 +113,16 @@ func TestTRC20_FailsClosed_OnMissingConstraints(t *testing.T) {
 			wantErr:     "missing required constraint",
 		},
 		{
+			name:        "missing amount (recipient+from_asset only) — rejected",
+			constraints: []*types.ParameterConstraint{fixed("recipient", recipientB58), fixed("from_asset", contractB58)},
+			wantErr:     "missing required constraint",
+		},
+		{
+			name:        "missing from_asset (recipient+amount only) — rejected",
+			constraints: []*types.ParameterConstraint{fixed("recipient", recipientB58), fixed("amount", "100000000")},
+			wantErr:     "missing required constraint",
+		},
+		{
 			name: "fully constrained + matching — ALLOWED",
 			constraints: []*types.ParameterConstraint{
 				fixed("recipient", recipientB58),
