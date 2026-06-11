@@ -247,6 +247,26 @@ func (t *Tron) validateTRC20Transfer(resource *types.ResourcePath, rule *types.R
 
 	contractAddr := tx.GetContractAddress()
 
+	// Fail closed: every security-critical TRC-20 field must be constrained by
+	// the rule. Without this, a rule that omits e.g. the recipient constraint
+	// would silently allow a transfer to ANY address (the loop below only
+	// validates constraints that are *present*). The EVM engine fails closed
+	// the same way (asserts target + requires a constraint per decoded arg).
+	// The metarule always emits recipient+amount+from_asset for legitimate
+	// tron.trc20.transfer rules, so this rejects only under-constrained policies.
+	present := make(map[string]bool, len(rule.GetParameterConstraints()))
+	for _, c := range rule.GetParameterConstraints() {
+		present[c.GetParameterName()] = true
+	}
+	for _, required := range []string{"recipient", "amount", "from_asset"} {
+		if !present[required] {
+			return fmt.Errorf(
+				"TRC-20 rule missing required constraint for %q: transfers must constrain recipient, amount, and from_asset (refusing to fail open)",
+				required,
+			)
+		}
+	}
+
 	for _, constraint := range rule.GetParameterConstraints() {
 		switch constraint.GetParameterName() {
 		case "recipient":
