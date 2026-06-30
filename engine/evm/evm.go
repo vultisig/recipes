@@ -111,6 +111,13 @@ func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes
 func assertTarget(resource *types.ResourcePath, target *types.Target, to *common.Address) error {
 	targetKind := target.GetTargetType()
 	switch targetKind {
+	case types.TargetType_TARGET_TYPE_UNSPECIFIED:
+		// No target restriction — any recipient is allowed.
+		// Backward-compatible: existing policies always specify TARGET_TYPE_ADDRESS or
+		// TARGET_TYPE_MAGIC_CONSTANT. UNSPECIFIED here means the policy author deliberately
+		// chose not to restrict the recipient (e.g., freedom policy native transfer).
+		return nil
+
 	case types.TargetType_TARGET_TYPE_ADDRESS:
 		if to == nil || !addrEqual(*to, common.HexToAddress(target.GetAddress())) {
 			toHex := "nil"

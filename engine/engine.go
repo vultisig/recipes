@@ -13,6 +13,7 @@ import (
 	"github.com/vultisig/recipes/types"
 	"github.com/vultisig/recipes/util"
 	"github.com/vultisig/vultisig-go/common"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -38,6 +39,40 @@ func (e *Engine) SetLogger(log *log.Logger) {
 }
 
 func (e *Engine) Evaluate(policy *types.Policy, chain common.Chain, txBytes []byte) (*types.Rule, error) {
+	// Deny-wins pass: scan EFFECT_DENY rules first.
+	// If any DENY rule matches the transaction, reject immediately — before the ALLOW scan.
+	// Backward-compatible: existing ALLOW-only policies have no DENY rules so this pass is a no-op.
+	for _, ruleRaw := range policy.GetRules() {
+		if ruleRaw == nil || ruleRaw.GetEffect() != types.Effect_EFFECT_DENY {
+			continue
+		}
+		denyRules, err := metarule.NewMetaRule().TryFormat(ruleRaw)
+		if err != nil {
+			continue // skip malformed deny rules; don't let them silently allow
+		}
+		for _, denyRule := range denyRules {
+			resourcePath, er := util.ParseResource(denyRule.GetResource())
+			if er != nil {
+				continue
+			}
+			if resourcePath.ChainId != strings.ToLower(chain.String()) {
+				continue
+			}
+			chainEngine, er := e.registry.GetEngine(chain)
+			if er != nil {
+				continue
+			}
+			// Clone the rule and set effect to ALLOW so the chain engine can evaluate constraints.
+			// If constraints match → the deny rule fires.
+			ruleAsAllow := proto.Clone(denyRule).(*types.Rule)
+			ruleAsAllow.Effect = types.Effect_EFFECT_ALLOW
+			if er = chainEngine.Evaluate(ruleAsAllow, txBytes); er == nil {
+				e.logger.Printf("Tx denied by rule %q", denyRule.GetId())
+				return nil, fmt.Errorf("transaction denied by rule %q", denyRule.GetId())
+			}
+		}
+	}
+
 	var errs []error
 	for _, ruleRaw := range policy.GetRules() {
 		if ruleRaw == nil {

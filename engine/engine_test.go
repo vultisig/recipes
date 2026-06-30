@@ -78,6 +78,81 @@ var testVectors = []struct {
 	},
 }
 
+// TestDenyWins asserts that EFFECT_DENY rules are evaluated before ALLOW rules and that a
+// matching DENY rule causes the evaluation to return an error even when an ALLOW rule
+// would have matched the same transaction.
+func TestDenyWins(t *testing.T) {
+	eng, err := NewEngine()
+	require.NoError(t, err)
+
+	usdcAddr := ecommon.HexToAddress("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+	uint256Max, _ := new(big.Int).SetString(
+		"115792089237316195423570985008687907853269984665640564039457584007913129639935", 10,
+	)
+	spender := ecommon.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
+
+	// Build an erc20.approve(spender, uint256Max) transaction — this should be denied.
+	approveData := erc20.NewErc20().PackApprove(spender, uint256Max)
+	txBytes := buildUnsignedTx(usdcAddr, approveData, big.NewInt(0))
+
+	policy := &types.Policy{
+		Rules: []*types.Rule{
+			{
+				Id:       "deny-unbounded-approve",
+				Resource: "ethereum.erc20.approve",
+				Effect:   types.Effect_EFFECT_DENY,
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target:     &types.Target_Address{Address: usdcAddr.Hex()},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "spender",
+						Constraint:    &types.Constraint{Type: types.ConstraintType_CONSTRAINT_TYPE_ANY},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type:  types.ConstraintType_CONSTRAINT_TYPE_FIXED,
+							Value: &types.Constraint_FixedValue{FixedValue: uint256Max.String()},
+						},
+					},
+				},
+			},
+			{
+				Id:       "allow-usdc-approve",
+				Resource: "ethereum.erc20.approve",
+				Effect:   types.Effect_EFFECT_ALLOW,
+				Target: &types.Target{
+					TargetType: types.TargetType_TARGET_TYPE_ADDRESS,
+					Target:     &types.Target_Address{Address: usdcAddr.Hex()},
+				},
+				ParameterConstraints: []*types.ParameterConstraint{
+					{
+						ParameterName: "spender",
+						Constraint:    &types.Constraint{Type: types.ConstraintType_CONSTRAINT_TYPE_ANY},
+					},
+					{
+						ParameterName: "amount",
+						Constraint: &types.Constraint{
+							Type: types.ConstraintType_CONSTRAINT_TYPE_MAX,
+							Value: &types.Constraint_MaxValue{
+								MaxValue: uint256Max.String(), // ALLOW MAX = uint256Max
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// uint256Max matches the DENY rule — must be rejected despite the ALLOW rule matching too.
+	rule, err := eng.Evaluate(policy, common.Ethereum, txBytes)
+	require.Error(t, err, "uint256.max approve must be denied")
+	require.Nil(t, rule)
+	require.Contains(t, err.Error(), "denied")
+}
+
 func TestEngine(t *testing.T) {
 	engine, err := NewEngine()
 	require.NoError(t, err)
