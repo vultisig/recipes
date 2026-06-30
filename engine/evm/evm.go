@@ -91,6 +91,18 @@ func assertArgsNative(resource *types.ResourcePath, rule *types.Rule, tx *etypes
 		)
 	}
 
+	// A native-asset transfer must have empty calldata. Transactions with calldata
+	// are contract calls (e.g., ERC-20 transfers) and must NOT be classified as
+	// native transfers — otherwise a contract call with value=0 would silently
+	// pass the native-transfer amount cap.
+	if len(tx.Data()) > 0 {
+		return fmt.Errorf(
+			"native transfer must have empty calldata: symbol=%s, data_len=%d",
+			resource.ProtocolId,
+			len(tx.Data()),
+		)
+	}
+
 	if len(rule.GetParameterConstraints()) != 1 {
 		return fmt.Errorf("expected 1 parameter constraint, got: %d", len(rule.GetParameterConstraints()))
 	}
