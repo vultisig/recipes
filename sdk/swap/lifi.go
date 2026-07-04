@@ -86,6 +86,14 @@ func (p *LiFiProvider) GetStatus(ctx context.Context, chain string) (*ProviderSt
 }
 
 // GetQuote gets a swap quote from LiFi
+// lifiSlippageFraction converts a basis-point tolerance into LiFi's `slippage`
+// query value, which is a decimal fraction (0.005 = 0.5%). Only set when the
+// caller provides a positive tolerance; omitting the param leaves LiFi's own
+// default (~0.5%, live-verified) in place.
+func lifiSlippageFraction(bps int) string {
+	return fmt.Sprintf("%g", float64(bps)/10000)
+}
+
 func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, error) {
 	fromChainID, ok := lifiChainIDs[req.From.Chain]
 	if !ok {
@@ -116,6 +124,9 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 	params.Set("fromAddress", req.Sender)
 	params.Set("toAddress", req.Destination)
 	params.Set("integrator", lifiIntegratorName)
+	if req.ToleranceBps != nil && *req.ToleranceBps > 0 {
+		params.Set("slippage", lifiSlippageFraction(*req.ToleranceBps))
+	}
 
 	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
 
@@ -177,6 +188,7 @@ func (p *LiFiProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote, 
 		ToAsset:         req.To,
 		FromAmount:      req.Amount,
 		ExpectedOutput:  toAmount,
+		ToleranceBps:    req.ToleranceBps, // carried so BuildTx re-quotes with the same slippage
 		Router:          routerAddress,
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: routerAddress,
@@ -220,6 +232,9 @@ func (p *LiFiProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapResul
 	params.Set("fromAddress", req.Sender)
 	params.Set("toAddress", req.Destination)
 	params.Set("integrator", lifiIntegratorName)
+	if req.Quote.ToleranceBps != nil && *req.Quote.ToleranceBps > 0 {
+		params.Set("slippage", lifiSlippageFraction(*req.Quote.ToleranceBps))
+	}
 
 	quoteURL := fmt.Sprintf("%s/quote?%s", p.baseURL, params.Encode())
 
