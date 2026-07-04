@@ -80,12 +80,23 @@ func (p *JupiterProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 	}
 
 	// Build quote URL
+	// Honor the caller's requested slippage. Jupiter's slippageBps is in the
+	// same basis-point units as QuoteRequest.ToleranceBps, and it bakes the
+	// resulting min-out into the quote's otherAmountThreshold (carried through
+	// to BuildTx via ProviderData) — so forwarding a positive tolerance here is
+	// sufficient. Fall back to the 1% default when the caller omits it (or
+	// passes 0, which would demand exact-out and revert on any movement).
+	slippageBps := jupiterDefaultSlippage
+	if req.ToleranceBps != nil && *req.ToleranceBps > 0 {
+		slippageBps = *req.ToleranceBps
+	}
+
 	params := url.Values{}
 	params.Set("swapMode", "ExactIn")
 	params.Set("inputMint", inputMint)
 	params.Set("outputMint", outputMint)
 	params.Set("amount", req.Amount.String())
-	params.Set("slippageBps", fmt.Sprintf("%d", jupiterDefaultSlippage))
+	params.Set("slippageBps", fmt.Sprintf("%d", slippageBps))
 
 	quoteURL := fmt.Sprintf("%s/swap/v1/quote?%s", p.apiURL, params.Encode())
 
