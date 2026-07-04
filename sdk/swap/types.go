@@ -144,6 +144,7 @@ type Quote struct {
 	FromAmount      *big.Int // Input amount
 	ExpectedOutput  *big.Int // Expected output amount
 	MinimumOutput   *big.Int // Minimum output with slippage
+	ToleranceBps    *int     // Caller's requested slippage (bps), carried from GetQuote so BuildTx can honor it; nil = provider default
 	EstimatedFees   *big.Int // Estimated fees
 	Memo            string   // Transaction memo (for THORChain/Maya)
 	InboundAddress  string   // Inbound vault address (for THORChain/Maya)

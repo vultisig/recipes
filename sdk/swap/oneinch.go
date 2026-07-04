@@ -114,7 +114,7 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 	q.Set("dst", dstToken)
 	q.Set("amount", req.Amount.String())
 	q.Set("from", req.Sender)
-	q.Set("slippage", fmt.Sprintf("%d", oneInchDefaultSlippage))
+	q.Set("slippage", oneInchSlippageParam(req.ToleranceBps))
 	q.Set("disableEstimate", "true")
 	q.Set("allowPartialFill", "false")
 	q.Set("compatibility", "true")
@@ -165,11 +165,25 @@ func (p *OneInchProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quot
 		ToAsset:         req.To,
 		FromAmount:      req.Amount,
 		ExpectedOutput:  dstAmount,
+		ToleranceBps:    req.ToleranceBps, // carried so BuildTx signs with the same slippage
 		Router:          routerAddress,
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: routerAddress,
 		ApprovalAmount:  req.Amount,
 	}, nil
+}
+
+// oneInchSlippageParam returns the 1inch `slippage` query value (in percent,
+// which is the unit 1inch expects). It honors the caller's requested tolerance
+// (QuoteRequest.ToleranceBps, in basis points) when positive, converting
+// bps->percent, and falls back to the 1% default otherwise. Both GetQuote and
+// BuildTx must use it so the quote's slippage and the signed swap tx's slippage
+// agree.
+func oneInchSlippageParam(toleranceBps *int) string {
+	if toleranceBps != nil && *toleranceBps > 0 {
+		return fmt.Sprintf("%g", float64(*toleranceBps)/100)
+	}
+	return fmt.Sprintf("%d", oneInchDefaultSlippage)
 }
 
 // BuildTx builds an unsigned transaction for the swap
@@ -206,7 +220,7 @@ func (p *OneInchProvider) BuildTx(ctx context.Context, req SwapRequest) (*SwapRe
 	q.Set("amount", req.Quote.FromAmount.String())
 	q.Set("from", req.Sender)
 	q.Set("receiver", req.Destination)
-	q.Set("slippage", fmt.Sprintf("%d", oneInchDefaultSlippage))
+	q.Set("slippage", oneInchSlippageParam(req.Quote.ToleranceBps))
 	q.Set("disableEstimate", "true")
 	q.Set("allowPartialFill", "false")
 	q.Set("compatibility", "true")
