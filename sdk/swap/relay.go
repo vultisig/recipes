@@ -143,6 +143,20 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		return nil, fmt.Errorf("relay: invalid output amount %q", quoteResp.Details.CurrencyOut.Amount)
 	}
 
+	// FUND-SAFETY: Relay quotes carry a real minimum-output floor
+	// (currencyOut.minimumAmount). Despite the "solver-based" framing, live
+	// quotes return isFixedRate:false with a genuine gap (~1% observed
+	// ETH->USDC) between amount and minimumAmount, so reporting expectedOutput
+	// as MinimumOutput hands every caller a FALSE zero-slippage signal. Use the
+	// API's actual minimumAmount; fall back to expectedOutput only if the field
+	// is absent/unparseable.
+	minimumOutput := expectedOutput
+	if raw := quoteResp.Details.CurrencyOut.MinimumAmount; raw != "" {
+		if m, ok := new(big.Int).SetString(raw, 10); ok {
+			minimumOutput = m
+		}
+	}
+
 	// Separate approval and swap transaction steps.
 	var approvalStep *relayStepData
 	var txStep *relayStepData
@@ -183,7 +197,7 @@ func (p *RelayProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Quote,
 		ToAsset:         req.To,
 		FromAmount:      req.Amount,
 		ExpectedOutput:  expectedOutput,
-		MinimumOutput:   expectedOutput, // Relay is solver-based: no AMM slippage
+		MinimumOutput:   minimumOutput, // real floor from currencyOut.minimumAmount (Relay is NOT zero-slippage)
 		Router:          router,
 		NeedsApproval:   needsApproval,
 		ApprovalSpender: approvalSpender,
@@ -501,6 +515,7 @@ type relayDetails struct {
 
 type relayCurrencyOut struct {
 	Amount          string            `json:"amount"`
+	MinimumAmount   string            `json:"minimumAmount"`
 	AmountFormatted string            `json:"amountFormatted"`
 	Currency        relayCurrencyMeta `json:"currency"`
 }
