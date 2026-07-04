@@ -188,6 +188,21 @@ func (p *MayachainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
+	// FUND-SAFETY: forward the slippage tolerance into the Mayanode quote so the
+	// returned memo carries a LIM (minimum-output) field. Without this, Mayanode
+	// builds a market-order memo ("=:c:maya1...", no limit) and the swap executes
+	// with ZERO slippage protection — full MEV/sandwich exposure on the entire
+	// amount — regardless of the caller's requested tolerance. Mirrors
+	// THORChainProvider.GetQuote exactly (same 2500bps default + 0-10000 bound);
+	// the omission here was a straight parity gap, not a design choice.
+	toleranceBps := 2500
+	if req.ToleranceBps != nil {
+		toleranceBps = *req.ToleranceBps
+	}
+	if toleranceBps < 0 || toleranceBps > 10000 {
+		return nil, fmt.Errorf("invalid tolerance_bps %d: must be between 0 and 10000", toleranceBps)
+	}
+	params.Set("tolerance_bps", fmt.Sprintf("%d", toleranceBps))
 
 	// Try all endpoints with fallback
 	var lastErr error
