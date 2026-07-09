@@ -237,6 +237,20 @@ func TestSetAffiliateParams_ZeroBpsOmitted(t *testing.T) {
 	}
 }
 
+// Out-of-range bps (>10000 = >100%) is rejected client-side rather than
+// sent to thornode/maya, mirroring the toleranceBps bound-check.
+func TestSetAffiliateParams_OutOfRangeBpsOmitted(t *testing.T) {
+	params := url.Values{}
+	tooHigh := 10001
+	req := QuoteRequest{AffiliateAddress: stationAffiliateAddress, AffiliateBps: &tooHigh}
+	setAffiliateParams(params, req)
+
+	if params.Has("affiliate") || params.Has("affiliate_bps") {
+		t.Errorf("expected no affiliate params for out-of-range bps, got affiliate=%q affiliate_bps=%q",
+			params.Get("affiliate"), params.Get("affiliate_bps"))
+	}
+}
+
 // AffiliateAddress set but AffiliateBps nil (or vice versa) — fail closed,
 // no partial affiliate line.
 func TestSetAffiliateParams_PartialFieldsOmitted(t *testing.T) {

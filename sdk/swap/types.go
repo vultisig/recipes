@@ -222,6 +222,13 @@ func setAffiliateParams(params url.Values, req QuoteRequest) {
 	if req.AffiliateAddress == "" || req.AffiliateBps == nil || *req.AffiliateBps <= 0 {
 		return
 	}
+	// Bound-check like toleranceBps above: a caller-supplied bps outside
+	// THORChain/Maya's valid range (0-10000, where 10000 = 100%) should fail
+	// fast client-side rather than go out on the wire and let thornode/maya
+	// reject or misinterpret it.
+	if *req.AffiliateBps > 10000 {
+		return
+	}
 	params.Set("affiliate", req.AffiliateAddress)
 	params.Set("affiliate_bps", fmt.Sprintf("%d", *req.AffiliateBps))
 }
