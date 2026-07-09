@@ -53,6 +53,14 @@ type SwapParams struct {
 	// If nil, uses default provider order.
 	Preference   *ProviderPreference
 	ToleranceBps *int // Optional THOR/Maya quote tolerance override in basis points (typically 0-10000, where 10000 = 100%)
+
+	// AffiliateBps / AffiliateAddress set the THOR/Maya affiliate fee on the
+	// quote request (see QuoteRequest for the full contract). Both must be
+	// set for an affiliate to be attached; leaving them unset fails closed
+	// (bare memo, no affiliate) rather than silently defaulting to some
+	// party's fee address.
+	AffiliateBps     *int
+	AffiliateAddress string
 }
 
 // SwapTx contains the transaction data ready for signing.
@@ -103,6 +111,9 @@ func (s *Service) GetSwapTx(ctx context.Context, params SwapParams) (*SwapTx, er
 		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
 		Preference:   params.Preference,
+
+		AffiliateBps:     params.AffiliateBps,
+		AffiliateAddress: params.AffiliateAddress,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -314,6 +325,9 @@ func (s *Service) GetSwapTxBundle(ctx context.Context, params SwapParams) (*Swap
 		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
 		Preference:   params.Preference,
+
+		AffiliateBps:     params.AffiliateBps,
+		AffiliateAddress: params.AffiliateAddress,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
@@ -367,6 +381,9 @@ func (s *Service) GetQuote(ctx context.Context, params SwapParams) (*Quote, erro
 		Destination:  params.Destination,
 		ToleranceBps: params.ToleranceBps,
 		Preference:   params.Preference,
+
+		AffiliateBps:     params.AffiliateBps,
+		AffiliateAddress: params.AffiliateAddress,
 	})
 }
 

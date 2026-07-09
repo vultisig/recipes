@@ -2,7 +2,9 @@ package swap
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"net/url"
 )
 
 // Asset represents a token/coin on a specific chain
@@ -200,6 +202,35 @@ type ProviderStatus struct {
 	ChainTradingPaused  bool
 	Router              string
 	InboundAddress      string
+}
+
+// setAffiliateParams sets the THORChain/Mayachain-style `affiliate` /
+// `affiliate_bps` quote query params from req.AffiliateAddress /
+// req.AffiliateBps, mirroring the SDK's buildAffiliateParams
+// (vultisig-sdk/packages/core/chain/swap/native/api/affiliate.ts). Both the
+// THORChain and Mayachain `/quote/swap` REST APIs accept the same two params.
+//
+// Before this helper existed, req.AffiliateBps / req.AffiliateAddress were
+// declared on QuoteRequest but silently dropped by both native providers —
+// every THOR/Maya swap built through this package went out with NO
+// affiliate, losing the caller's affiliate fee attribution entirely
+// (vultisig/agent-backend revenue bug, 2026-07-09). Callers MUST set
+// AffiliateAddress explicitly; this helper does not invent a default so a
+// caller who forgets to set it fails closed (no affiliate line in the memo)
+// rather than silently misattributing the fee to some other party.
+func setAffiliateParams(params url.Values, req QuoteRequest) {
+	if req.AffiliateAddress == "" || req.AffiliateBps == nil || *req.AffiliateBps <= 0 {
+		return
+	}
+	// Bound-check like toleranceBps above: a caller-supplied bps outside
+	// THORChain/Maya's valid range (0-10000, where 10000 = 100%) should fail
+	// fast client-side rather than go out on the wire and let thornode/maya
+	// reject or misinterpret it.
+	if *req.AffiliateBps > 10000 {
+		return
+	}
+	params.Set("affiliate", req.AffiliateAddress)
+	params.Set("affiliate_bps", fmt.Sprintf("%d", *req.AffiliateBps))
 }
 
 // EVMChains is the list of EVM-compatible chains that support ERC20 approvals

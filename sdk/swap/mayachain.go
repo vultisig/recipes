@@ -188,6 +188,7 @@ func (p *MayachainProvider) GetQuote(ctx context.Context, req QuoteRequest) (*Qu
 	params.Set("destination", req.Destination)
 	params.Set("streaming_interval", "3")
 	params.Set("streaming_quantity", "0")
+	setAffiliateParams(params, req)
 
 	// Try all endpoints with fallback
 	var lastErr error
